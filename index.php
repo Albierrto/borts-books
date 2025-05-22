@@ -14,10 +14,172 @@ $currentPage = "home";
     <title><?php echo $pageTitle; ?> - Manga Store</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { background: #f7f7fa; font-family: 'Inter', sans-serif; }
+        .hero {
+            background: linear-gradient(120deg, #232946 60%, #eebbc3 100%);
+            color: #fff;
+            padding: 4rem 0 3rem 0;
+            text-align: center;
+            position: relative;
+        }
+        .hero h1 {
+            font-family: 'Permanent Marker', cursive;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            letter-spacing: 2px;
+        }
+        .hero p { font-size: 1.3rem; margin-bottom: 2rem; }
+        .hero-ctas { display: flex; justify-content: center; gap: 1.5rem; }
+        .hero-ctas a {
+            padding: 1rem 2.5rem;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .hero-ctas .btn-primary { background: #eebbc3; color: #232946; }
+        .hero-ctas .btn-primary:hover { background: #fff; color: #232946; }
+        .hero-ctas .btn-secondary { background: transparent; border: 2px solid #eebbc3; color: #fff; }
+        .hero-ctas .btn-secondary:hover { background: #eebbc3; color: #232946; }
+        .genre-section {
+            background: #fff;
+            padding: 2.5rem 0 1.5rem 0;
+        }
+        .genre-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1.5rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .genre-card {
+            background: #f7f7fa;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(35,41,70,0.07);
+            text-align: center;
+            padding: 1.2rem 0.5rem;
+            transition: transform 0.15s;
+            cursor: pointer;
+        }
+        .genre-card:hover { transform: translateY(-6px) scale(1.04); background: #eebbc3; color: #232946; }
+        .genre-card img { width: 60px; height: 90px; object-fit: cover; border-radius: 8px; margin-bottom: 0.7rem; }
+        .genre-card span { font-weight: 600; font-size: 1.1rem; }
+        .section-title { text-align: center; font-size: 2rem; font-weight: 800; margin: 2.5rem 0 1rem 0; letter-spacing: 1px; }
+        .trending-section { background: #232946; color: #fff; padding: 2.5rem 0; }
+        .trending-carousel {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            padding: 1rem 0 1rem 1rem;
+            scroll-snap-type: x mandatory;
+        }
+        .trending-card {
+            background: #fff;
+            color: #232946;
+            border-radius: 14px;
+            min-width: 220px;
+            box-shadow: 0 2px 8px rgba(35,41,70,0.09);
+            margin-bottom: 1rem;
+            flex: 0 0 auto;
+            scroll-snap-align: start;
+            transition: transform 0.15s;
+        }
+        .trending-card:hover { transform: translateY(-6px) scale(1.04); }
+        .trending-card img { width: 100%; height: 180px; object-fit: cover; border-radius: 14px 14px 0 0; }
+        .trending-card .info { padding: 1rem; }
+        .trending-card .title { font-weight: 700; font-size: 1.1rem; margin-bottom: 0.3rem; }
+        .trending-card .price { color: #e63946; font-weight: 700; margin-bottom: 0.5rem; }
+        .trending-card .add-cart { background: #eebbc3; color: #232946; border: none; border-radius: 20px; padding: 0.5rem 1.2rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .trending-card .add-cart:hover { background: #232946; color: #fff; }
+        .value-props {
+            display: flex;
+            justify-content: center;
+            gap: 2.5rem;
+            margin: 2.5rem 0 1.5rem 0;
+            flex-wrap: wrap;
+        }
+        .value-prop {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(35,41,70,0.07);
+            padding: 1.5rem 2rem;
+            text-align: center;
+            flex: 1 1 180px;
+            min-width: 180px;
+        }
+        .value-prop i { font-size: 2rem; color: #eebbc3; margin-bottom: 0.7rem; }
+        .value-prop h4 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .value-prop p { font-size: 0.98rem; color: #555; }
+        .sell-callout {
+            background: linear-gradient(90deg, #eebbc3 60%, #fff 100%);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2.5rem 2rem;
+            margin: 2.5rem auto 2rem auto;
+            max-width: 900px;
+            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
+            gap: 2rem;
+        }
+        .sell-callout img { width: 120px; border-radius: 12px; }
+        .sell-callout-content { flex: 1; }
+        .sell-callout h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.7rem; }
+        .sell-callout p { font-size: 1.05rem; margin-bottom: 1rem; }
+        .sell-callout a { background: #232946; color: #fff; padding: 0.8rem 2rem; border-radius: 30px; font-weight: 700; text-decoration: none; transition: background 0.2s; }
+        .sell-callout a:hover { background: #e63946; }
+        .reviews-section { background: #fff; padding: 2.5rem 0; }
+        .reviews-grid { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; }
+        .review-card {
+            background: #f7f7fa;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(35,41,70,0.07);
+            padding: 1.2rem 1.5rem;
+            max-width: 320px;
+            min-width: 220px;
+            text-align: left;
+        }
+        .review-card .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-bottom: 0.5rem; }
+        .review-card .name { font-weight: 700; font-size: 1rem; margin-bottom: 0.2rem; }
+        .review-card .stars { color: #eebbc3; margin-bottom: 0.3rem; }
+        .newsletter-section { background: #232946; color: #fff; text-align: center; padding: 2.5rem 0; }
+        .newsletter-section h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.7rem; }
+        .newsletter-form { display: flex; justify-content: center; gap: 0.7rem; margin-top: 1rem; }
+        .newsletter-form input[type="email"] {
+            padding: 0.7rem 1.2rem;
+            border-radius: 30px;
+            border: none;
+            font-size: 1rem;
+            min-width: 220px;
+        }
+        .newsletter-form button {
+            background: #eebbc3;
+            color: #232946;
+            border: none;
+            border-radius: 30px;
+            padding: 0.7rem 2rem;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .newsletter-form button:hover { background: #fff; color: #232946; }
+        @media (max-width: 900px) {
+            .sell-callout { flex-direction: column; text-align: center; }
+            .sell-callout img { margin-bottom: 1rem; }
+        }
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 2.1rem; }
+            .section-title { font-size: 1.3rem; }
+            .sell-callout { padding: 1.2rem 0.5rem; }
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -42,32 +204,62 @@ $currentPage = "home";
     </header>
 
     <section class="hero">
-        <div class="container hero-content">
-            <h1>Welcome to Bort's Books</h1>
-            <p>Your premier destination for manga collections. Browse our extensive catalog or sell your collection for top dollar.</p>
-            <div class="hero-buttons">
-                <a href="/pages/shop.php" class="btn">Shop Now</a>
-                <a href="/pages/sell.php" class="btn btn-outline">Sell Your Collection</a>
-            </div>
+        <h1>Discover, Collect, and Sell Manga</h1>
+        <p>Your ultimate destination for authentic manga, rare finds, and unbeatable deals. Shop, sell, and join a passionate manga community!</p>
+        <div class="hero-ctas">
+            <a href="/pages/shop.php" class="btn-primary">Shop Now</a>
+            <a href="/pages/sell.php" class="btn-secondary">Sell Your Manga</a>
         </div>
     </section>
 
-    <section class="section featured">
-        <div class="container">
-            <div class="section-header">
-                <h2>Featured Manga</h2>
-                <p>Check out some of our most popular listings below!</p>
-            </div>
-            <div id="kitsu-manga-covers" class="manga-grid"></div>
+    <section class="genre-section">
+        <div class="section-title">Shop by Genre</div>
+        <div class="genre-grid">
+            <a href="/pages/shop.php?genre=Shonen" class="genre-card"><img src="assets/img/genre-shonen.jpg" alt="Shonen"><span>Shonen</span></a>
+            <a href="/pages/shop.php?genre=Shojo" class="genre-card"><img src="assets/img/genre-shojo.jpg" alt="Shojo"><span>Shojo</span></a>
+            <a href="/pages/shop.php?genre=Seinen" class="genre-card"><img src="assets/img/genre-seinen.jpg" alt="Seinen"><span>Seinen</span></a>
+            <a href="/pages/shop.php?genre=Josei" class="genre-card"><img src="assets/img/genre-josei.jpg" alt="Josei"><span>Josei</span></a>
+            <a href="/pages/shop.php?genre=Isekai" class="genre-card"><img src="assets/img/genre-isekai.jpg" alt="Isekai"><span>Isekai</span></a>
+            <a href="/pages/shop.php?genre=Sports" class="genre-card"><img src="assets/img/genre-sports.jpg" alt="Sports"><span>Sports</span></a>
         </div>
     </section>
 
-    <section class="sell-collection">
-        <div class="container">
-            <h2>Sell Your Manga Collection</h2>
-            <p>Looking to declutter or upgrade your collection? We offer competitive prices for manga collections of all sizes. From single volumes to entire series, we're interested in what you have to offer.</p>
-            <a href="/pages/sell.php" class="btn">Get Started</a>
+    <section class="trending-section">
+        <div class="section-title">Trending Manga</div>
+        <div class="trending-carousel" id="trending-carousel"></div>
+    </section>
+
+    <div class="value-props">
+        <div class="value-prop"><i class="fas fa-certificate"></i><h4>Authentic Manga</h4><p>100% official, licensed manga only.</p></div>
+        <div class="value-prop"><i class="fas fa-shipping-fast"></i><h4>Fast Shipping</h4><p>Quick, secure delivery worldwide.</p></div>
+        <div class="value-prop"><i class="fas fa-tags"></i><h4>Great Prices</h4><p>Competitive deals on all titles.</p></div>
+        <div class="value-prop"><i class="fas fa-undo"></i><h4>Easy Returns</h4><p>Hassle-free returns & support.</p></div>
+    </div>
+
+    <div class="sell-callout">
+        <img src="assets/img/sell-manga-stack.jpg" alt="Sell Manga">
+        <div class="sell-callout-content">
+            <h2>Turn Your Manga Into Cash!</h2>
+            <p>Have a collection to sell? We offer top dollar and a smooth, friendly process. Start your selling journey now.</p>
+            <a href="/pages/sell.php">Get an Offer</a>
         </div>
+    </div>
+
+    <section class="reviews-section">
+        <div class="section-title">What Our Customers Say</div>
+        <div class="reviews-grid">
+            <div class="review-card"><img src="assets/img/avatar1.png" class="avatar"><div class="name">Alex R.</div><div class="stars">★★★★★</div><div>"Super fast shipping and the manga was in perfect condition! Will buy again."</div></div>
+            <div class="review-card"><img src="assets/img/avatar2.png" class="avatar"><div class="name">Mina S.</div><div class="stars">★★★★★</div><div>"Love the selection and the prices. Found rare volumes I couldn't get anywhere else."</div></div>
+            <div class="review-card"><img src="assets/img/avatar3.png" class="avatar"><div class="name">Jordan K.</div><div class="stars">★★★★★</div><div>"Selling my collection was so easy. Great communication and quick payment!"</div></div>
+        </div>
+    </section>
+
+    <section class="newsletter-section">
+        <h3>Get Exclusive Deals & New Arrivals</h3>
+        <form class="newsletter-form">
+            <input type="email" placeholder="Your email address" required>
+            <button type="submit">Subscribe</button>
+        </form>
     </section>
 
     <footer>
@@ -90,10 +282,10 @@ $currentPage = "home";
             <div class="footer-section">
                 <h3>Help</h3>
                 <ul>
-                    <li><a href="/borts-books/pages/faq.php">FAQ</a></li>
-                    <li><a href="/borts-books/pages/shipping.php">Shipping</a></li>
-                    <li><a href="/borts-books/pages/returns.php">Returns</a></li>
-                    <li><a href="/borts-books/pages/contact.php">Contact Us</a></li>
+                    <li><a href="/pages/faq.php">FAQ</a></li>
+                    <li><a href="/pages/shipping.php">Shipping</a></li>
+                    <li><a href="/pages/returns.php">Returns</a></li>
+                    <li><a href="/pages/contact.php">Contact Us</a></li>
                 </ul>
             </div>
 
@@ -112,52 +304,28 @@ $currentPage = "home";
         </div>
     </footer>
     <script>
-    const mangaTitles = [
-      "One Piece",
-      "Demon Slayer: Kimetsu no Yaiba",
-      "Chainsaw Man",
-      "Jujutsu Kaisen"
+    // Trending Manga Data (replace with dynamic data as needed)
+    const trendingManga = [
+      { title: "One Piece Vol. 98", price: "$12.99", img: "assets/img/onepiece.jpg" },
+      { title: "Demon Slayer Vol. 23", price: "$10.99", img: "assets/img/demonslayer.jpg" },
+      { title: "Chainsaw Man Vol. 11", price: "$9.99", img: "assets/img/chainsawman.jpg" },
+      { title: "Jujutsu Kaisen Vol. 15", price: "$11.99", img: "assets/img/jujutsukaisen.jpg" },
+      { title: "Attack on Titan Vol. 34", price: "$13.99", img: "assets/img/aot.jpg" },
+      { title: "My Hero Academia Vol. 30", price: "$10.99", img: "assets/img/mha.jpg" }
     ];
-
-    async function fetchKitsuMangaCover(title) {
-      const url = `https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(title)}&page[limit]=1`;
-      const res = await fetch(url, {
-        headers: {
-          'Accept': 'application/vnd.api+json',
-          'Content-Type': 'application/vnd.api+json'
-        }
-      });
-      const data = await res.json();
-      if (data.data && data.data.length > 0) {
-        return data.data[0];
-      }
-      return null;
-    }
-
-    async function renderKitsuMangaCovers() {
-      const container = document.getElementById('kitsu-manga-covers');
-      container.innerHTML = '';
-      for (const title of mangaTitles) {
-        const manga = await fetchKitsuMangaCover(title);
-        if (manga) {
-          const attributes = manga.attributes;
-          container.innerHTML += `
-            <a href="/borts-books/pages/shop.php" class="manga-card-link">
-              <div class="manga-card">
-                <div class="manga-img">
-                  <img src="${attributes.posterImage && attributes.posterImage.medium ? attributes.posterImage.medium : ''}" alt="${attributes.canonicalTitle}">
-                </div>
-                <div class="manga-info">
-                  <h3>${attributes.canonicalTitle}</h3>
-                  <p>${attributes.titles && attributes.titles.en_jp ? attributes.titles.en_jp : ''}</p>
-                </div>
-              </div>
-            </a>
-          `;
-        }
-      }
-    }
-    renderKitsuMangaCovers();
+    const trendingContainer = document.getElementById('trending-carousel');
+    trendingManga.forEach(manga => {
+      trendingContainer.innerHTML += `
+        <div class="trending-card">
+          <img src="${manga.img}" alt="${manga.title}">
+          <div class="info">
+            <div class="title">${manga.title}</div>
+            <div class="price">${manga.price}</div>
+            <button class="add-cart">Add to Cart</button>
+          </div>
+        </div>
+      `;
+    });
     </script>
 </body>
 </html>

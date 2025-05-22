@@ -33,7 +33,7 @@ function importListing($item, $db) {
     $condition = $item['condition'][0]['conditionDisplayName'][0] ?? '';
     $images = [$item['galleryURL'][0] ?? ''];
 
-    $stmt = $db->prepare("INSERT INTO products (title, description, price, \"condition\", created_at) VALUES (?, ?, ?, ?, NOW())");
+    $stmt = $db->prepare("INSERT INTO products (title, description, price, `condition`, created_at) VALUES (?, ?, ?, ?, NOW())");
     $stmt->execute([$title, $description, $price, $condition]);
     $productId = $db->lastInsertId();
 
@@ -63,7 +63,7 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
             $condition = $data['Condition'] ?? '';
             $image_url = ''; // No image data in CSV
             try {
-                $stmt = $db->prepare("INSERT INTO products (title, description, price, \"condition\", created_at) VALUES (?, ?, ?, ?, NOW())");
+                $stmt = $db->prepare("INSERT INTO products (title, description, price, `condition`, created_at) VALUES (?, ?, ?, ?, NOW())");
                 $stmt->execute([$title, $description, $price, $condition]);
                 $productId = $db->lastInsertId();
                 // No image insert
