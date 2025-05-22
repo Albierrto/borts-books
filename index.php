@@ -5,6 +5,15 @@ session_start();
 // Set page title
 $pageTitle = "Welcome to Bort's Books";
 $currentPage = "home";
+
+// Fetch trending manga from database
+require_once 'includes/db.php';
+$trendingQuery = "SELECT p.*, pi.image_url 
+                 FROM products p 
+                 LEFT JOIN product_images pi ON p.id = pi.product_id 
+                 ORDER BY p.created_at DESC 
+                 LIMIT 8";
+$trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -215,18 +224,64 @@ $currentPage = "home";
     <section class="genre-section">
         <div class="section-title">Shop by Genre</div>
         <div class="genre-grid">
-            <a href="/pages/shop.php?genre=Shonen" class="genre-card"><img src="assets/img/genre-shonen.jpg" alt="Shonen"><span>Shonen</span></a>
-            <a href="/pages/shop.php?genre=Shojo" class="genre-card"><img src="assets/img/genre-shojo.jpg" alt="Shojo"><span>Shojo</span></a>
-            <a href="/pages/shop.php?genre=Seinen" class="genre-card"><img src="assets/img/genre-seinen.jpg" alt="Seinen"><span>Seinen</span></a>
-            <a href="/pages/shop.php?genre=Josei" class="genre-card"><img src="assets/img/genre-josei.jpg" alt="Josei"><span>Josei</span></a>
-            <a href="/pages/shop.php?genre=Isekai" class="genre-card"><img src="assets/img/genre-isekai.jpg" alt="Isekai"><span>Isekai</span></a>
-            <a href="/pages/shop.php?genre=Sports" class="genre-card"><img src="assets/img/genre-sports.jpg" alt="Sports"><span>Sports</span></a>
+            <?php
+            $genres = [
+                'shonen' => ['Shonen', '#eebbc3'],
+                'shojo' => ['Shojo', '#ffb6c1'],
+                'seinen' => ['Seinen', '#232946'],
+                'josei' => ['Josei', '#ffc0cb'],
+                'isekai' => ['Isekai', '#9370db'],
+                'sports' => ['Sports', '#4682b4']
+            ];
+            
+            foreach ($genres as $key => $genre):
+                $svg = base64_encode('
+                    <svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="100%" height="100%" fill="' . $genre[1] . '"/>
+                        <text x="50%" y="50%" font-family="Arial" font-size="24" fill="white" text-anchor="middle">' . $genre[0] . '</text>
+                    </svg>
+                ');
+            ?>
+            <a href="/pages/shop.php?genre=<?php echo ucfirst($key); ?>" class="genre-card">
+                <img src="data:image/svg+xml;base64,<?php echo $svg; ?>" alt="<?php echo $genre[0]; ?>">
+                <span><?php echo $genre[0]; ?></span>
+            </a>
+            <?php endforeach; ?>
         </div>
     </section>
 
     <section class="trending-section">
         <div class="section-title">Trending Manga</div>
-        <div class="trending-carousel" id="trending-carousel"></div>
+        <div class="trending-carousel" id="trending-carousel">
+            <?php foreach ($trendingManga as $manga): ?>
+            <div class="trending-card">
+                <img src="<?php 
+                    if (!empty($manga['image_url'])) {
+                        echo htmlspecialchars($manga['image_url']);
+                    } else {
+                        echo 'data:image/svg+xml;base64,' . base64_encode('
+                            <svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="100%" height="100%" fill="#f5f5fa"/>
+                                <text x="50%" y="50%" font-family="Arial" font-size="24" fill="#232946" text-anchor="middle">No Image</text>
+                            </svg>
+                        ');
+                    }
+                ?>" 
+                alt="<?php echo htmlspecialchars($manga['title']); ?>"
+                onerror="this.onerror=null; this.src='data:image/svg+xml;base64,<?php echo base64_encode('
+                    <svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="100%" height="100%" fill="#f5f5fa"/>
+                        <text x="50%" y="50%" font-family="Arial" font-size="24" fill="#232946" text-anchor="middle">No Image</text>
+                    </svg>
+                '); ?>'">
+                <div class="info">
+                    <div class="title"><?php echo htmlspecialchars($manga['title']); ?></div>
+                    <div class="price">$<?php echo number_format($manga['price'], 2); ?></div>
+                    <button class="add-cart" onclick="addToCart(<?php echo $manga['id']; ?>)">Add to Cart</button>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
     </section>
 
     <div class="value-props">
