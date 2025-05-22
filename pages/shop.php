@@ -117,10 +117,10 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <a href="../index.php" class="logo">Bort's <span>Books</span></a>
             <nav>
                 <ul>
-                    <li><a href="/borts-books/index.php">Home</a></li>
-                    <li><a href="/borts-books/pages/shop.php" class="active">Shop</a></li>
-                    <li><a href="/borts-books/pages/sell.php">Sell Manga</a></li>
-                    <li><a href="/borts-books/pages/about.php">About</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </nav>
             <div class="search-cart">

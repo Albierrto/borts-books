@@ -25,11 +25,10 @@ $currentPage = "home";
             <a href="index.php" class="logo">Bort's <span>Books</span></a>
             <nav>
                 <ul>
-                    <li><a href="/borts-books/index.php" <?php echo $currentPage === 'home' ? 'class="active"' : ''; ?>>Home</a></li>
-                    <li><a href="/borts-books/pages/shop.php" <?php echo $currentPage === 'shop' ? 'class="active"' : ''; ?>>Shop</a></li>
-                    <li><a href="/borts-books/pages/collections.php" <?php echo $currentPage === 'collections' ? 'class="active"' : ''; ?>>Collections</a></li>
-                    <li><a href="/borts-books/pages/sell.php" <?php echo $currentPage === 'sell' ? 'class="active"' : ''; ?>>Sell Manga</a></li>
-                    <li><a href="/borts-books/pages/about.php" <?php echo $currentPage === 'about' ? 'class="active"' : ''; ?>>About</a></li>
+                    <li><a href="/index.php" <?php echo $currentPage === 'home' ? 'class="active"' : ''; ?>>Home</a></li>
+                    <li><a href="/pages/shop.php" <?php echo $currentPage === 'shop' ? 'class="active"' : ''; ?>>Shop</a></li>
+                    <li><a href="/pages/sell.php" <?php echo $currentPage === 'sell' ? 'class="active"' : ''; ?>>Sell Manga</a></li>
+                    <li><a href="/pages/about.php" <?php echo $currentPage === 'about' ? 'class="active"' : ''; ?>>About</a></li>
                 </ul>
             </nav>
             <div class="search-cart">
@@ -47,8 +46,8 @@ $currentPage = "home";
             <h1>Welcome to Bort's Books</h1>
             <p>Your premier destination for manga collections. Browse our extensive catalog or sell your collection for top dollar.</p>
             <div class="hero-buttons">
-                <a href="/borts-books/pages/shop.php" class="btn">Shop Now</a>
-                <a href="/borts-books/pages/sell.php" class="btn btn-outline">Sell Your Collection</a>
+                <a href="/pages/shop.php" class="btn">Shop Now</a>
+                <a href="/pages/sell.php" class="btn btn-outline">Sell Your Collection</a>
             </div>
         </div>
     </section>
@@ -56,8 +55,8 @@ $currentPage = "home";
     <section class="section featured">
         <div class="container">
             <div class="section-header">
-                <h2>Featured Manga (Live from Kitsu API)</h2>
-                <p>These covers are fetched in real-time from the Kitsu API</p>
+                <h2>Featured Manga</h2>
+                <p>Check out some of our most popular listings below!</p>
             </div>
             <div id="kitsu-manga-covers" class="manga-grid"></div>
         </div>
@@ -67,7 +66,7 @@ $currentPage = "home";
         <div class="container">
             <h2>Sell Your Manga Collection</h2>
             <p>Looking to declutter or upgrade your collection? We offer competitive prices for manga collections of all sizes. From single volumes to entire series, we're interested in what you have to offer.</p>
-            <a href="/borts-books/pages/sell.php" class="btn">Get Started</a>
+            <a href="/pages/sell.php" class="btn">Get Started</a>
         </div>
     </section>
 
@@ -81,10 +80,10 @@ $currentPage = "home";
             <div class="footer-section">
                 <h3>Quick Links</h3>
                 <ul>
-                    <li><a href="/borts-books/index.php" <?php echo $currentPage === 'home' ? 'class="active"' : ''; ?>>Home</a></li>
-                    <li><a href="/borts-books/pages/shop.php" <?php echo $currentPage === 'shop' ? 'class="active"' : ''; ?>>Shop</a></li>
-                    <li><a href="/borts-books/pages/sell.php" <?php echo $currentPage === 'sell' ? 'class="active"' : ''; ?>>Sell Manga</a></li>
-                    <li><a href="/borts-books/pages/about.php" <?php echo $currentPage === 'about' ? 'class="active"' : ''; ?>>About</a></li>
+                    <li><a href="/index.php" <?php echo $currentPage === 'home' ? 'class="active"' : ''; ?>>Home</a></li>
+                    <li><a href="/pages/shop.php" <?php echo $currentPage === 'shop' ? 'class="active"' : ''; ?>>Shop</a></li>
+                    <li><a href="/pages/sell.php" <?php echo $currentPage === 'sell' ? 'class="active"' : ''; ?>>Sell Manga</a></li>
+                    <li><a href="/pages/about.php" <?php echo $currentPage === 'about' ? 'class="active"' : ''; ?>>About</a></li>
                 </ul>
             </div>
 
@@ -143,15 +142,17 @@ $currentPage = "home";
         if (manga) {
           const attributes = manga.attributes;
           container.innerHTML += `
-            <div class="manga-card">
-              <div class="manga-img">
-                <img src="${attributes.posterImage && attributes.posterImage.medium ? attributes.posterImage.medium : ''}" alt="${attributes.canonicalTitle}">
+            <a href="/borts-books/pages/shop.php" class="manga-card-link">
+              <div class="manga-card">
+                <div class="manga-img">
+                  <img src="${attributes.posterImage && attributes.posterImage.medium ? attributes.posterImage.medium : ''}" alt="${attributes.canonicalTitle}">
+                </div>
+                <div class="manga-info">
+                  <h3>${attributes.canonicalTitle}</h3>
+                  <p>${attributes.titles && attributes.titles.en_jp ? attributes.titles.en_jp : ''}</p>
+                </div>
               </div>
-              <div class="manga-info">
-                <h3>${attributes.canonicalTitle}</h3>
-                <p>${attributes.titles && attributes.titles.en_jp ? attributes.titles.en_jp : ''}</p>
-              </div>
-            </div>
+            </a>
           `;
         }
       }

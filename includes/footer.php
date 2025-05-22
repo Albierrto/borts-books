@@ -8,10 +8,10 @@
             <div class="footer-section">
                 <h3>Quick Links</h3>
                 <ul>
-                    <li><a href="<?php echo $level ?>index.php">Home</a></li>
-                    <li><a href="<?php echo $level ?>pages/shop.php">Shop</a></li>
-                    <li><a href="<?php echo $level ?>pages/sell.php">Sell Manga</a></li>
-                    <li><a href="<?php echo $level ?>pages/about.php">About</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </div>
             

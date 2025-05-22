@@ -66,11 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="../index.php" class="logo">Bort's <span>Books</span></a>
             <nav>
                 <ul>
-                    <li><a href="/borts-books/index.php">Home</a></li>
-                    <li><a href="/borts-books/pages/shop.php">Shop</a></li>
-                    <li><a href="/borts-books/pages/collections.php">Collections</a></li>
-                    <li><a href="/borts-books/pages/sell.php" class="active">Sell Manga</a></li>
-                    <li><a href="/borts-books/pages/about.php">About</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </nav>
             <div class="search-cart">
@@ -188,11 +187,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="footer-section">
                 <h3>Quick Links</h3>
                 <ul>
-                    <li><a href="/borts-books/index.php">Home</a></li>
-                    <li><a href="/borts-books/pages/shop.php">Shop</a></li>
-                    <li><a href="/borts-books/pages/collections.php">Collections</a></li>
-                    <li><a href="/borts-books/pages/sell.php">Sell Manga</a></li>
-                    <li><a href="/borts-books/pages/about.php">About</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </div>
             <div class="footer-section">

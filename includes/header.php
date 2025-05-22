@@ -15,11 +15,11 @@
             <div class="logo">Bort's <span>Books</span></div>
             <nav>
                 <ul>
-                    <li><a href="<?php echo $level ?>index.php">Home</a></li>
-                    <li><a href="<?php echo $level ?>pages/shop.php">Shop</a></li>
-                    <li><a href="<?php echo $level ?>pages/sell.php">Sell Manga</a></li>
-                    <li><a href="<?php echo $level ?>pages/ebay-import.php">Import from eBay</a></li>
-                    <li><a href="<?php echo $level ?>pages/about.php">About</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/ebay-import.php">Import from eBay</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </nav>
             <div class="search-cart">
