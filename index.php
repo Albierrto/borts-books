@@ -233,14 +233,14 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
                 'isekai' => ['Isekai', '#9370db'],
                 'sports' => ['Sports', '#4682b4']
             ];
-            
             foreach ($genres as $key => $genre):
-                $svg = base64_encode('
-                    <svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="100%" height="100%" fill="' . $genre[1] . '"/>
-                        <text x="50%" y="50%" font-family="Arial" font-size="24" fill="white" text-anchor="middle">' . $genre[0] . '</text>
-                    </svg>
-                ');
+                $svg = base64_encode(<<<EOD
+<svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="{$genre[1]}"/>
+    <text x="50%" y="50%" font-family="Arial" font-size="24" fill="white" text-anchor="middle" dominant-baseline="middle">{$genre[0]}</text>
+</svg>
+EOD
+                );
             ?>
             <a href="/pages/shop.php?genre=<?php echo ucfirst($key); ?>" class="genre-card">
                 <img src="data:image/svg+xml;base64,<?php echo $svg; ?>" alt="<?php echo $genre[0]; ?>">
@@ -255,25 +255,22 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
         <div class="trending-carousel" id="trending-carousel">
             <?php foreach ($trendingManga as $manga): ?>
             <div class="trending-card">
-                <img src="<?php 
-                    if (!empty($manga['image_url'])) {
-                        echo htmlspecialchars($manga['image_url']);
-                    } else {
-                        echo 'data:image/svg+xml;base64,' . base64_encode('
-                            <svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="100%" height="100%" fill="#f5f5fa"/>
-                                <text x="50%" y="50%" font-family="Arial" font-size="24" fill="#232946" text-anchor="middle">No Image</text>
-                            </svg>
-                        ');
-                    }
-                ?>" 
-                alt="<?php echo htmlspecialchars($manga['title']); ?>"
-                onerror="this.onerror=null; this.src='data:image/svg+xml;base64,<?php echo base64_encode('
-                    <svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="100%" height="100%" fill="#f5f5fa"/>
-                        <text x="50%" y="50%" font-family="Arial" font-size="24" fill="#232946" text-anchor="middle">No Image</text>
-                    </svg>
-                '); ?>'">
+                <?php
+                if (!empty($manga['image_url'])) {
+                    $imgSrc = htmlspecialchars($manga['image_url']);
+                } else {
+                    $svg = base64_encode(<<<EOD
+<svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#f5f5fa"/>
+    <text x="50%" y="50%" font-family="Arial" font-size="24" fill="#232946" text-anchor="middle" dominant-baseline="middle">No Image</text>
+</svg>
+EOD
+                    );
+                    $imgSrc = "data:image/svg+xml;base64,$svg";
+                }
+                ?>
+                <img src="<?php echo $imgSrc; ?>" alt="<?php echo htmlspecialchars($manga['title']); ?>"
+                onerror="this.onerror=null; this.src='<?php echo $imgSrc; ?>'">
                 <div class="info">
                     <div class="title"><?php echo htmlspecialchars($manga['title']); ?></div>
                     <div class="price">$<?php echo number_format($manga['price'], 2); ?></div>
@@ -358,29 +355,5 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             <p>&copy; <?php echo date('Y'); ?> Bort's Books. All rights reserved.</p>
         </div>
     </footer>
-    <script>
-    // Trending Manga Data (replace with dynamic data as needed)
-    const trendingManga = [
-      { title: "One Piece Vol. 98", price: "$12.99", img: "assets/img/onepiece.jpg" },
-      { title: "Demon Slayer Vol. 23", price: "$10.99", img: "assets/img/demonslayer.jpg" },
-      { title: "Chainsaw Man Vol. 11", price: "$9.99", img: "assets/img/chainsawman.jpg" },
-      { title: "Jujutsu Kaisen Vol. 15", price: "$11.99", img: "assets/img/jujutsukaisen.jpg" },
-      { title: "Attack on Titan Vol. 34", price: "$13.99", img: "assets/img/aot.jpg" },
-      { title: "My Hero Academia Vol. 30", price: "$10.99", img: "assets/img/mha.jpg" }
-    ];
-    const trendingContainer = document.getElementById('trending-carousel');
-    trendingManga.forEach(manga => {
-      trendingContainer.innerHTML += `
-        <div class="trending-card">
-          <img src="${manga.img}" alt="${manga.title}">
-          <div class="info">
-            <div class="title">${manga.title}</div>
-            <div class="price">${manga.price}</div>
-            <button class="add-cart">Add to Cart</button>
-          </div>
-        </div>
-      `;
-    });
-    </script>
 </body>
 </html>
