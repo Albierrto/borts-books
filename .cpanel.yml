@@ -2,12 +2,10 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/bortmpcz/public_html/
-    - /bin/cp -R assets $DEPLOYPATH
-    - /bin/cp -R includes $DEPLOYPATH
-    - /bin/cp -R pages $DEPLOYPATH
-    - /bin/cp -R .htaccess $DEPLOYPATH
-    - /bin/cp index.php $DEPLOYPATH
-    # Don't copy sensitive files
-    - /bin/rm -f $DEPLOYPATH/.env
-    - /bin/rm -f $DEPLOYPATH/.gitignore
-    - /bin/rm -f $DEPLOYPATH/.cpanel.yml 
+    - /bin/cp -R pages assets includes vendor *.php *.css *.js .htaccess $DEPLOYPATH
+    - /bin/cp -R images $DEPLOYPATH || true
+    - /bin/cp -R database $DEPLOYPATH || true
+    - /bin/cp -R uploads $DEPLOYPATH || true
+    - /bin/cp favicon.ico $DEPLOYPATH || true
+    - /bin/cp robots.txt $DEPLOYPATH || true
+    - /bin/rm -rf $DEPLOYPATH/.git $DEPLOYPATH/.env $DEPLOYPATH/.gitignore $DEPLOYPATH/.cpanel.yml || true 
