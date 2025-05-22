@@ -7,42 +7,48 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 require_once '../includes/db.php';
 $pageTitle = "Sell Submissions";
 
-// Handle delete
-if (isset($_POST['delete_id'])) {
-    $delId = (int)$_POST['delete_id'];
-    $db->prepare('DELETE FROM sell_submissions WHERE id = ?')->execute([$delId]);
-    $db->prepare('DELETE FROM sell_submission_notes WHERE submission_id = ?')->execute([$delId]);
-    header('Location: admin-sell-submissions.php');
-    exit;
-}
-// Handle status update (no note)
-if (isset($_POST['update_id']) && isset($_POST['status']) && !isset($_POST['add_note'])) {
-    $updId = (int)$_POST['update_id'];
-    $status = $_POST['status'] ?? 'Incomplete';
-    $db->prepare('UPDATE sell_submissions SET status=?, status_updated_at=NOW() WHERE id=?')->execute([$status, $updId]);
-    header('Location: admin-sell-submissions.php');
-    exit;
-}
-// Handle add note (with optional status update)
-if (isset($_POST['update_id']) && isset($_POST['add_note'])) {
-    $updId = (int)$_POST['update_id'];
-    $status = $_POST['status'] ?? 'Incomplete';
-    $note = $_POST['note'] ?? '';
-    if (trim($note) !== '') {
-        $db->prepare('INSERT INTO sell_submission_notes (submission_id, note, status) VALUES (?, ?, ?)')->execute([$updId, $note, $status]);
-        $db->prepare('UPDATE sell_submissions SET status=?, note=?, status_updated_at=NOW() WHERE id=?')->execute([$status, $note, $updId]);
-    } else {
-        $db->prepare('UPDATE sell_submissions SET status=?, status_updated_at=NOW() WHERE id=?')->execute([$status, $updId]);
+$debugMsg = '';
+
+try {
+    // Handle delete
+    if (isset($_POST['delete_id'])) {
+        $delId = (int)$_POST['delete_id'];
+        $db->prepare('DELETE FROM sell_submissions WHERE id = ?')->execute([$delId]);
+        $db->prepare('DELETE FROM sell_submission_notes WHERE submission_id = ?')->execute([$delId]);
+        header('Location: admin-sell-submissions.php');
+        exit;
     }
-    header('Location: admin-sell-submissions.php');
-    exit;
-}
-// Handle delete note
-if (isset($_POST['delete_note_id'])) {
-    $noteId = (int)$_POST['delete_note_id'];
-    $db->prepare('DELETE FROM sell_submission_notes WHERE id = ?')->execute([$noteId]);
-    header('Location: admin-sell-submissions.php');
-    exit;
+    // Handle status update (no note)
+    if (isset($_POST['update_id']) && isset($_POST['status']) && !isset($_POST['add_note'])) {
+        $updId = (int)$_POST['update_id'];
+        $status = $_POST['status'] ?? 'Incomplete';
+        $db->prepare('UPDATE sell_submissions SET status=?, status_updated_at=NOW() WHERE id=?')->execute([$status, $updId]);
+        header('Location: admin-sell-submissions.php');
+        exit;
+    }
+    // Handle add note (with optional status update)
+    if (isset($_POST['update_id']) && isset($_POST['add_note'])) {
+        $updId = (int)$_POST['update_id'];
+        $status = $_POST['status'] ?? 'Incomplete';
+        $note = $_POST['note'] ?? '';
+        if (trim($note) !== '') {
+            $db->prepare('INSERT INTO sell_submission_notes (submission_id, note, status) VALUES (?, ?, ?)')->execute([$updId, $note, $status]);
+            $db->prepare('UPDATE sell_submissions SET status=?, note=?, status_updated_at=NOW() WHERE id=?')->execute([$status, $note, $updId]);
+        } else {
+            $db->prepare('UPDATE sell_submissions SET status=?, status_updated_at=NOW() WHERE id=?')->execute([$status, $updId]);
+        }
+        header('Location: admin-sell-submissions.php');
+        exit;
+    }
+    // Handle delete note
+    if (isset($_POST['delete_note_id'])) {
+        $noteId = (int)$_POST['delete_note_id'];
+        $db->prepare('DELETE FROM sell_submission_notes WHERE id = ?')->execute([$noteId]);
+        header('Location: admin-sell-submissions.php');
+        exit;
+    }
+} catch (Exception $e) {
+    $debugMsg = 'DEBUG ERROR: ' . $e->getMessage();
 }
 
 // Status filter
@@ -166,6 +172,11 @@ function statusBorder($status) {
         <a href="admin-dashboard.php" class="back-link">&larr; Back to Admin Dashboard</a>
     </div>
     <div class="submissions-container">
+        <?php if ($debugMsg): ?>
+            <div style="background:#F25F4C;color:#fff;padding:1rem 1.5rem;border-radius:8px;margin-bottom:1.5rem;font-weight:700;">
+                <?php echo $debugMsg; ?>
+            </div>
+        <?php endif; ?>
         <h1 style="font-size:2rem;font-weight:700;margin-bottom:1.5rem;">Sell Submissions</h1>
         <form class="status-filter" method="get" style="margin-bottom:2rem;">
             <label for="filter">Filter by Status:</label>
