@@ -98,6 +98,7 @@ $currentPage = "admin";
     </header>
 
     <div class="container">
+        <a href="admin-dashboard.php" style="display:inline-block;margin-bottom:1.5rem;color:#232946;font-weight:600;text-decoration:underline;"><i class="fas fa-arrow-left"></i> Back to Admin Dashboard</a>
         <div class="add-container">
             <h1>Add New Product</h1>
             

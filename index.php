@@ -261,11 +261,18 @@ EOD
     <section class="trending-section">
         <div class="section-title">Trending Manga</div>
         <div class="trending-carousel" id="trending-carousel">
-            <?php foreach ($trendingManga as $manga): ?>
+            <?php foreach (
+                $trendingManga as $manga): ?>
             <div class="trending-card">
                 <?php
+                $imgSrc = '';
                 if (!empty($manga['image_url'])) {
-                    $imgSrc = htmlspecialchars($manga['image_url']);
+                    if (preg_match('/^https?:\/\//', $manga['image_url'])) {
+                        $imgSrc = htmlspecialchars($manga['image_url']);
+                    } else {
+                        // Remove leading ../ or ./ if present
+                        $imgSrc = '/' . ltrim(preg_replace('/^\.\.\//', '', $manga['image_url']), '/');
+                    }
                 } else {
                     $svg = base64_encode(<<<EOD
 <svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
@@ -280,8 +287,8 @@ EOD
                 <img src="<?php echo $imgSrc; ?>" alt="<?php echo htmlspecialchars($manga['title']); ?>"
                 onerror="this.onerror=null; this.src='<?php echo $imgSrc; ?>'">
                 <div class="info">
-                    <div class="title"><?php echo htmlspecialchars($manga['title']); ?></div>
-                    <div class="price">$<?php echo number_format($manga['price'], 2); ?></div>
+                    <div class="title" style="font-size:1.15rem;font-weight:700;margin-bottom:0.3rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?php echo htmlspecialchars($manga['title']); ?>"><?php echo htmlspecialchars($manga['title']); ?></div>
+                    <div class="price" style="color:#e63946;font-weight:700;margin-bottom:0.5rem;">$<?php echo number_format($manga['price'], 2); ?></div>
                     <button class="add-cart" onclick="addToCart(<?php echo $manga['id']; ?>)">Add to Cart</button>
                 </div>
             </div>

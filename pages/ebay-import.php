@@ -112,8 +112,8 @@ $currentPage = "import";
     </style>
 </head>
 <body>
-    <div class="container" style="margin-top:2rem;">
-        <a href="admin.php" style="display:inline-block;margin-bottom:1.5rem;color:#2a9d8f;font-weight:600;text-decoration:underline;">&larr; Back to Admin Portal</a>
+    <div class="container">
+        <a href="admin-dashboard.php" style="display:inline-block;margin-bottom:1.5rem;color:#232946;font-weight:600;text-decoration:underline;"><i class="fas fa-arrow-left"></i> Back to Admin Dashboard</a>
     </div>
     <header>
         <div class="container header-container">

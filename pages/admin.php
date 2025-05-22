@@ -143,6 +143,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </header>
 
     <div class="admin-container">
+        <a href="admin-dashboard.php" style="display:inline-block;margin-bottom:1.5rem;color:#232946;font-weight:600;text-decoration:underline;"><i class="fas fa-arrow-left"></i> Back to Admin Dashboard</a>
         <div class="admin-header">
             <h1 class="admin-title">Admin Panel</h1>
             <div class="admin-actions">

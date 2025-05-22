@@ -160,6 +160,7 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </header>
 
     <div class="container">
+        <a href="admin-dashboard.php" style="display:inline-block;margin-bottom:1.5rem;color:#232946;font-weight:600;text-decoration:underline;"><i class="fas fa-arrow-left"></i> Back to Admin Dashboard</a>
         <div class="edit-container">
             <h1>Edit Product</h1>
             
