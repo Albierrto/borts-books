@@ -31,4 +31,8 @@ access_log
 
 # Database files
 *.sql
-*.sqlite 
+*.sqlite
+
+# Uploads
+/uploads/ 
+/uploads/sell-photos

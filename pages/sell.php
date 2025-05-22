@@ -30,6 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $photo_paths = [];
     if (!empty($_FILES['collection_photos']['name'][0])) {
         $upload_dir = __DIR__ . '/../uploads/sell-photos/';
+        if (!file_exists($upload_dir)) {
+            mkdir($upload_dir, 0755, true); // Use 0755 for security, not 0777
+        }
         foreach ($_FILES['collection_photos']['tmp_name'] as $idx => $tmp_name) {
             if ($_FILES['collection_photos']['error'][$idx] === UPLOAD_ERR_OK) {
                 $ext = pathinfo($_FILES['collection_photos']['name'][$idx], PATHINFO_EXTENSION);
@@ -128,11 +131,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">Collection Details</h3>
             <div class="form-group" style="margin-bottom:1.2rem;">
                 <label>Approximate Number of Items</label>
-                <input type="number" name="num_items" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
+                <input type="number" name="num_items" required style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
             </div>
             <div class="form-group" style="margin-bottom:2rem;">
                 <label>Overall Condition</label>
-                <select name="overall_condition" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
+                <select name="overall_condition" required style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
                     <option value="">Select condition</option>
                     <option value="New">New</option>
                     <option value="Like New">Like New</option>
@@ -159,11 +162,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">Contact Information</h3>
             <div class="form-group" style="margin-bottom:1.2rem;">
                 <label>Full Name</label>
-                <input type="text" name="full_name" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
+                <input type="text" name="full_name" required style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
             </div>
             <div class="form-group" style="margin-bottom:1.2rem;">
                 <label>Email</label>
-                <input type="email" name="email" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
+                <input type="email" name="email" required style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
             </div>
             <div class="form-group" style="margin-bottom:2rem;">
                 <label>Phone Number</label>
