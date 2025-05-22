@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Success - Bort's Books</title>
+    <link rel="stylesheet" href="../assets/css/styles.css">
+    <script src="../assets/js/main.js" defer></script>
+    <style>
+        :root {
+            --primary: #ff4757;
+            --secondary: #5352ed;
+            --dark: #2f3542;
+            --light: #f1f2f6;
+            --accent: #ffa502;
+            --success: #4cd137;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Header Styles */
+        header {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .logo span {
+            color: var(--secondary);
+        }
+        
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+        
+        nav ul li {
+            margin-left: 2rem;
+        }
+        
+        nav ul li a {
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        nav ul li a:hover {
+            color: var(--primary);
+        }
+        
+        .search-cart {
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-cart a {
+            margin-left: 1rem;
+            text-decoration: none;
+            color: var(--dark);
+            position: relative;
+        }
+        
+        /* Steps Progress */
+        .steps-progress {
+            display: flex;
+            justify-content: space-between;
+            margin: 2rem 0;
+            position: relative;
+        }
+        
+        .steps-progress::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #ddd;
+            z-index: 1;
+        }
+        
+        .step {
+            width: 33.33%;
+            position: relative;
+            text-align: center;
+            z-index: 2;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ddd;
+            color: #777;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 0.5rem;
+            font-weight: 700;
+        }
+        
+        .step.active .step-number {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .step.completed .step-number {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .step-label {
+            font-weight: 500;
+            color: #777;
+        }
+        
+        .step.active .step-label {
+            color: var(--dark);
+            font-weight: 700;
+        }
+        
+        .step.completed .step-label {
+            color: var(--success);
+        }
+        
+        /* Success Message */
+        .success-message {
+            background-color: var(--success);
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .success-message h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .success-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* Order Details */
+        .order-details {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .section-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .section-header h2 {
+            font-size: 1.5rem;
+        }
+        
+        .order-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .order-info-item h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+        
+        .order-info-item p {
+            color: #777;
+        }
+        
+        .order-products {
+            margin-top: 2rem;
+        }
+        
+        .order-products h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .order-product {
+            display: flex;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .order-product-img {
+            width: 80px;
+            height: 100px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-right: 1rem;
+        }
+        
+        .order-product-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .order-product-info {
+            flex-grow: 1;
+        }
+        
+        .order-product-title {
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+        }
+        
+        .order-product-author {
+            color: #777;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .order-product-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+        
+        .order-product-price {
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .order-summary {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #ddd;
+        }
+        
+        .order-summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .order-summary-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px solid #ddd;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            background-color: #e8384a;
+        }
+        
+        .btn-lg {
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #4240d4;
+        }
+        
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--dark);
+            color: white;
+            padding: 4rem 0 2rem;
+            margin-top: 4rem;
+        }
+        
+        .footer-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+        
+        .footer-section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+        
+        .footer-section ul {
+            list-style: none;
+        }
+        
+        .footer-section ul li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .footer-section ul li a {
+            color: #ddd;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-section ul li a:hover {
+            color: var(--primary);
+        }
+        
+        .footer-bottom {
+            margin-top: 2rem;
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid #444;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                display: none;
+            }
+            
+            .buttons {
+                flex-direction: column;
+            }
+            
+            .order-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-container">
+            <div class="logo">Bort's <span>Books</span></div>
+            <nav>
+                <ul>
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="shop.html">Shop</a></li>
+                    <li><a href="collections.html">Collections</a></li>
+                    <li><a href="sell.html">Sell Manga</a></li>
+                    <li><a href="about.html">About</a></li>
+                </ul>
+            </nav>
+            <div class="search-cart">
+                <a href="search.html">🔍</a>
+                <a href="cart.html">🛒</a>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container steps-progress">
+        <div class="step completed">
+            <div class="step-number">1</div>
+            <div class="step-label">Shopping Cart</div>
+        </div>
+        <div class="step completed">
+            <div class="step-number">2</div>
+            <div class="step-label">Checkout</div>
+        </div>
+        <div class="step active">
+            <div class="step-number">3</div>
+            <div class="step-label">Order Complete</div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="success-message">
+            <div class="success-icon">✓</div>
+            <h2>Thank You! Your Order Has Been Received</h2>
+            <p>An email with your order details has been sent to your email address.</p>
+        </div>
+        
+        <div class="order-details">
+            <div class="section-header">
+                <h2>Order Details</h2>
+            </div>
+            
+            <div class="order-info">
+                <div class="order-info-item">
+                    <h3>Order Number</h3>
+                    <p>#BB-25050123</p>
+                </div>
+                
+                <div class="order-info-item">
+                    <h3>Date</h3>
+                    <p>May 1, 2025</p>
+                </div>
+                
+                <div class="order-info-item">
+                    <h3>Payment Method</h3>
+                    <p>Credit Card (ending in 1234)</p>
+                </div>
+                
+                <div class="order-info-item">
+                    <h3>Status</h3>
+                    <p>Processing</p>
+                </div>
+            </div>
+            
+            <div class="order-shipping">
+                <div class="order-info">
+                    <div class="order-info-item">
+                        <h3>Shipping Address</h3>
+                        <p id="shipping-address">John Doe<br>123 Main St<br>Anytown, CA 12345<br>United States</p>
+                    </div>
+                    
+                    <div class="order-info-item">
+                        <h3>Contact Information</h3>
+                        <p id="contact-info">Email: john.doe@example.com<br>Phone: (555) 123-4567</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="order-products">
+                <h3>Items Ordered</h3>
+                
+                <div class="order-product">
+                    <div class="order-product-img">
+                        <img src="/api/placeholder/80/100" alt="One Piece Vol. 98">
+                    </div>
+                    <div class="order-product-info">
+                        <div class="order-product-title">One Piece Vol. 98</div>
+                        <div class="order-product-author">Eiichiro Oda</div>
+                        <div class="order-product-meta">
+                            <div class="order-product-quantity">Quantity: 1</div>
+                            <div class="order-product-price">$12.99</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="order-product">
+                    <div class="order-product-img">
+                        <img src="/api/placeholder/80/100" alt="Chainsaw Man Vol. 11">
+                    </div>
+                    <div class="order-product-info">
+                        <div class="order-product-title">Chainsaw Man Vol. 11</div>
+                        <div class="order-product-author">Tatsuki Fujimoto</div>
+                        <div class="order-product-meta">
+                            <div class="order-product-quantity">Quantity: 1</div>
+                            <div class="order-product-price">$9.99</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="order-product">
+                    <div class="order-product-img">
+                        <img src="/api/placeholder/80/100" alt="Jujutsu Kaisen Vol. 15">
+                    </div>
+                    <div class="order-product-info">
+                        <div class="order-product-title">Jujutsu Kaisen Vol. 15</div>
+                        <div class="order-product-author">Gege Akutami</div>
+                        <div class="order-product-meta">
+                            <div class="order-product-quantity">Quantity: 1</div>
+                            <div class="order-product-price">$11.99</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="order-summary">
+                    <div class="order-summary-row">
+                        <div>Subtotal</div>
+                        <div>$34.97</div>
+                    </div>
+                    <div class="order-summary-row">
+                        <div>Shipping</div>
+                        <div>$5.00</div>
+                    </div>
+                    <div class="order-summary-row">
+                        <div>Tax</div>
+                        <div>$3.50</div>
+                    </div>
+                    <div class="order-summary-total">
+                        <div>Total</div>
+                        <div>$43.47</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <a href="shop.html" class="btn btn-lg">Continue Shopping</a>
+            <a href="account.html" class="btn btn-lg btn-secondary">View Account</a>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container footer-container">
+            <div class="footer-section">
+                <h3>Bort's Books</h3>
+                <p>Your trusted source for manga collections since 2023.</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="shop.html">Shop</a></li>
+                    <li><a href="collections.html">Collections</a></li>
+                    <li><a href="sell.html">Sell Manga</a></li>
+                    <li><a href="about.html">About</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Help</h3>
+                <ul>
+                    <li><a href="faq.html">FAQ</a></li>
+                    <li><a href="shipping.html">Shipping</a></li>
+                    <li><a href="returns.html">Returns</a></li>
+                    <li><a href="contact.html">Contact Us</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Contact</h3>
+                <ul>
+                    <li>Email: info@bortsbooks.com</li>
+                    <li>Phone: (123) 456-7890</li>
+                    <li>Address: 123 Manga St, Anime City, AC 12345</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom container">
+            <p>&copy; 2025 Bort's Books. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <script>
+        // This script would normally populate the order details from the URL parameters or session storage
+        document.addEventListener('DOMContentLoaded', () => {
+            // Clear cart in localStorage after successful order
+            // localStorage.removeItem('cart');
+            
+            // Fetch order information from URL parameters or session
+            const orderInfo = {
+                orderNumber: 'BB-25050123',
+                date: 'May 1, 2025',
+                paymentMethod: 'Credit Card (ending in 1234)',
+                status: 'Processing',
+                shippingAddress: {
+                    name: 'John Doe',
+                    address: '123 Main St',
+                    city: 'Anytown',
+                    state: 'CA',
+                    postcode: '12345',
+                    country: 'United States'
+                },
+                contactInfo: {
+                    email: 'john.doe@example.com',
+                    phone: '(555) 123-4567'
+                },
+                items: [
+                    {
+                        id: 'prod_001',
+                        title: 'One Piece Vol. 98',
+                        author: 'Eiichiro Oda',
+                        price: 12.99,
+                        quantity: 1,
+                        imageUrl: '/api/placeholder/80/100'
+                    },
+                    {
+                        id: 'prod_003',
+                        title: 'Chainsaw Man Vol. 11',
+                        author: 'Tatsuki Fujimoto',
+                        price: 9.99,
+                        quantity: 1,
+                        imageUrl: '/api/placeholder/80/100'
+                    },
+                    {
+                        id: 'prod_004',
+                        title: 'Jujutsu Kaisen Vol. 15',
+                        author: 'Gege Akutami',
+                        price: 11.99,
+                        quantity: 1,
+                        imageUrl: '/api/placeholder/80/100'
+                    }
+                ],
+                subtotal: 34.97,
+                shipping: 5.00,
+                tax: 3.50,
+                total: 43.47
+            };
+            
+            // Format shipping address
+            const shippingAddressElement = document.getElementById('shipping-address');
+            if (shippingAddressElement) {
+                const { name, address, city, state, postcode, country } = orderInfo.shippingAddress;
+                shippingAddressElement.innerHTML = `${name}<br>${address}<br>${city}, ${state} ${postcode}<br>${country}`;
+            }
+            
+            // Format contact info
+            const contactInfoElement = document.getElementById('contact-info');
+            if (contactInfoElement) {
+                const { email, phone } = orderInfo.contactInfo;
+                contactInfoElement.innerHTML = `Email: ${email}<br>Phone: ${phone}`;
+            }
+        });
+    </script>
+</body>
+</html>
