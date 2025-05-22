@@ -1,26 +1,35 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 $pageTitle = "Sell Your Manga";
 $currentPage = "sell";
 require_once '../includes/db.php';
 
 $successMsg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $full_name = $_POST['full_name'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $phone = $_POST['phone'] ?? '';
-    $num_items = $_POST['num_items'] ?? null;
-    $overall_condition = $_POST['overall_condition'] ?? '';
+    // Sanitize all user inputs
+    $full_name = trim(strip_tags($_POST['full_name'] ?? ''));
+    $email = trim(strip_tags($_POST['email'] ?? ''));
+    $phone = trim(strip_tags($_POST['phone'] ?? ''));
+    $num_items = intval($_POST['num_items'] ?? 0);
+    $overall_condition = trim(strip_tags($_POST['overall_condition'] ?? ''));
     // Item details as JSON
     $item_details = [];
     if (!empty($_POST['item_title'])) {
         $count = count($_POST['item_title']);
         for ($i = 0; $i < $count; $i++) {
-            if (trim($_POST['item_title'][$i]) !== '' || trim($_POST['item_volume'][$i]) !== '' || trim($_POST['item_expected_price'][$i]) !== '') {
+            $title = trim(strip_tags($_POST['item_title'][$i]));
+            $volume = trim(strip_tags($_POST['item_volume'][$i]));
+            $condition = trim(strip_tags($_POST['item_condition'][$i]));
+            $expected_price = trim(strip_tags($_POST['item_expected_price'][$i]));
+            if ($title !== '' || $volume !== '' || $expected_price !== '') {
                 $item_details[] = [
-                    'title' => $_POST['item_title'][$i],
-                    'volume' => $_POST['item_volume'][$i],
-                    'condition' => $_POST['item_condition'][$i],
-                    'expected_price' => $_POST['item_expected_price'][$i]
+                    'title' => $title,
+                    'volume' => $volume,
+                    'condition' => $condition,
+                    'expected_price' => $expected_price
                 ];
             }
         }
@@ -45,10 +54,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     $photo_paths_json = json_encode($photo_paths);
-    // Insert into DB
-    $stmt = $db->prepare('INSERT INTO sell_submissions (full_name, email, phone, num_items, overall_condition, item_details, photo_paths) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$full_name, $email, $phone, $num_items, $overall_condition, $item_details_json, $photo_paths_json]);
-    $successMsg = 'Thank you for your submission! We will review your collection and contact you soon.';
+    // SQL injection protection: using prepared statements and sanitized inputs
+    if (count($photo_paths) > 0) {
+        $stmt = $db->prepare('INSERT INTO sell_submissions (full_name, email, phone, num_items, overall_condition, item_details, photo_paths) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$full_name, $email, $phone, $num_items, $overall_condition, $item_details_json, $photo_paths_json]);
+        $successMsg = 'Thank you for your submission! We will review your collection and contact you soon.';
+    } else {
+        $successMsg = '<span style="color:#b71c1c;">You must upload at least one photo of your collection.</span>';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -170,12 +183,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="form-group" style="margin-bottom:2rem;">
                 <label>Phone Number</label>
-                <input type="text" name="phone" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
+                <input type="text" name="phone" required style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
             </div>
             <!-- Photo upload field -->
             <div class="form-group" style="margin-bottom:2rem;">
-                <label>Upload Photos of Your Collection <span style='color:#888;font-weight:400;'>(Optional, but recommended)</span></label>
-                <input type="file" name="collection_photos[]" multiple accept="image/*" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
+                <label>Upload Photos of Your Collection <span style='color:#b71c1c;font-weight:600;'>(Required)</span></label>
+                <input type="file" name="collection_photos[]" multiple accept="image/*" required style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;" onchange="updatePhotoList()">
+                <ul id="photo-list" style="list-style:none;padding:0;margin-top:0.7rem;"></ul>
             </div>
             <button type="submit" style="background:#2a9d8f;color:#fff;border:none;border-radius:4px;padding:0.8rem 2.2rem;font-weight:700;font-size:1.1rem;">Submit Collection</button>
         </form>
@@ -220,7 +234,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </footer>
     <script>
     function addItemRow() {
-        const container = document.querySelector('.sell-container form');
+        const form = document.querySelector('.sell-container form');
+        const photoField = form.querySelector('input[type="file"]').parentElement;
         const itemRow = document.createElement('div');
         itemRow.className = 'form-group';
         itemRow.style = 'margin-bottom:1.2rem;display:flex;gap:0.7rem;flex-wrap:wrap;';
@@ -236,8 +251,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </select>
             <input type="number" name="item_expected_price[]" placeholder="Expected Price" style="flex:1 1 100px;padding:0.7rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;">
         `;
-        container.insertBefore(itemRow, container.querySelector('button[type="button"]'));
+        form.insertBefore(itemRow, photoField);
     }
+
+    // Show selected photo filenames and allow removal
+    function updatePhotoList() {
+        const input = document.querySelector('input[name="collection_photos[]"]');
+        const list = document.getElementById('photo-list');
+        list.innerHTML = '';
+        Array.from(input.files).forEach((file, idx) => {
+            const li = document.createElement('li');
+            li.style = 'margin-bottom:0.3rem;display:flex;align-items:center;gap:0.5rem;';
+            li.innerHTML = `<span>${file.name}</span> <button type="button" onclick="removePhoto(${idx})" style="background:#e63946;color:#fff;border:none;border-radius:3px;padding:0.2rem 0.7rem;font-size:0.95rem;">Remove</button>`;
+            list.appendChild(li);
+        });
+    }
+    function removePhoto(idx) {
+        const input = document.querySelector('input[name="collection_photos[]"]');
+        const dt = new DataTransfer();
+        Array.from(input.files).forEach((file, i) => {
+            if (i !== idx) dt.items.add(file);
+        });
+        input.files = dt.files;
+        updatePhotoList();
+    }
+    // Initialize photo list on page load (in case of browser autofill)
+    document.addEventListener('DOMContentLoaded', updatePhotoList);
     </script>
 </body>
 </html> 
