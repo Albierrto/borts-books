@@ -81,6 +81,12 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
         'imported' => $importedCount,
         'errors' => $errors
     ];
+    // Debug: If there are errors, output them before redirecting
+    if (count($errors) > 0) {
+        echo '<h2>CSV Import Debug Output</h2>';
+        echo '<pre>' . print_r($errors, true) . '</pre>';
+        exit;
+    }
     header('Location: ebay-import.php');
     exit;
 }
