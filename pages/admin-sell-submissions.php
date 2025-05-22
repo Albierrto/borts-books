@@ -316,7 +316,7 @@ function statusBorder($status) {
                         <?php $photos = json_decode($sub['photo_paths'], true); if ($photos && count($photos)): ?>
                             <div class="submission-photos"><span class="submission-label">Photos:</span><br>
                                 <?php foreach ($photos as $photo): ?>
-                                    <a href="../<?php echo htmlspecialchars($photo); ?>" target="_blank"><img src="../<?php echo htmlspecialchars($photo); ?>" alt="Collection Photo"></a>
+                                    <img src="../<?php echo htmlspecialchars($photo); ?>" alt="Collection Photo" onclick="openPhotoModal(<?php echo htmlspecialchars(json_encode(array_map(function($p) { return '../' . $p; }, $photos))); ?>, <?php echo array_search($photo, $photos); ?>)">
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
@@ -408,18 +408,6 @@ function statusBorder($status) {
                     closePhotoModal();
                 }
             }
-        });
-
-        // Add click handlers to all submission photos
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.submission-photos').forEach(function(photoContainer) {
-                const photos = Array.from(photoContainer.querySelectorAll('img')).map(img => img.src);
-                photoContainer.querySelectorAll('img').forEach(function(img, index) {
-                    img.onclick = function() {
-                        openPhotoModal(photos, index);
-                    }
-                });
-            });
         });
     </script>
 </body>
