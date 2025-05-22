@@ -243,16 +243,18 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             ];
             foreach ($genres as $key => $genre):
                 $svg = base64_encode(<<<EOD
-<svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
-    <rect width="100%" height="100%" fill="{$genre[1]}"/>
-    <text x="50%" y="50%" font-family="Arial" font-size="24" fill="white" text-anchor="middle" dominant-baseline="middle">{$genre[0]}</text>
+<svg width="80" height="110" viewBox="0 0 80 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="5" y="10" width="70" height="90" rx="10" fill="{$genre[1]}" stroke="#232946" stroke-width="3"/>
+  <rect x="15" y="20" width="50" height="70" rx="6" fill="#fff" opacity="0.15"/>
+  <rect x="10" y="15" width="60" height="80" rx="8" fill="#fff" opacity="0.08"/>
+  <text x="50%" y="60%" text-anchor="middle" fill="#232946" font-family="Arial" font-size="13" font-weight="bold">{$genre[0]}</text>
 </svg>
 EOD
                 );
             ?>
-            <a href="/pages/shop.php?genre=<?php echo ucfirst($key); ?>" class="genre-card">
-                <img src="data:image/svg+xml;base64,<?php echo $svg; ?>" alt="<?php echo $genre[0]; ?>">
-                <span><?php echo $genre[0]; ?></span>
+            <a href="/pages/shop.php?genre=<?php echo ucfirst($key); ?>" class="genre-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(35,41,70,0.08);background:#f7f7fa;border-radius:16px;padding:1.5rem 0;transition:transform 0.13s,box-shadow 0.13s;text-decoration:none;color:#232946;">
+                <img src="data:image/svg+xml;base64,<?php echo $svg; ?>" alt="<?php echo $genre[0]; ?>" style="width:80px;height:110px;margin-bottom:1rem;">
+                <span style="font-weight:700;font-size:1.1rem;letter-spacing:0.5px;"> <?php echo $genre[0]; ?> </span>
             </a>
             <?php endforeach; ?>
         </div>

@@ -112,6 +112,11 @@ $pageTitle = "Admin Dashboard";
                 <h3>Import from eBay/CSV</h3>
                 <p>Bulk import products from eBay or CSV files.</p>
             </a>
+            <a href="admin-sell-submissions.php" class="dashboard-card">
+                <i class="fas fa-inbox"></i>
+                <h3>View Sell Submissions</h3>
+                <p>Review and manage manga sell requests from users.</p>
+            </a>
         </div>
         <a href="admin-login.php?logout=1" class="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
