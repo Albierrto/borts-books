@@ -164,6 +164,73 @@ function statusBorder($status) {
             .submission-card { flex-direction: column; gap: 1.5rem; padding: 1.2rem 1rem; }
             .submissions-container { padding: 0.5rem; }
         }
+        .photo-modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            overflow: auto;
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90vh;
+            object-fit: contain;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .close-modal {
+            position: absolute;
+            right: 25px;
+            top: 15px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10000;
+        }
+        .modal-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 16px;
+            user-select: none;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        .modal-nav:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+        .prev {
+            left: 20px;
+        }
+        .next {
+            right: 20px;
+        }
+        .submission-photos img {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .submission-photos img:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -279,5 +346,81 @@ function statusBorder($status) {
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
+    <!-- Full Screen Photo Gallery Modal -->
+    <div id="photoModal" class="photo-modal">
+        <span class="close-modal">&times;</span>
+        <img class="modal-content" id="modalImg">
+        <div class="modal-nav prev" onclick="prevPhoto()">❮</div>
+        <div class="modal-nav next" onclick="nextPhoto()">❯</div>
+    </div>
+
+    <script>
+        let currentPhotoIndex = 0;
+        let currentPhotos = [];
+        const modal = document.getElementById('photoModal');
+        const modalImg = document.getElementById('modalImg');
+        const closeBtn = document.querySelector('.close-modal');
+
+        // Open modal with photo
+        function openPhotoModal(photos, index) {
+            currentPhotos = photos;
+            currentPhotoIndex = index;
+            modal.style.display = "block";
+            modalImg.src = photos[index];
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        // Close modal
+        function closePhotoModal() {
+            modal.style.display = "none";
+            document.body.style.overflow = 'auto'; // Re-enable scrolling
+        }
+
+        // Navigate photos
+        function nextPhoto() {
+            currentPhotoIndex = (currentPhotoIndex + 1) % currentPhotos.length;
+            modalImg.src = currentPhotos[currentPhotoIndex];
+        }
+
+        function prevPhoto() {
+            currentPhotoIndex = (currentPhotoIndex - 1 + currentPhotos.length) % currentPhotos.length;
+            modalImg.src = currentPhotos[currentPhotoIndex];
+        }
+
+        // Close modal when clicking the close button
+        closeBtn.onclick = closePhotoModal;
+
+        // Close modal when clicking outside the image
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                closePhotoModal();
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (modal.style.display === "block") {
+                if (e.key === "ArrowRight") {
+                    nextPhoto();
+                } else if (e.key === "ArrowLeft") {
+                    prevPhoto();
+                } else if (e.key === "Escape") {
+                    closePhotoModal();
+                }
+            }
+        });
+
+        // Add click handlers to all submission photos
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.submission-photos').forEach(function(photoContainer) {
+                const photos = Array.from(photoContainer.querySelectorAll('img')).map(img => img.src);
+                photoContainer.querySelectorAll('img').forEach(function(img, index) {
+                    img.onclick = function() {
+                        openPhotoModal(photos, index);
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html> 
