@@ -1,20 +1,20 @@
 <?php
-// Load environment variables
-$envFile = __DIR__ . '/../.env';
-if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
-            list($key, $value) = explode('=', $line, 2);
-            $_ENV[trim($key)] = trim($value);
-        }
-    }
+// Load environment variables from .env
+$envPath = dirname(__DIR__) . '/.env';
+if (!file_exists($envPath)) {
+    die('ERROR: .env file not found at ' . htmlspecialchars($envPath));
+}
+$lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+foreach ($lines as $line) {
+    if (strpos(trim($line), '#') === 0) continue;
+    list($name, $value) = array_map('trim', explode('=', $line, 2));
+    $_ENV[$name] = $value;
 }
 
 // Database configuration
 $host = $_ENV['DB_HOST'] ?? 'localhost';
-$db   = $_ENV['DB_NAME'] ?? 'bortmpcz_bortsbooks';
-$user = $_ENV['DB_USER'] ?? 'bortmpcz_Bort';
+$db   = $_ENV['DB_NAME'] ?? '';
+$user = $_ENV['DB_USER'] ?? '';
 $pass = $_ENV['DB_PASS'] ?? '';
 $charset = $_ENV['DB_CHARSET'] ?? 'utf8mb4';
 
@@ -27,8 +27,6 @@ $options = [
 
 try {
     $db = new PDO($dsn, $user, $pass, $options);
-} catch (\PDOException $e) {
-    // Log error but don't expose details
-    error_log("Database connection failed: " . $e->getMessage());
-    throw new \PDOException("Database connection failed. Please try again later.", (int)$e->getCode());
+} catch (PDOException $e) {
+    die('Database connection failed: ' . htmlspecialchars($e->getMessage()));
 }
