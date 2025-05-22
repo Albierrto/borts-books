@@ -13,7 +13,12 @@ $currentPage = "home";
 require_once 'includes/db.php';
 $trendingQuery = "SELECT p.*, pi.image_url 
                  FROM products p 
-                 LEFT JOIN product_images pi ON p.id = pi.product_id 
+                 LEFT JOIN (
+                     SELECT product_id, MIN(id) as min_image_id
+                     FROM product_images
+                     GROUP BY product_id
+                 ) pim ON p.id = pim.product_id
+                 LEFT JOIN product_images pi ON pim.min_image_id = pi.id
                  ORDER BY p.created_at DESC 
                  LIMIT 8";
 $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
