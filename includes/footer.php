@@ -18,10 +18,10 @@
             <div class="footer-section">
                 <h3>Help</h3>
                 <ul>
-                    <li><a href="<?php echo $level ?>pages/faq.php">FAQ</a></li>
-                    <li><a href="<?php echo $level ?>pages/shipping.php">Shipping</a></li>
-                    <li><a href="<?php echo $level ?>pages/returns.php">Returns</a></li>
-                    <li><a href="<?php echo $level ?>pages/contact.php">Contact Us</a></li>
+                    <li><a href="/pages/faq.php">FAQ</a></li>
+                    <li><a href="/pages/shipping.php">Shipping</a></li>
+                    <li><a href="/pages/returns.php">Returns</a></li>
+                    <li><a href="/pages/contact.php">Contact Us</a></li>
                 </ul>
             </div>
             

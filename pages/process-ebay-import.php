@@ -56,7 +56,7 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
         while (($row = fgetcsv($handle)) !== false) {
             $data = array_combine($header, $row);
             $title = $data['Title'] ?? '';
-            $description = $data['Description'] ?? '';
+            $description = isset($data['Description']) ? $data['Description'] : '';
             $rawPrice = $data['Start price'] ?? '';
             $numericPrice = floatval(preg_replace('/[^0-9.]/', '', $rawPrice));
             $price = $numericPrice > 0 ? number_format(round($numericPrice * 0.9, 2), 2, '.', '') : '0.00';
