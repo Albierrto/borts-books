@@ -32,8 +32,8 @@ function fetchEbayImages($ebayItemId, &$debugInfo = null) {
     ];
     curl_setopt($ch, CURLOPT_USERAGENT, $userAgents[array_rand($userAgents)]);
     
-    // Add random delay to mimic human behavior
-    usleep(rand(1000000, 3000000)); // 1-3 second delay
+    // Reduce delay for speed
+    usleep(100000); // 0.1 second delay
     
     // Set additional headers to appear more like a real browser
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -47,6 +47,8 @@ function fetchEbayImages($ebayItemId, &$debugInfo = null) {
         'Sec-Fetch-Site: none',
         'Sec-Fetch-User: ?1'
     ]);
+    
+    curl_setopt($ch, CURLOPT_TIMEOUT, 8); // 8 second timeout
     
     $html = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -206,7 +208,10 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
         if ($ebayItemIndex === false) {
             $ebayItemIndex = array_search('eBay Item ID', $header);
         }
+        $maxRows = 5; // Limit for testing, increase for production
+        $rowCount = 0;
         while (($row = fgetcsv($handle)) !== false) {
+            if (++$rowCount > $maxRows) break;
             $rowDebug = [
                 'row' => $row,
                 'images' => [],
