@@ -192,6 +192,35 @@ $currentPage = "import";
             unset($_SESSION['import_result']);
             endif; 
             ?>
+
+            <?php if (isset($_SESSION['import_debug'])): $dbg = $_SESSION['import_debug']; ?>
+            <div style="background:#fff3cd;color:#856404;padding:1.5rem;margin:2rem 0;border-radius:8px;">
+                <h2>CSV Import Debug Output</h2>
+                <b>Imported:</b> <?php echo $dbg['imported']; ?><br>
+                <?php if (!empty($dbg['errors'])): ?>
+                    <b>Errors:</b><ul>
+                    <?php foreach ($dbg['errors'] as $err) echo '<li>' . htmlspecialchars($err) . '</li>'; ?>
+                    </ul>
+                <?php endif; ?>
+                <h3>Row Details</h3>
+                <ol>
+                <?php foreach ($dbg['rows'] as $i => $row): ?>
+                    <li><pre>Row: <?php echo htmlspecialchars(json_encode($row['row'])); ?></pre>
+                    <?php if (!empty($row['images'])): ?>
+                        <b>Images:</b> <ul>
+                        <?php foreach ($row['images'] as $img) echo '<li>' . htmlspecialchars($img) . '</li>'; ?>
+                        </ul>
+                    <?php else: ?>
+                        <b>No images found.</b>
+                    <?php endif; ?>
+                    <?php if ($row['error']): ?>
+                        <div style="color:#b71c1c;"><b>Error:</b> <?php echo htmlspecialchars($row['error']); ?></div>
+                    <?php endif; ?>
+                    </li>
+                <?php endforeach; ?>
+                </ol>
+            </div>
+            <?php unset($_SESSION['import_debug']); endif; ?>
         </div>
     </section>
 

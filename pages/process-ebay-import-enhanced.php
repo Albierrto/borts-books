@@ -220,35 +220,12 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
         'imported' => $importedCount,
         'errors' => $errors
     ];
-    // Debug output if ?debug=1
-    if (isset($_GET['debug']) && $_GET['debug'] == '1') {
-        echo '<div style="background:#fff3cd;color:#856404;padding:1.5rem;margin:2rem 0;border-radius:8px;">';
-        echo '<h2>CSV Import Debug Output</h2>';
-        echo '<b>Imported:</b> ' . $importedCount . '<br>';
-        if (!empty($errors)) {
-            echo '<b>Errors:</b><ul>';
-            foreach ($errors as $err) echo '<li>' . htmlspecialchars($err) . '</li>';
-            echo '</ul>';
-        }
-        echo '<h3>Row Details</h3>';
-        echo '<ol>';
-        foreach ($debugRows as $i => $dbg) {
-            echo '<li><pre>Row: ' . htmlspecialchars(json_encode($dbg['row'])) . '</pre>';
-            if (!empty($dbg['images'])) {
-                echo '<b>Images:</b> <ul>';
-                foreach ($dbg['images'] as $img) echo '<li>' . htmlspecialchars($img) . '</li>';
-                echo '</ul>';
-            } else {
-                echo '<b>No images found.</b>';
-            }
-            if ($dbg['error']) {
-                echo '<div style="color:#b71c1c;"><b>Error:</b> ' . htmlspecialchars($dbg['error']) . '</div>';
-            }
-            echo '</li>';
-        }
-        echo '</ol>';
-        echo '</div>';
-    }
+    // Store debug info in session for display after redirect
+    $_SESSION['import_debug'] = [
+        'imported' => $importedCount,
+        'errors' => $errors,
+        'rows' => $debugRows
+    ];
     header('Location: ebay-import.php');
     exit;
 } 
