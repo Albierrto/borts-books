@@ -7,8 +7,49 @@ require_once '../includes/db.php';
 $pageTitle = "Shop";
 $currentPage = "shop";
 
-// Show all products with a non-empty title
-$stmt = $db->query("SELECT * FROM products WHERE title IS NOT NULL AND title != ''");
+// Build filter conditions
+$where = [];
+$params = [];
+
+if (!empty($_GET['title'])) {
+    $where[] = "p.title LIKE ?";
+    $params[] = '%' . $_GET['title'] . '%';
+}
+if (!empty($_GET['min_price'])) {
+    $where[] = "p.price >= ?";
+    $params[] = $_GET['min_price'];
+}
+if (!empty($_GET['max_price'])) {
+    $where[] = "p.price <= ?";
+    $params[] = $_GET['max_price'];
+}
+if (!empty($_GET['condition'])) {
+    $where[] = "p.condition = ?";
+    $params[] = $_GET['condition'];
+}
+
+$sql = "
+    SELECT p.*, (
+        SELECT image_url FROM product_images 
+        WHERE product_id = p.id 
+        ORDER BY is_primary DESC, id ASC LIMIT 1
+    ) AS main_image
+    FROM products p
+    WHERE p.title IS NOT NULL AND p.title != ''
+";
+if ($where) {
+    $sql .= " AND " . implode(" AND ", $where);
+}
+
+$sort = $_GET['sort'] ?? '';
+if ($sort == 'price_asc') $sql .= " ORDER BY p.price ASC";
+elseif ($sort == 'price_desc') $sql .= " ORDER BY p.price DESC";
+elseif ($sort == 'date_asc') $sql .= " ORDER BY p.created_at ASC";
+elseif ($sort == 'date_desc') $sql .= " ORDER BY p.created_at DESC";
+else $sql .= " ORDER BY p.id DESC";
+
+$stmt = $db->prepare($sql);
+$stmt->execute($params);
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -136,18 +177,36 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </header>
     <main class="container">
-        <div class="shop-header">
+        <div class="shop-header" style="flex-direction:column;align-items:stretch;gap:1.5rem;">
             <div class="shop-title">Shop Manga</div>
-            <div class="shop-search">
-                <input type="text" id="searchInput" placeholder="Search manga by title...">
-            </div>
+            <form id="shopFilters" method="get" style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;background:#fff;border-radius:2em;box-shadow:var(--shadow);padding:1em 1.5em 0.5em 1.5em;margin-bottom:0.5em;">
+                <input type="text" name="title" placeholder="Title" value="<?php echo htmlspecialchars($_GET['title'] ?? ''); ?>" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);font-size:1em;">
+                <input type="number" name="min_price" placeholder="Min Price" step="0.01" value="<?php echo htmlspecialchars($_GET['min_price'] ?? ''); ?>" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);width:110px;">
+                <input type="number" name="max_price" placeholder="Max Price" step="0.01" value="<?php echo htmlspecialchars($_GET['max_price'] ?? ''); ?>" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);width:110px;">
+                <select name="condition" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);">
+                    <option value="">Any Condition</option>
+                    <option value="New" <?php if(($_GET['condition'] ?? '')=='New') echo 'selected'; ?>>New</option>
+                    <option value="Like New" <?php if(($_GET['condition'] ?? '')=='Like New') echo 'selected'; ?>>Like New</option>
+                    <option value="Very Good" <?php if(($_GET['condition'] ?? '')=='Very Good') echo 'selected'; ?>>Very Good</option>
+                    <option value="Good" <?php if(($_GET['condition'] ?? '')=='Good') echo 'selected'; ?>>Good</option>
+                    <option value="Acceptable" <?php if(($_GET['condition'] ?? '')=='Acceptable') echo 'selected'; ?>>Acceptable</option>
+                </select>
+                <select name="sort" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);">
+                    <option value="">Sort By</option>
+                    <option value="price_asc" <?php if(($_GET['sort'] ?? '')=='price_asc') echo 'selected'; ?>>Price: Low to High</option>
+                    <option value="price_desc" <?php if(($_GET['sort'] ?? '')=='price_desc') echo 'selected'; ?>>Price: High to Low</option>
+                    <option value="date_desc" <?php if(($_GET['sort'] ?? '')=='date_desc') echo 'selected'; ?>>Newest</option>
+                    <option value="date_asc" <?php if(($_GET['sort'] ?? '')=='date_asc') echo 'selected'; ?>>Oldest</option>
+                </select>
+                <button type="submit" style="border-radius:2em;padding:0.5em 1.5em;background:var(--primary);color:#fff;border:none;font-weight:600;box-shadow:var(--shadow-sm);transition:background 0.2s;">Filter</button>
+            </form>
         </div>
         <div class="products-grid" id="productsGrid">
             <?php foreach ($products as $product): ?>
                 <a href="product.php?id=<?php echo $product['id']; ?>" class="product-card-link">
                 <div class="product-card" data-title="<?php echo htmlspecialchars(strtolower($product['title'])); ?>">
                     <img class="product-image" 
-                        src="../assets/img/placeholder.png" 
+                        src="<?php echo $product['main_image'] ? htmlspecialchars($product['main_image']) : '../assets/img/placeholder.png'; ?>" 
                         alt="<?php echo htmlspecialchars($product['title']); ?> cover"
                         data-title="<?php echo htmlspecialchars($product['title']); ?>">
                     <div class="product-title"><?php echo htmlspecialchars($product['title']); ?></div>
@@ -158,27 +217,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <?php endforeach; ?>
         </div>
     </main>
-    <script>
-    // Search filter
-    document.getElementById('searchInput').addEventListener('input', function() {
-        const val = this.value.toLowerCase();
-        document.querySelectorAll('.product-card').forEach(card => {
-            card.style.display = card.getAttribute('data-title').includes(val) ? '' : 'none';
-        });
-    });
-
-    // Kitsu API for all images
-    document.querySelectorAll('.product-image').forEach(function(img) {
-        const title = img.getAttribute('data-title');
-        fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(title)}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.data && data.data.length > 0) {
-                    const cover = data.data[0].attributes.posterImage && data.data[0].attributes.posterImage.medium;
-                    if (cover) img.src = cover;
-                }
-            });
-    });
-    </script>
+    <!-- No JS needed for filtering; handled by PHP form -->
 </body>
 </html> 

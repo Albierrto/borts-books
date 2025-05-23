@@ -6,13 +6,18 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     exit;
 }
 $id = (int)$_GET['id'];
-$stmt = $db->prepare('SELECT p.*, pi.image_url FROM products p LEFT JOIN product_images pi ON p.id = pi.product_id WHERE p.id = ?');
+// Fetch product
+$stmt = $db->prepare('SELECT * FROM products WHERE id = ?');
 $stmt->execute([$id]);
 $product = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$product) {
     echo '<p>Product not found. <a href="shop.php">Back to shop</a></p>';
     exit;
 }
+// Fetch all images for this product
+$imgStmt = $db->prepare('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, id ASC');
+$imgStmt->execute([$id]);
+$images = $imgStmt->fetchAll(PDO::FETCH_COLUMN);
 // Fetch up to 7 random recommended products (excluding current)
 $recStmt = $db->prepare("SELECT * FROM products WHERE id != ? AND title IS NOT NULL AND title != '' ORDER BY RANDOM() LIMIT 7");
 $recStmt->execute([$id]);
@@ -102,10 +107,15 @@ $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
     </header>
     <main>
         <div class="product-detail-container">
-            <img class="product-detail-image" id="productImage"
-                src="<?php echo $product['image_url'] ? htmlspecialchars($product['image_url']) : '../assets/img/placeholder.png'; ?>"
-                alt="<?php echo htmlspecialchars($product['title']); ?> cover"
-                data-title="<?php echo htmlspecialchars($product['title']); ?>">
+            <?php if ($images && count($images) > 0): ?>
+                <div style="display:flex;gap:10px;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap;">
+                <?php foreach ($images as $img): ?>
+                    <img class="product-detail-image" src="<?php echo htmlspecialchars($img); ?>" alt="<?php echo htmlspecialchars($product['title']); ?> cover">
+                <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <img class="product-detail-image" src="../assets/img/placeholder.png" alt="<?php echo htmlspecialchars($product['title']); ?> cover">
+            <?php endif; ?>
             <div class="product-detail-title"><?php echo htmlspecialchars($product['title']); ?></div>
             <div class="product-detail-price"><?php echo ($product['price'] > 0) ? '$' . number_format($product['price'], 2) : '<span style=\"color:#888\">Price unavailable</span>'; ?></div>
             <div class="product-detail-condition">Condition: <?php echo htmlspecialchars($product['condition']); ?></div>
