@@ -231,7 +231,7 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
 
     <section class="sell-hero" style="background:linear-gradient(120deg,#eebbc3 60%,#232946 100%);padding:3.5rem 0 3rem 0;display:flex;align-items:center;justify-content:center;">
         <div style="display:flex;align-items:center;gap:3rem;max-width:1100px;width:100%;flex-wrap:wrap;justify-content:center;">
-            <img src="https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=320&h=320&facepad=2&q=80" alt="Sell Manga" style="width:220px;height:220px;object-fit:cover;border-radius:18px;box-shadow:0 4px 24px rgba(35,41,70,0.13);border:6px solid #fff;">
+            <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=320&q=80" alt="Sell Manga" style="width:220px;height:220px;object-fit:cover;border-radius:18px;box-shadow:0 4px 24px rgba(35,41,70,0.13);border:6px solid #fff;">
             <div style="flex:1;min-width:260px;">
                 <h2 style="font-size:2.3rem;font-weight:900;color:#232946;margin-bottom:1rem;letter-spacing:1px;">Turn Your Manga Into Cash!</h2>
                 <p style="font-size:1.2rem;color:#232946;margin-bottom:1.5rem;max-width:500px;">Have a collection to sell? We offer top dollar and a smooth, friendly process. Start your selling journey now and join hundreds of happy manga fans who've cashed in with Bort's Books!</p>
