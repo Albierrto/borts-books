@@ -287,9 +287,14 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
         const totalCards = carouselInner.children.length;
 
         function updateCarousel() {
+            // Clamp currentIndex if there are not enough cards
+            if (totalCards <= visibleCards) {
+                currentIndex = 0;
+            }
             carouselInner.style.transform = `translateX(-${currentIndex * cardWidth}px)`;
         }
         nextBtn.addEventListener('click', () => {
+            if (totalCards <= visibleCards) return;
             if (currentIndex < totalCards - visibleCards) {
                 currentIndex++;
                 updateCarousel();
@@ -299,6 +304,7 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             }
         });
         prevBtn.addEventListener('click', () => {
+            if (totalCards <= visibleCards) return;
             if (currentIndex > 0) {
                 currentIndex--;
                 updateCarousel();
