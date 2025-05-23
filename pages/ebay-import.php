@@ -193,34 +193,56 @@ $currentPage = "import";
             endif; 
             ?>
 
-            <?php if (isset($_SESSION['import_debug'])): $dbg = $_SESSION['import_debug']; ?>
-            <div style="background:#fff3cd;color:#856404;padding:1.5rem;margin:2rem 0;border-radius:8px;">
-                <h2>CSV Import Debug Output</h2>
-                <b>Imported:</b> <?php echo $dbg['imported']; ?><br>
-                <?php if (!empty($dbg['errors'])): ?>
-                    <b>Errors:</b><ul>
-                    <?php foreach ($dbg['errors'] as $err) echo '<li>' . htmlspecialchars($err) . '</li>'; ?>
-                    </ul>
-                <?php endif; ?>
-                <h3>Row Details</h3>
-                <ol>
-                <?php foreach ($dbg['rows'] as $i => $row): ?>
-                    <li><pre>Row: <?php echo htmlspecialchars(json_encode($row['row'])); ?></pre>
-                    <?php if (!empty($row['images'])): ?>
-                        <b>Images:</b> <ul>
-                        <?php foreach ($row['images'] as $img) echo '<li>' . htmlspecialchars($img) . '</li>'; ?>
-                        </ul>
-                    <?php else: ?>
-                        <b>No images found.</b>
-                    <?php endif; ?>
-                    <?php if ($row['error']): ?>
-                        <div style="color:#b71c1c;"><b>Error:</b> <?php echo htmlspecialchars($row['error']); ?></div>
-                    <?php endif; ?>
-                    </li>
-                <?php endforeach; ?>
-                </ol>
-            </div>
-            <?php unset($_SESSION['import_debug']); endif; ?>
+            <?php if (isset($_SESSION['import_debug'])) {
+                $debug = $_SESSION['import_debug'];
+                echo '<div class="debug-box" style="background:#fffbe6;border:1px solid #ffe082;padding:1.5rem;margin:2rem 0;overflow-x:auto;">';
+                echo '<h3 style="margin-top:0;">CSV Import Debug Output</h3>';
+                echo '<strong>Imported:</strong> ' . htmlspecialchars($debug['imported']) . '<br>';
+                if (!empty($debug['errors'])) {
+                    echo '<div style="color:#b71c1c;font-weight:600;">Errors:<ul>';
+                    foreach ($debug['errors'] as $err) {
+                        echo '<li>' . htmlspecialchars($err) . '</li>';
+                    }
+                    echo '</ul></div>';
+                }
+                echo '<h4>Row Details</h4>';
+                foreach ($debug['rows'] as $row) {
+                    echo '<div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid #eee;">';
+                    echo '<div><strong>Row:</strong> <span style="font-family:monospace;font-size:0.95em;">' . htmlspecialchars(json_encode($row['row'])) . '</span></div>';
+                    if (!empty($row['images'])) {
+                        echo '<div><strong>Images:</strong> ';
+                        foreach ($row['images'] as $img) {
+                            echo '<a href="' . htmlspecialchars($img) . '" target="_blank">' . htmlspecialchars($img) . '</a> ';
+                        }
+                        echo '</div>';
+                    } else {
+                        echo '<div style="color:#b71c1c;"><strong>No images found.</strong></div>';
+                    }
+                    if (!empty($row['error'])) {
+                        echo '<div style="color:#b71c1c;"><strong>Error:</strong> ' . htmlspecialchars($row['error']) . '</div>';
+                    }
+                    // Show new image debug info if present
+                    if (!empty($row['image_debug']) && is_array($row['image_debug'])) {
+                        foreach ($row['image_debug'] as $imgDbg) {
+                            echo '<div style="margin:0.5em 0 0.5em 1em;padding:0.5em;background:#f8f8f8;border:1px solid #eee;">';
+                            echo '<strong>eBay Item ID:</strong> ' . htmlspecialchars($imgDbg['ebay_item_id'] ?? '') . '<br>';
+                            echo '<strong>HTTP Code:</strong> ' . htmlspecialchars($imgDbg['http_code'] ?? '') . '<br>';
+                            echo '<strong>Image Count:</strong> ' . htmlspecialchars($imgDbg['image_count'] ?? '') . '<br>';
+                            if (!empty($imgDbg['error'])) {
+                                echo '<strong>Error:</strong> <span style="color:#b71c1c;">' . htmlspecialchars($imgDbg['error']) . '</span><br>';
+                            }
+                            if (!empty($imgDbg['html_snippet'])) {
+                                echo '<details><summary>HTML Snippet</summary><pre style="max-width:100%;overflow-x:auto;font-size:0.9em;background:#f4f4f4;">' . htmlspecialchars($imgDbg['html_snippet']) . '</pre></details>';
+                            }
+                            echo '</div>';
+                        }
+                    }
+                    echo '</div>';
+                }
+                echo '</div>';
+                unset($_SESSION['import_debug']);
+            }
+            ?>
         </div>
     </section>
 
