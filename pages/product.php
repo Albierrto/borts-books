@@ -2,6 +2,13 @@
 session_start();
 require_once '../includes/db.php';
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    $debug = isset($_GET['debug']) && $_GET['debug'] == '1';
+    if ($debug) {
+        echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
+        echo '<b>Debug:</b> Invalid or missing product ID.<br>ID: ' . htmlspecialchars($_GET['id'] ?? 'N/A') . '<br>';
+        echo '</div>';
+        exit;
+    }
     header('Location: shop.php');
     exit;
 }
@@ -27,6 +34,11 @@ try {
     $imgStmt = $db->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC');
     $imgStmt->execute([$id]);
     $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($debug && count($images) === 0) {
+        echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
+        echo '<b>Debug:</b> No images found for product ID ' . htmlspecialchars($id) . '<br>';
+        echo '</div>';
+    }
 } catch (Exception $e) {
     if ($debug) {
         echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
