@@ -262,40 +262,66 @@ EOD
 
     <section class="trending-section">
         <div class="section-title">Trending Manga</div>
-        <div class="trending-carousel" id="trending-carousel">
-            <?php foreach (
-                $trendingManga as $manga): ?>
-            <div class="trending-card">
-                <?php
-                $imgSrc = '';
-                if (!empty($manga['image_url'])) {
-                    if (preg_match('/^https?:\/\//', $manga['image_url'])) {
-                        $imgSrc = htmlspecialchars($manga['image_url']);
-                    } else {
-                        // Remove leading ../ or ./ if present
-                        $imgSrc = '/' . ltrim(preg_replace('/^\.\.\//', '', $manga['image_url']), '/');
-                    }
-                } else {
-                    $svg = base64_encode(<<<EOD
-<svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
-    <rect width="100%" height="100%" fill="#f5f5fa"/>
-    <text x="50%" y="50%" font-family="Arial" font-size="24" fill="#232946" text-anchor="middle" dominant-baseline="middle">No Image</text>
-</svg>
-EOD
-                    );
-                    $imgSrc = "data:image/svg+xml;base64,$svg";
-                }
-                ?>
-                <img src="<?php echo $imgSrc; ?>" alt="<?php echo htmlspecialchars($manga['title']); ?>"
-                onerror="this.onerror=null; this.src='<?php echo $imgSrc; ?>'">
-                <div class="info">
-                    <div class="title" style="font-size:1.15rem;font-weight:700;margin-bottom:0.3rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?php echo htmlspecialchars($manga['title']); ?>"><?php echo htmlspecialchars($manga['title']); ?></div>
-                    <div class="price" style="color:#e63946;font-weight:700;margin-bottom:0.5rem;">$<?php echo number_format($manga['price'], 2); ?></div>
-                    <button class="add-cart" onclick="addToCart(<?php echo $manga['id']; ?>)">Add to Cart</button>
+        <div style="position:relative;max-width:1200px;margin:0 auto;">
+            <button id="carouselPrev" style="position:absolute;left:-30px;top:50%;transform:translateY(-50%);background:#eebbc3;color:#232946;border:none;border-radius:50%;width:48px;height:48px;font-size:2rem;box-shadow:0 2px 8px rgba(35,41,70,0.12);z-index:2;cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:center;">&#8592;</button>
+            <div id="home-carousel" style="overflow:hidden;width:100%;">
+                <div id="carouselInner" style="display:flex;transition:transform 0.5s cubic-bezier(.4,2,.6,1);gap:2rem;padding:1rem 0;">
+                    <?php foreach ($trendingManga as $manga): ?>
+                    <div class="trending-card" style="min-width:240px;max-width:240px;background:#fff;color:#232946;border-radius:14px;box-shadow:0 2px 8px rgba(35,41,70,0.09);margin-bottom:1rem;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;">
+                        <?php
+                        $imgSrc = '';
+                        if (!empty($manga['image_url'])) {
+                            if (preg_match('/^https?:\/\//', $manga['image_url'])) {
+                                $imgSrc = htmlspecialchars($manga['image_url']);
+                            } else {
+                                $imgSrc = '/' . ltrim(preg_replace('/^\.\.\//', '', $manga['image_url']), '/');
+                            }
+                        } else {
+                            $svg = base64_encode('<svg width="240" height="320" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f5f5fa"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="#232946" text-anchor="middle" dominant-baseline="middle">No Image</text></svg>');
+                            $imgSrc = "data:image/svg+xml;base64,$svg";
+                        }
+                        ?>
+                        <img src="<?php echo $imgSrc; ?>" alt="<?php echo htmlspecialchars($manga['title']); ?>" style="width:200px;height:280px;object-fit:cover;border-radius:12px 12px 0 0;box-shadow:0 2px 8px rgba(35,41,70,0.08);margin-top:1rem;">
+                        <div class="info" style="padding:1rem;width:100%;display:flex;flex-direction:column;align-items:center;">
+                            <div class="title" style="font-size:1.15rem;font-weight:700;margin-bottom:0.3rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;" title="<?php echo htmlspecialchars($manga['title']); ?>"><?php echo htmlspecialchars($manga['title']); ?></div>
+                            <div class="price" style="color:#e63946;font-weight:700;margin-bottom:0.5rem;">$<?php echo number_format($manga['price'], 2); ?></div>
+                            <button class="add-cart" onclick="addToCart(<?php echo $manga['id']; ?>)" style="background:#eebbc3;color:#232946;border:none;border-radius:20px;padding:0.5rem 1.2rem;font-weight:700;cursor:pointer;transition:background 0.2s;">Add to Cart</button>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
-            <?php endforeach; ?>
+            <button id="carouselNext" style="position:absolute;right:-30px;top:50%;transform:translateY(-50%);background:#eebbc3;color:#232946;border:none;border-radius:50%;width:48px;height:48px;font-size:2rem;box-shadow:0 2px 8px rgba(35,41,70,0.12);z-index:2;cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:center;">&#8594;</button>
         </div>
+        <script>
+        // Carousel logic
+        const carousel = document.getElementById('home-carousel');
+        const carouselInner = document.getElementById('carouselInner');
+        const prevBtn = document.getElementById('carouselPrev');
+        const nextBtn = document.getElementById('carouselNext');
+        const cardWidth = 240 + 32; // card width + gap
+        let currentIndex = 0;
+        const visibleCards = window.innerWidth < 700 ? 2 : 4;
+        const totalCards = carouselInner.children.length;
+
+        function updateCarousel() {
+            carouselInner.style.transform = `translateX(-${currentIndex * cardWidth}px)`;
+        }
+        prevBtn.addEventListener('click', () => {
+            currentIndex = Math.max(0, currentIndex - 1);
+            updateCarousel();
+        });
+        nextBtn.addEventListener('click', () => {
+            if (currentIndex < totalCards - visibleCards) {
+                currentIndex++;
+                updateCarousel();
+            }
+        });
+        // Responsive: update visibleCards on resize
+        window.addEventListener('resize', () => {
+            // Optionally, recalculate visibleCards and clamp currentIndex
+        });
+        </script>
     </section>
 
     <div class="value-props">
