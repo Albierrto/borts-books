@@ -1,11 +1,61 @@
 <?php
 session_start();
+require_once '../includes/db.php';
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     header('Location: admin.php');
     exit;
 }
 $pageTitle = "Import from eBay";
 $currentPage = "import";
+
+// --- IMAGE CSV IMPORT LOGIC ---
+$image_import_msg = '';
+if (isset($_POST['import_images'])) {
+    if (isset($_FILES['image_csv']) && $_FILES['image_csv']['error'] === UPLOAD_ERR_OK) {
+        $csvFile = $_FILES['image_csv']['tmp_name'];
+        $handle = fopen($csvFile, 'r');
+        if ($handle !== false) {
+            $header = fgetcsv($handle);
+            $itemIdx = array_search('Item number', $header);
+            $imagesIdx = array_search('Images', $header);
+            $imported = 0;
+            $errors = 0;
+            $notFound = [];
+            while (($row = fgetcsv($handle)) !== false) {
+                $itemNumber = $row[$itemIdx];
+                $images = explode('|', $row[$imagesIdx]);
+                // Find product by ebay_item_id
+                $stmt = $db->prepare("SELECT id FROM products WHERE ebay_item_id = ?");
+                $stmt->execute([$itemNumber]);
+                $product = $stmt->fetch();
+                if ($product) {
+                    $productId = $product['id'];
+                    foreach ($images as $imgUrl) {
+                        $imgUrl = trim($imgUrl);
+                        if ($imgUrl !== '') {
+                            $insert = $db->prepare("INSERT INTO product_images (product_id, image_url) VALUES (?, ?)");
+                            $insert->execute([$productId, $imgUrl]);
+                        }
+                    }
+                    $imported++;
+                } else {
+                    $errors++;
+                    $notFound[] = $itemNumber;
+                }
+            }
+            fclose($handle);
+            $image_import_msg = "<div class='alert alert-success'>Imported images for $imported products.";
+            if ($errors > 0) {
+                $image_import_msg .= " <br><span style='color:#b71c1c;'>$errors products not found:</span> <span style='font-family:monospace;'>" . htmlspecialchars(implode(', ', $notFound)) . "</span>";
+            }
+            $image_import_msg .= "</div>";
+        } else {
+            $image_import_msg = "<div class='alert alert-error'>Failed to open uploaded CSV.</div>";
+        }
+    } else {
+        $image_import_msg = "<div class='alert alert-error'>No file uploaded or upload error.</div>";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -251,6 +301,23 @@ $currentPage = "import";
                 unset($_SESSION['import_debug']);
             }
             ?>
+
+            <?php if (!empty($image_import_msg)) echo $image_import_msg; ?>
+            <div class="import-instructions" style="margin-top:2em;">
+                <h3>How to Import eBay Images from Scraper CSV</h3>
+                <ol>
+                    <li>Run the eBay image scraper to generate output.csv (columns: Item number, Images)</li>
+                    <li>Upload the output.csv file below</li>
+                    <li>Click "Import Images" to link images to your products</li>
+                </ol>
+            </div>
+            <form class="import-form" method="post" enctype="multipart/form-data" style="margin-top:1.5em;">
+                <div class="form-group">
+                    <label for="image_csv">Upload output.csv from image scraper</label>
+                    <input type="file" name="image_csv" id="image_csv" accept=".csv" required>
+                </div>
+                <button type="submit" name="import_images" class="btn">Import Images</button>
+            </form>
         </div>
     </section>
 
