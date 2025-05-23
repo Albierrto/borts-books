@@ -211,7 +211,7 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
                 'row' => $row,
                 'images' => [],
                 'error' => null,
-                'image_debug' => null
+                'image_debug' => []
             ];
             try {
                 $data = array_combine($header, $row);
@@ -225,27 +225,45 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
                 $stmt = $db->prepare("INSERT INTO products (title, description, price, `condition`, ebay_item_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
                 $stmt->execute([$title, $description, $price, $condition, $ebayItemId]);
                 $productId = $db->lastInsertId();
-                if ($fetchImages && !empty($ebayItemId) && is_numeric($ebayItemId)) {
-                    $imageDebug = [];
-                    $images = fetchEbayImages($ebayItemId, $imageDebug);
-                    $rowDebug['images'] = $images;
-                    $rowDebug['image_debug'] = $imageDebug;
-                    if (!empty($images)) {
-                        $imageIndex = 1;
-                        foreach ($images as $imageUrl) {
-                            $savedPath = downloadImage($imageUrl, $productId, $imageIndex);
-                            if ($savedPath) {
-                                $stmt = $db->prepare("INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, ?)");
-                                $stmt->execute([$productId, $savedPath, $imageIndex == 1 ? 1 : 0]);
-                                $imageIndex++;
+                if ($fetchImages) {
+                    if (!empty($ebayItemId) && is_numeric($ebayItemId)) {
+                        $imageDebug = [];
+                        $images = fetchEbayImages($ebayItemId, $imageDebug);
+                        $rowDebug['images'] = $images;
+                        $rowDebug['image_debug'] = $imageDebug;
+                        if (!empty($images)) {
+                            $imageIndex = 1;
+                            foreach ($images as $imageUrl) {
+                                $savedPath = downloadImage($imageUrl, $productId, $imageIndex);
+                                if ($savedPath) {
+                                    $stmt = $db->prepare("INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, ?)");
+                                    $stmt->execute([$productId, $savedPath, $imageIndex == 1 ? 1 : 0]);
+                                    $imageIndex++;
+                                }
+                                if ($imageIndex > 24) break;
                             }
-                            if ($imageIndex > 24) break;
                         }
+                    } else {
+                        // eBay ID missing or invalid
+                        $rowDebug['image_debug'][] = [
+                            'ebay_item_id' => $ebayItemId,
+                            'http_code' => null,
+                            'image_count' => 0,
+                            'error' => 'No valid eBay Item ID for this row.',
+                            'html_snippet' => null
+                        ];
                     }
                 }
                 $importedCount++;
             } catch (Exception $e) {
                 $rowDebug['error'] = $e->getMessage();
+                $rowDebug['image_debug'][] = [
+                    'ebay_item_id' => $ebayItemId ?? '',
+                    'http_code' => null,
+                    'image_count' => 0,
+                    'error' => 'Exception: ' . $e->getMessage(),
+                    'html_snippet' => null
+                ];
                 $errors[] = "Failed to import listing: " . $e->getMessage();
             }
             $debugRows[] = $rowDebug;
