@@ -54,7 +54,7 @@ try {
     exit;
 }
 // Fetch up to 7 random recommended products (excluding current)
-$recStmt = $db->prepare("SELECT * FROM products WHERE id != ? AND title IS NOT NULL AND title != '' ORDER BY RANDOM() LIMIT 7");
+$recStmt = $db->prepare("SELECT * FROM products WHERE id != ? AND title IS NOT NULL AND title != '' ORDER BY RAND() LIMIT 7");
 $recStmt->execute([$id]);
 $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
