@@ -32,7 +32,7 @@ $sql = "
     SELECT p.*, (
         SELECT image_url FROM product_images 
         WHERE product_id = p.id 
-        ORDER BY is_primary DESC, id ASC LIMIT 1
+        ORDER BY id ASC LIMIT 1
     ) AS main_image
     FROM products p
     WHERE p.title IS NOT NULL AND p.title != ''
