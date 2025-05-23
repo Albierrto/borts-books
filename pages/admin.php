@@ -11,8 +11,36 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 $pageTitle = "Admin Panel";
 $currentPage = "admin";
 
-// Fetch all products with their first image
-$stmt = $db->query("
+// Build filter conditions
+$where = [];
+$params = [];
+
+if (!empty($_GET['title'])) {
+    $where[] = "p.title LIKE ?";
+    $params[] = '%' . $_GET['title'] . '%';
+}
+if (!empty($_GET['min_price'])) {
+    $where[] = "p.price >= ?";
+    $params[] = $_GET['min_price'];
+}
+if (!empty($_GET['max_price'])) {
+    $where[] = "p.price <= ?";
+    $params[] = $_GET['max_price'];
+}
+if (!empty($_GET['condition'])) {
+    $where[] = "p.condition = ?";
+    $params[] = $_GET['condition'];
+}
+if (!empty($_GET['date_from'])) {
+    $where[] = "p.created_at >= ?";
+    $params[] = $_GET['date_from'] . ' 00:00:00';
+}
+if (!empty($_GET['date_to'])) {
+    $where[] = "p.created_at <= ?";
+    $params[] = $_GET['date_to'] . ' 23:59:59';
+}
+
+$sql = "
     SELECT p.*, pi.image_url 
     FROM products p 
     LEFT JOIN (
@@ -21,8 +49,20 @@ $stmt = $db->query("
         GROUP BY product_id
     ) pim ON p.id = pim.product_id
     LEFT JOIN product_images pi ON pim.min_image_id = pi.id
-    ORDER BY p.created_at DESC
-");
+";
+if ($where) {
+    $sql .= " WHERE " . implode(" AND ", $where);
+}
+
+$sort = $_GET['sort'] ?? '';
+if ($sort == 'price_asc') $sql .= " ORDER BY p.price ASC";
+elseif ($sort == 'price_desc') $sql .= " ORDER BY p.price DESC";
+elseif ($sort == 'date_asc') $sql .= " ORDER BY p.created_at ASC";
+elseif ($sort == 'date_desc') $sql .= " ORDER BY p.created_at DESC";
+else $sql .= " ORDER BY p.created_at DESC";
+
+$stmt = $db->prepare($sql);
+$stmt->execute($params);
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -162,6 +202,29 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         <?php endif; ?>
 
+        <form id="adminFilters" method="get" style="position:sticky;top:0;z-index:10;background:#fff;box-shadow:var(--shadow);border-radius:2em;padding:1em 1.5em 0.5em 1.5em;margin-bottom:2em;display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+            <input type="text" name="title" placeholder="Title" value="<?php echo htmlspecialchars($_GET['title'] ?? ''); ?>" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);font-size:1em;">
+            <input type="number" name="min_price" placeholder="Min Price" step="0.01" value="<?php echo htmlspecialchars($_GET['min_price'] ?? ''); ?>" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);width:110px;">
+            <input type="number" name="max_price" placeholder="Max Price" step="0.01" value="<?php echo htmlspecialchars($_GET['max_price'] ?? ''); ?>" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);width:110px;">
+            <select name="condition" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);">
+                <option value="">Any Condition</option>
+                <option value="New" <?php if(($_GET['condition'] ?? '')=='New') echo 'selected'; ?>>New</option>
+                <option value="Like New" <?php if(($_GET['condition'] ?? '')=='Like New') echo 'selected'; ?>>Like New</option>
+                <option value="Very Good" <?php if(($_GET['condition'] ?? '')=='Very Good') echo 'selected'; ?>>Very Good</option>
+                <option value="Good" <?php if(($_GET['condition'] ?? '')=='Good') echo 'selected'; ?>>Good</option>
+                <option value="Acceptable" <?php if(($_GET['condition'] ?? '')=='Acceptable') echo 'selected'; ?>>Acceptable</option>
+            </select>
+            <input type="date" name="date_from" value="<?php echo htmlspecialchars($_GET['date_from'] ?? ''); ?>" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);">
+            <input type="date" name="date_to" value="<?php echo htmlspecialchars($_GET['date_to'] ?? ''); ?>" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);">
+            <select name="sort" style="border-radius:2em;padding:0.5em 1.2em;border:1px solid var(--gray-200);background:var(--gray-100);">
+                <option value="">Sort By</option>
+                <option value="price_asc" <?php if(($_GET['sort'] ?? '')=='price_asc') echo 'selected'; ?>>Price: Low to High</option>
+                <option value="price_desc" <?php if(($_GET['sort'] ?? '')=='price_desc') echo 'selected'; ?>>Price: High to Low</option>
+                <option value="date_desc" <?php if(($_GET['sort'] ?? '')=='date_desc') echo 'selected'; ?>>Newest</option>
+                <option value="date_asc" <?php if(($_GET['sort'] ?? '')=='date_asc') echo 'selected'; ?>>Oldest</option>
+            </select>
+            <button type="submit" style="border-radius:2em;padding:0.5em 1.5em;background:var(--primary);color:#fff;border:none;font-weight:600;box-shadow:var(--shadow-sm);transition:background 0.2s;">Filter</button>
+        </form>
         <form id="mass-delete-form" action="admin-mass-delete.php" method="POST" onsubmit="return confirm('Are you sure you want to delete the selected products?');" style="margin-bottom:1.5rem;">
             <button type="submit" class="btn btn-danger" style="background:#e63946;">Delete Selected</button>
         </form>
