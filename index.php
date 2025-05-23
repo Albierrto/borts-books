@@ -289,13 +289,22 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
         function updateCarousel() {
             carouselInner.style.transform = `translateX(-${currentIndex * cardWidth}px)`;
         }
-        prevBtn.addEventListener('click', () => {
-            currentIndex = Math.max(0, currentIndex - 1);
-            updateCarousel();
-        });
         nextBtn.addEventListener('click', () => {
             if (currentIndex < totalCards - visibleCards) {
                 currentIndex++;
+                updateCarousel();
+            } else {
+                currentIndex = 0;
+                updateCarousel();
+            }
+        });
+        prevBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateCarousel();
+            } else {
+                currentIndex = totalCards - visibleCards;
+                if (currentIndex < 0) currentIndex = 0;
                 updateCarousel();
             }
         });
