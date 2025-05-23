@@ -208,10 +208,8 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
         if ($ebayItemIndex === false) {
             $ebayItemIndex = array_search('eBay Item ID', $header);
         }
-        $maxRows = 5; // Limit for testing, increase for production
-        $rowCount = 0;
+        $fetchImages = true;
         while (($row = fgetcsv($handle)) !== false) {
-            if (++$rowCount > $maxRows) break;
             $rowDebug = [
                 'row' => $row,
                 'images' => [],

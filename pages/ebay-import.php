@@ -210,12 +210,6 @@ if (isset($_POST['import_images'])) {
                     <label for="csv_file">Upload eBay Listings CSV</label>
                     <input type="file" id="csv_file" name="csv_file" accept=".csv">
                 </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" name="fetch_images" value="1" checked>
-                        Fetch images from eBay listings (recommended)
-                    </label>
-                </div>
                 <button type="submit" name="import_csv" class="btn">Import CSV</button>
             </form>
 
