@@ -161,22 +161,23 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
     $csvFile = $_FILES['csv_file']['tmp_name'];
     $importedCount = 0;
     $errors = [];
+    $debugRows = [];
     $fetchImages = isset($_POST['fetch_images']) && $_POST['fetch_images'] == '1';
     
     if (($handle = fopen($csvFile, 'r')) !== false) {
         $header = fgetcsv($handle); // Read header row
-        
-        // Find the index of the eBay item number column
         $ebayItemIndex = array_search('Item number', $header);
         if ($ebayItemIndex === false) {
             $ebayItemIndex = array_search('eBay Item ID', $header);
         }
-        
         while (($row = fgetcsv($handle)) !== false) {
+            $rowDebug = [
+                'row' => $row,
+                'images' => [],
+                'error' => null
+            ];
             try {
                 $data = array_combine($header, $row);
-                
-                // Extract product details
                 $title = $data['Title'] ?? '';
                 $description = $data['Description'] ?? $data['Variation details'] ?? '';
                 $rawPrice = $data['Start price'] ?? $data['Current price'] ?? '';
@@ -184,50 +185,70 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
                 $price = $numericPrice > 0 ? number_format($numericPrice * 0.9, 2, '.', '') : '0.00';
                 $condition = $data['Condition'] ?? '';
                 $ebayItemId = $ebayItemIndex !== false ? $row[$ebayItemIndex] : ($data['Item number'] ?? '');
-                
-                // Insert product
                 $stmt = $db->prepare("INSERT INTO products (title, description, price, `condition`, ebay_item_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
                 $stmt->execute([$title, $description, $price, $condition, $ebayItemId]);
                 $productId = $db->lastInsertId();
-                
-                // Fetch and save images if requested
                 if ($fetchImages && !empty($ebayItemId) && is_numeric($ebayItemId)) {
                     $images = fetchEbayImages($ebayItemId);
-                    
+                    $rowDebug['images'] = $images;
                     if (!empty($images)) {
                         $imageIndex = 1;
                         foreach ($images as $imageUrl) {
                             $savedPath = downloadImage($imageUrl, $productId, $imageIndex);
                             if ($savedPath) {
-                                // Insert image record
                                 $stmt = $db->prepare("INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, ?)");
                                 $stmt->execute([$productId, $savedPath, $imageIndex == 1 ? 1 : 0]);
                                 $imageIndex++;
                             }
-                            
-                            // Limit to 24 images as mentioned
                             if ($imageIndex > 24) break;
                         }
                     }
                 }
-                
                 $importedCount++;
-                
             } catch (Exception $e) {
+                $rowDebug['error'] = $e->getMessage();
                 $errors[] = "Failed to import listing: " . $e->getMessage();
             }
+            $debugRows[] = $rowDebug;
         }
         fclose($handle);
     } else {
         $errors[] = "Failed to open uploaded CSV file.";
     }
-    
     $_SESSION['import_result'] = [
         'success' => count($errors) === 0,
         'imported' => $importedCount,
         'errors' => $errors
     ];
-    
+    // Debug output if ?debug=1
+    if (isset($_GET['debug']) && $_GET['debug'] == '1') {
+        echo '<div style="background:#fff3cd;color:#856404;padding:1.5rem;margin:2rem 0;border-radius:8px;">';
+        echo '<h2>CSV Import Debug Output</h2>';
+        echo '<b>Imported:</b> ' . $importedCount . '<br>';
+        if (!empty($errors)) {
+            echo '<b>Errors:</b><ul>';
+            foreach ($errors as $err) echo '<li>' . htmlspecialchars($err) . '</li>';
+            echo '</ul>';
+        }
+        echo '<h3>Row Details</h3>';
+        echo '<ol>';
+        foreach ($debugRows as $i => $dbg) {
+            echo '<li><pre>Row: ' . htmlspecialchars(json_encode($dbg['row'])) . '</pre>';
+            if (!empty($dbg['images'])) {
+                echo '<b>Images:</b> <ul>';
+                foreach ($dbg['images'] as $img) echo '<li>' . htmlspecialchars($img) . '</li>';
+                echo '</ul>';
+            } else {
+                echo '<b>No images found.</b>';
+            }
+            if ($dbg['error']) {
+                echo '<div style="color:#b71c1c;"><b>Error:</b> ' . htmlspecialchars($dbg['error']) . '</div>';
+            }
+            echo '</li>';
+        }
+        echo '</ol>';
+        echo '</div>';
+    }
     header('Location: ebay-import.php');
     exit;
 } 

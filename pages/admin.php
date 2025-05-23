@@ -162,9 +162,13 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         <?php endif; ?>
 
+        <form id="mass-delete-form" action="admin-mass-delete.php" method="POST" onsubmit="return confirm('Are you sure you want to delete the selected products?');" style="margin-bottom:1.5rem;">
+            <button type="submit" class="btn btn-danger" style="background:#e63946;">Delete Selected</button>
+        </form>
         <table class="products-table">
             <thead>
                 <tr>
+                    <th><input type="checkbox" id="select-all"></th>
                     <th>Image</th>
                     <th>Title</th>
                     <th>Price</th>
@@ -176,6 +180,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <tbody>
                 <?php foreach ($products as $product): ?>
                     <tr>
+                        <td><input type="checkbox" name="delete_ids[]" value="<?php echo $product['id']; ?>" form="mass-delete-form"></td>
                         <td>
                             <img src="<?php echo $product['image_url'] ? htmlspecialchars($product['image_url']) : '../assets/img/placeholder.png'; ?>" 
                                  alt="<?php echo htmlspecialchars($product['title']); ?>" 
@@ -199,5 +204,14 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </tbody>
         </table>
     </div>
+
+    <script>
+    // Select all checkboxes functionality
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('input[name="delete_ids[]"]');
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    });
+    </script>
 </body>
 </html> 
