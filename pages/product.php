@@ -1,4 +1,8 @@
 <?php
+<<<<<<< HEAD
+=======
+echo 'PHP is working<br>';
+>>>>>>> 77392b2d00a84874d491967ba54a0565aa58707d
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
