@@ -225,12 +225,22 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
                 $stmt = $db->prepare("INSERT INTO products (title, description, price, `condition`, ebay_item_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
                 $stmt->execute([$title, $description, $price, $condition, $ebayItemId]);
                 $productId = $db->lastInsertId();
+                // Always set image_debug for every row
                 if ($fetchImages) {
                     if (!empty($ebayItemId) && is_numeric($ebayItemId)) {
                         $imageDebug = [];
                         $images = fetchEbayImages($ebayItemId, $imageDebug);
                         $rowDebug['images'] = $images;
                         $rowDebug['image_debug'] = $imageDebug;
+                        if (empty($imageDebug)) {
+                            $rowDebug['image_debug'][] = [
+                                'ebay_item_id' => $ebayItemId,
+                                'http_code' => null,
+                                'image_count' => 0,
+                                'error' => 'fetchEbayImages returned no debug info',
+                                'html_snippet' => null
+                            ];
+                        }
                         if (!empty($images)) {
                             $imageIndex = 1;
                             foreach ($images as $imageUrl) {
@@ -249,10 +259,19 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
                             'ebay_item_id' => $ebayItemId,
                             'http_code' => null,
                             'image_count' => 0,
-                            'error' => 'No valid eBay Item ID for this row.',
+                            'error' => 'No valid eBay Item ID for this row. $fetchImages=' . ($fetchImages ? 'true' : 'false'),
                             'html_snippet' => null
                         ];
                     }
+                } else {
+                    // $fetchImages is false
+                    $rowDebug['image_debug'][] = [
+                        'ebay_item_id' => $ebayItemId,
+                        'http_code' => null,
+                        'image_count' => 0,
+                        'error' => 'Image fetching skipped for this row. $fetchImages=false',
+                        'html_snippet' => null
+                    ];
                 }
                 $importedCount++;
             } catch (Exception $e) {
