@@ -221,8 +221,8 @@ $currentPage = "import";
                     if (!empty($row['error'])) {
                         echo '<div style="color:#b71c1c;"><strong>Error:</strong> ' . htmlspecialchars($row['error']) . '</div>';
                     }
-                    // Show new image debug info if present
-                    if (!empty($row['image_debug']) && is_array($row['image_debug'])) {
+                    // Always show image_debug info, even if empty or missing
+                    if (isset($row['image_debug']) && is_array($row['image_debug']) && count($row['image_debug']) > 0) {
                         foreach ($row['image_debug'] as $imgDbg) {
                             echo '<div style="margin:0.5em 0 0.5em 1em;padding:0.5em;background:#f8f8f8;border:1px solid #eee;">';
                             echo '<strong>eBay Item ID:</strong> ' . htmlspecialchars($imgDbg['ebay_item_id'] ?? '') . '<br>';
@@ -236,6 +236,8 @@ $currentPage = "import";
                             }
                             echo '</div>';
                         }
+                    } else {
+                        echo '<div style="margin:0.5em 0 0.5em 1em;padding:0.5em;background:#f8f8f8;border:1px solid #eee;color:#b71c1c;">No debug info available for this row.</div>';
                     }
                     echo '</div>';
                 }
