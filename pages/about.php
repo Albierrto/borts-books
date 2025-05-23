@@ -35,14 +35,13 @@ $currentPage = "about";
 <body>
     <header>
         <div class="container header-container">
-            <a href="../index.php" class="logo">Bort's <span>Books</span></a>
+            <a href="/index.php" class="logo">Bort's <span>Books</span></a>
             <nav>
                 <ul>
-                    <li><a href="/borts-books/index.php">Home</a></li>
-                    <li><a href="/borts-books/pages/shop.php">Shop</a></li>
-                    <li><a href="/borts-books/pages/collections.php">Collections</a></li>
-                    <li><a href="/borts-books/pages/sell.php">Sell Manga</a></li>
-                    <li><a href="/borts-books/pages/about.php">About</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </nav>
         </div>
@@ -51,10 +50,13 @@ $currentPage = "about";
         <div class="about-container">
             <h1 class="about-title">About Us</h1>
             <p class="about-content">
-                Welcome to Bort's Books, your trusted source for manga collections since 2023. We are dedicated to providing a wide range of manga titles, ensuring that every reader finds something they love. Our mission is to make manga accessible to everyone, offering both popular and rare titles at competitive prices.
+                <b>Bort's Books</b> is your trusted source for manga collections since 2023. We're passionate about connecting manga fans with the stories and series they love—whether you're a seasoned collector or just starting your journey.
             </p>
             <p class="about-content">
-                Our team is passionate about manga and committed to delivering excellent customer service. Whether you're a long-time fan or new to the world of manga, we are here to help you discover your next favorite series.
+                Our mission is to make manga accessible and affordable for everyone. We offer a curated selection of both popular and rare titles, competitive prices, and a friendly, knowledgeable team ready to help you find your next favorite read.
+            </p>
+            <p class="about-content">
+                We believe in community, transparency, and a love for all things manga. Thank you for supporting our small business and being part of the Bort's Books family!
             </p>
         </div>
     </main>
@@ -67,19 +69,19 @@ $currentPage = "about";
             <div class="footer-section">
                 <h3>Quick Links</h3>
                 <ul>
-                    <li><a href="/borts-books/index.php">Home</a></li>
-                    <li><a href="/borts-books/pages/shop.php">Shop</a></li>
-                    <li><a href="/borts-books/pages/sell.php">Sell Manga</a></li>
-                    <li><a href="/borts-books/pages/about.php">About</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </div>
             <div class="footer-section">
                 <h3>Help</h3>
                 <ul>
-                    <li><a href="/borts-books/pages/faq.php">FAQ</a></li>
-                    <li><a href="/borts-books/pages/shipping.php">Shipping</a></li>
-                    <li><a href="/borts-books/pages/returns.php">Returns</a></li>
-                    <li><a href="/borts-books/pages/contact.php">Contact Us</a></li>
+                    <li><a href="/pages/faq.php">FAQ</a></li>
+                    <li><a href="/pages/shipping.php">Shipping</a></li>
+                    <li><a href="/pages/returns.php">Returns</a></li>
+                    <li><a href="/pages/contact.php">Contact Us</a></li>
                 </ul>
             </div>
             <div class="footer-section">

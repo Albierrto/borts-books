@@ -155,7 +155,7 @@ $currentPage = "import";
                 </ol>
             </div>
 
-            <form class="import-form" action="process-ebay-import.php" method="POST" enctype="multipart/form-data">
+            <form class="import-form" action="process-ebay-import-enhanced.php" method="POST" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="csv_file">Upload eBay Listings CSV</label>
                     <input type="file" id="csv_file" name="csv_file" accept=".csv">
