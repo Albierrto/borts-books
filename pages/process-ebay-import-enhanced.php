@@ -3,8 +3,15 @@ session_start();
 require_once '../includes/db.php';
 
 // Function to fetch images from eBay listing with enhanced anti-detection
-function fetchEbayImages($ebayItemId) {
+function fetchEbayImages($ebayItemId, &$debugInfo = null) {
     $images = [];
+    $debug = [
+        'ebay_item_id' => $ebayItemId,
+        'http_code' => null,
+        'image_count' => 0,
+        'error' => null,
+        'html_snippet' => null
+    ];
     
     // Construct eBay URL
     $ebayUrl = "https://www.ebay.com/itm/" . $ebayItemId;
@@ -18,10 +25,10 @@ function fetchEbayImages($ebayItemId) {
     
     // Enhanced user agent rotation
     $userAgents = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0'
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0'
     ];
     curl_setopt($ch, CURLOPT_USERAGENT, $userAgents[array_rand($userAgents)]);
     
@@ -30,40 +37,30 @@ function fetchEbayImages($ebayItemId) {
     
     // Set additional headers to appear more like a real browser
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language: en-US,en;q=0.5',
         'Connection: keep-alive',
         'Upgrade-Insecure-Requests: 1',
-        'Cache-Control: max-age=0'
+        'Cache-Control: max-age=0',
+        'Sec-Fetch-Dest: document',
+        'Sec-Fetch-Mode: navigate',
+        'Sec-Fetch-Site: none',
+        'Sec-Fetch-User: ?1'
     ]);
     
     $html = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $debug['http_code'] = $httpCode;
     curl_close($ch);
     
     if ($httpCode == 200 && $html) {
-        // Create DOM parser
-        $dom = new DOMDocument();
-        @$dom->loadHTML($html);
-        $xpath = new DOMXPath($dom);
-        
-        // Method 1: Try to find images in the main image viewer
-        $imageNodes = $xpath->query('//div[contains(@class, "ux-image-carousel-item")]//img[@data-src]');
-        foreach ($imageNodes as $img) {
-            $src = $img->getAttribute('data-src');
-            if ($src && strpos($src, 'ebayimg.com') !== false) {
-                $highRes = str_replace(['/s-l64.', '/s-l140.', '/s-l225.', '/s-l500.'], '/s-l1600.', $src);
-                $images[] = $highRes;
-            }
-        }
-        
-        // Method 2: Try alternative image container
-        if (empty($images)) {
-            $imageNodes = $xpath->query('//img[contains(@src, "ebayimg.com")]');
-            foreach ($imageNodes as $img) {
-                $src = $img->getAttribute('src');
-                if ($src && strpos($src, 'ebayimg.com') !== false && strpos($src, 's-l') !== false) {
-                    $highRes = preg_replace('/s-l\d+\./', 's-l1600.', $src);
+        // Method 1: Look for image URLs in JSON data
+        preg_match_all('/"imageUrl":"([^"]+)"/', $html, $matches);
+        if (!empty($matches[1])) {
+            foreach ($matches[1] as $url) {
+                $url = str_replace('\/', '/', $url);
+                if (strpos($url, 'ebayimg.com') !== false) {
+                    $highRes = preg_replace('/s-l\d+\./', 's-l1600.', $url);
                     if (!in_array($highRes, $images)) {
                         $images[] = $highRes;
                     }
@@ -71,12 +68,11 @@ function fetchEbayImages($ebayItemId) {
             }
         }
         
-        // Method 3: Look for JavaScript variable containing images
+        // Method 2: Look for image URLs in the main image viewer
         if (empty($images)) {
-            preg_match_all('/"imageUrl":"([^"]+)"/', $html, $matches);
+            preg_match_all('/"ux-image-carousel-item".*?data-src="([^"]+)"/', $html, $matches);
             if (!empty($matches[1])) {
                 foreach ($matches[1] as $url) {
-                    $url = str_replace('\/', '/', $url);
                     if (strpos($url, 'ebayimg.com') !== false) {
                         $highRes = preg_replace('/s-l\d+\./', 's-l1600.', $url);
                         if (!in_array($highRes, $images)) {
@@ -87,12 +83,11 @@ function fetchEbayImages($ebayItemId) {
             }
         }
         
-        // Method 4: Look for image URLs in JSON data
+        // Method 3: Look for image URLs in the image gallery
         if (empty($images)) {
-            preg_match_all('/"imageUrl":"([^"]+)"/', $html, $matches);
+            preg_match_all('/"ux-image-gallery-item".*?src="([^"]+)"/', $html, $matches);
             if (!empty($matches[1])) {
                 foreach ($matches[1] as $url) {
-                    $url = str_replace('\/', '/', $url);
                     if (strpos($url, 'ebayimg.com') !== false) {
                         $highRes = preg_replace('/s-l\d+\./', 's-l1600.', $url);
                         if (!in_array($highRes, $images)) {
@@ -102,8 +97,48 @@ function fetchEbayImages($ebayItemId) {
                 }
             }
         }
+        
+        // Method 4: Look for image URLs in the main image container
+        if (empty($images)) {
+            preg_match_all('/"ux-image-magnify".*?src="([^"]+)"/', $html, $matches);
+            if (!empty($matches[1])) {
+                foreach ($matches[1] as $url) {
+                    if (strpos($url, 'ebayimg.com') !== false) {
+                        $highRes = preg_replace('/s-l\d+\./', 's-l1600.', $url);
+                        if (!in_array($highRes, $images)) {
+                            $images[] = $highRes;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Method 5: Look for image URLs in the image gallery container
+        if (empty($images)) {
+            preg_match_all('/"ux-image-gallery".*?src="([^"]+)"/', $html, $matches);
+            if (!empty($matches[1])) {
+                foreach ($matches[1] as $url) {
+                    if (strpos($url, 'ebayimg.com') !== false) {
+                        $highRes = preg_replace('/s-l\d+\./', 's-l1600.', $url);
+                        if (!in_array($highRes, $images)) {
+                            $images[] = $highRes;
+                        }
+                    }
+                }
+            }
+        }
+        $debug['image_count'] = count($images);
+        if (empty($images)) {
+            $debug['html_snippet'] = substr($html, 0, 500); // First 500 chars for quick inspection
+            $debug['error'] = 'No images found in HTML. Possible reasons: item not found, blocked, or no images.';
+        }
+    } else {
+        $debug['error'] = 'HTTP code ' . $httpCode . '. eBay page not loaded.';
+        $debug['html_snippet'] = $html ? substr($html, 0, 500) : null;
     }
-    
+    if (is_array($debugInfo)) {
+        $debugInfo[] = $debug;
+    }
     return array_unique($images);
 }
 
@@ -163,6 +198,7 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
     $errors = [];
     $debugRows = [];
     $fetchImages = isset($_POST['fetch_images']) && $_POST['fetch_images'] == '1';
+    $imageDebugs = [];
     
     if (($handle = fopen($csvFile, 'r')) !== false) {
         $header = fgetcsv($handle); // Read header row
@@ -174,7 +210,8 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
             $rowDebug = [
                 'row' => $row,
                 'images' => [],
-                'error' => null
+                'error' => null,
+                'image_debug' => null
             ];
             try {
                 $data = array_combine($header, $row);
@@ -189,8 +226,10 @@ if (isset($_POST['import_csv']) && isset($_FILES['csv_file']) && $_FILES['csv_fi
                 $stmt->execute([$title, $description, $price, $condition, $ebayItemId]);
                 $productId = $db->lastInsertId();
                 if ($fetchImages && !empty($ebayItemId) && is_numeric($ebayItemId)) {
-                    $images = fetchEbayImages($ebayItemId);
+                    $imageDebug = [];
+                    $images = fetchEbayImages($ebayItemId, $imageDebug);
                     $rowDebug['images'] = $images;
+                    $rowDebug['image_debug'] = $imageDebug;
                     if (!empty($images)) {
                         $imageIndex = 1;
                         foreach ($images as $imageUrl) {
