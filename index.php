@@ -229,34 +229,14 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </section>
 
-    <section class="genre-section">
-        <div class="section-title">Shop by Genre</div>
-        <div class="genre-grid">
-            <?php
-            $genres = [
-                'shonen' => ['Shonen', '#eebbc3'],
-                'shojo' => ['Shojo', '#ffb6c1'],
-                'seinen' => ['Seinen', '#232946'],
-                'josei' => ['Josei', '#ffc0cb'],
-                'isekai' => ['Isekai', '#9370db'],
-                'sports' => ['Sports', '#4682b4']
-            ];
-            foreach ($genres as $key => $genre):
-                $svg = base64_encode(<<<EOD
-<svg width="80" height="110" viewBox="0 0 80 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="5" y="10" width="70" height="90" rx="10" fill="{$genre[1]}" stroke="#232946" stroke-width="3"/>
-  <rect x="15" y="20" width="50" height="70" rx="6" fill="#fff" opacity="0.15"/>
-  <rect x="10" y="15" width="60" height="80" rx="8" fill="#fff" opacity="0.08"/>
-  <text x="50%" y="60%" text-anchor="middle" fill="#232946" font-family="Arial" font-size="13" font-weight="bold">{$genre[0]}</text>
-</svg>
-EOD
-                );
-            ?>
-            <a href="/pages/shop.php?genre=<?php echo ucfirst($key); ?>" class="genre-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(35,41,70,0.08);background:#f7f7fa;border-radius:16px;padding:1.5rem 0;transition:transform 0.13s,box-shadow 0.13s;text-decoration:none;color:#232946;">
-                <img src="data:image/svg+xml;base64,<?php echo $svg; ?>" alt="<?php echo $genre[0]; ?>" style="width:80px;height:110px;margin-bottom:1rem;">
-                <span style="font-weight:700;font-size:1.1rem;letter-spacing:0.5px;"> <?php echo $genre[0]; ?> </span>
-            </a>
-            <?php endforeach; ?>
+    <section class="sell-hero" style="background:linear-gradient(120deg,#eebbc3 60%,#232946 100%);padding:3.5rem 0 3rem 0;display:flex;align-items:center;justify-content:center;">
+        <div style="display:flex;align-items:center;gap:3rem;max-width:1100px;width:100%;flex-wrap:wrap;justify-content:center;">
+            <img src="https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=320&h=320&facepad=2&q=80" alt="Sell Manga" style="width:220px;height:220px;object-fit:cover;border-radius:18px;box-shadow:0 4px 24px rgba(35,41,70,0.13);border:6px solid #fff;">
+            <div style="flex:1;min-width:260px;">
+                <h2 style="font-size:2.3rem;font-weight:900;color:#232946;margin-bottom:1rem;letter-spacing:1px;">Turn Your Manga Into Cash!</h2>
+                <p style="font-size:1.2rem;color:#232946;margin-bottom:1.5rem;max-width:500px;">Have a collection to sell? We offer top dollar and a smooth, friendly process. Start your selling journey now and join hundreds of happy manga fans who've cashed in with Bort's Books!</p>
+                <a href="/pages/sell.php" style="background:#232946;color:#fff;padding:1.1rem 2.5rem;border-radius:30px;font-weight:800;font-size:1.2rem;text-decoration:none;box-shadow:0 2px 12px rgba(35,41,70,0.13);transition:background 0.2s;">Get an Offer</a>
+            </div>
         </div>
     </section>
 
@@ -281,7 +261,9 @@ EOD
                             $imgSrc = "data:image/svg+xml;base64,$svg";
                         }
                         ?>
-                        <img src="<?php echo $imgSrc; ?>" alt="<?php echo htmlspecialchars($manga['title']); ?>" style="width:200px;height:280px;object-fit:cover;border-radius:12px 12px 0 0;box-shadow:0 2px 8px rgba(35,41,70,0.08);margin-top:1rem;">
+                        <a href="/pages/product.php?id=<?php echo $manga['id']; ?>" style="display:block;width:200px;height:280px;">
+                            <img src="<?php echo $imgSrc; ?>" alt="<?php echo htmlspecialchars($manga['title']); ?>" style="width:200px;height:280px;object-fit:cover;border-radius:12px 12px 0 0;box-shadow:0 2px 8px rgba(35,41,70,0.08);margin-top:1rem;">
+                        </a>
                         <div class="info" style="padding:1rem;width:100%;display:flex;flex-direction:column;align-items:center;">
                             <div class="title" style="font-size:1.15rem;font-weight:700;margin-bottom:0.3rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;" title="<?php echo htmlspecialchars($manga['title']); ?>"><?php echo htmlspecialchars($manga['title']); ?></div>
                             <div class="price" style="color:#e63946;font-weight:700;margin-bottom:0.5rem;">$<?php echo number_format($manga['price'], 2); ?></div>
@@ -331,21 +313,12 @@ EOD
         <div class="value-prop"><i class="fas fa-undo"></i><h4>Easy Returns</h4><p>Hassle-free returns & support.</p></div>
     </div>
 
-    <div class="sell-callout">
-        <img src="assets/img/sell-manga-stack.jpg" alt="Sell Manga">
-        <div class="sell-callout-content">
-            <h2>Turn Your Manga Into Cash!</h2>
-            <p>Have a collection to sell? We offer top dollar and a smooth, friendly process. Start your selling journey now.</p>
-            <a href="/pages/sell.php">Get an Offer</a>
-        </div>
-    </div>
-
     <section class="reviews-section">
         <div class="section-title">What Our Customers Say</div>
         <div class="reviews-grid">
-            <div class="review-card"><img src="assets/img/avatar1.png" class="avatar"><div class="name">Alex R.</div><div class="stars">★★★★★</div><div>"Super fast shipping and the manga was in perfect condition! Will buy again."</div></div>
-            <div class="review-card"><img src="assets/img/avatar2.png" class="avatar"><div class="name">Mina S.</div><div class="stars">★★★★★</div><div>"Love the selection and the prices. Found rare volumes I couldn't get anywhere else."</div></div>
-            <div class="review-card"><img src="assets/img/avatar3.png" class="avatar"><div class="name">Jordan K.</div><div class="stars">★★★★★</div><div>"Selling my collection was so easy. Great communication and quick payment!"</div></div>
+            <div class="review-card"><img src="https://randomuser.me/api/portraits/men/32.jpg" class="avatar"><div class="name">Alex R.</div><div class="stars">★★★★★</div><div>"Super fast shipping and the manga was in perfect condition! Will buy again."</div></div>
+            <div class="review-card"><img src="https://randomuser.me/api/portraits/women/44.jpg" class="avatar"><div class="name">Mina S.</div><div class="stars">★★★★★</div><div>"Love the selection and the prices. Found rare volumes I couldn't get anywhere else."</div></div>
+            <div class="review-card"><img src="https://randomuser.me/api/portraits/men/65.jpg" class="avatar"><div class="name">Jordan K.</div><div class="stars">★★★★★</div><div>"Selling my collection was so easy. Great communication and quick payment!"</div></div>
         </div>
     </section>
 

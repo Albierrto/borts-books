@@ -5,19 +5,38 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header('Location: shop.php');
     exit;
 }
-$id = (int)$_GET['id'];
-// Fetch product
-$stmt = $db->prepare('SELECT * FROM products WHERE id = ?');
-$stmt->execute([$id]);
-$product = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$product) {
-    echo '<p>Product not found. <a href="shop.php">Back to shop</a></p>';
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$debug = isset($_GET['debug']) && $_GET['debug'] == '1';
+
+try {
+    // Fetch product
+    $stmt = $db->prepare('SELECT * FROM products WHERE id = ?');
+    $stmt->execute([$id]);
+    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$product) {
+        if ($debug) {
+            echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
+            echo '<b>Debug:</b> Product not found.<br>ID: ' . htmlspecialchars($id) . '<br>';
+            echo 'Query: SELECT * FROM products WHERE id = ' . htmlspecialchars($id) . '<br>';
+            echo '</div>';
+        }
+        echo '<p>Product not found. <a href="shop.php">Back to shop</a></p>';
+        exit;
+    }
+    // Fetch all images for this product
+    $imgStmt = $db->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC');
+    $imgStmt->execute([$id]);
+    $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    if ($debug) {
+        echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
+        echo '<b>Debug Exception:</b> ' . htmlspecialchars($e->getMessage()) . '<br>';
+        echo '</div>';
+    } else {
+        echo '<p>There was an error loading this product.</p>';
+    }
     exit;
 }
-// Fetch all images for this product
-$imgStmt = $db->prepare('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, id ASC');
-$imgStmt->execute([$id]);
-$images = $imgStmt->fetchAll(PDO::FETCH_COLUMN);
 // Fetch up to 7 random recommended products (excluding current)
 $recStmt = $db->prepare("SELECT * FROM products WHERE id != ? AND title IS NOT NULL AND title != '' ORDER BY RANDOM() LIMIT 7");
 $recStmt->execute([$id]);
@@ -110,7 +129,7 @@ $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
             <?php if ($images && count($images) > 0): ?>
                 <div style="display:flex;gap:10px;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap;">
                 <?php foreach ($images as $img): ?>
-                    <img class="product-detail-image" src="<?php echo htmlspecialchars($img); ?>" alt="<?php echo htmlspecialchars($product['title']); ?> cover">
+                    <img class="product-detail-image" src="<?php echo htmlspecialchars($img['image_url']); ?>" alt="<?php echo htmlspecialchars($product['title']); ?> cover">
                 <?php endforeach; ?>
                 </div>
             <?php else: ?>
