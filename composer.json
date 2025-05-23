@@ -1,0 +1,17 @@
+{
+    "name": "alber/borts-books",
+    "autoload": {
+        "psr-4": {
+            "Alber\\BortsBooks\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Bort",
+            "email": "albertoadame28@yahoo.com"
+        }
+    ],
+    "require": {
+        "stripe/stripe-php": "^17.2"
+    }
+}

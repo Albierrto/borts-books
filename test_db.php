@@ -1,6 +1,6 @@
 <?php
 // Load environment variables from .env
-$envPath = dirname(__DIR__) . '/.env';
+$envPath = __DIR__ . '/.env';
 if (!file_exists($envPath)) {
     die('ERROR: .env file not found at ' . htmlspecialchars($envPath));
 }
@@ -11,7 +11,6 @@ foreach ($lines as $line) {
     $_ENV[$name] = $value;
 }
 
-// Database configuration
 $host = $_ENV['DB_HOST'] ?? 'localhost';
 $db   = $_ENV['DB_NAME'] ?? '';
 $user = $_ENV['DB_USER'] ?? '';
@@ -26,13 +25,8 @@ $options = [
 ];
 
 try {
-    $db = new PDO($dsn, $user, $pass, $options);
+    $pdo = new PDO($dsn, $user, $pass, $options);
+    echo 'Connection successful!';
 } catch (PDOException $e) {
-    die('Database connection failed: ' . htmlspecialchars($e->getMessage()));
-}
-// Add ebay_item_id column if it doesn't exist
-try {
-    $db->query("ALTER TABLE products ADD COLUMN IF NOT EXISTS ebay_item_id VARCHAR(255)");
-} catch (PDOException $e) {
-    // Column might already exist, continue
-}
+    echo 'Connection failed: ' . $e->getMessage();
+} 

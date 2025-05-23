@@ -1,5 +1,4 @@
 <?php
-echo 'PHP is working<br>';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -57,7 +56,16 @@ try {
 $recStmt = $db->prepare("SELECT * FROM products WHERE id != ? AND title IS NOT NULL AND title != '' ORDER BY RAND() LIMIT 7");
 $recStmt->execute([$id]);
 $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// After product details, add a Buy Now button
 ?>
+<div style="text-align:center;margin:2rem 0;">
+    <form action="cart.php" method="POST" style="display:inline;">
+        <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
+        <input type="hidden" name="quantity" value="1">
+        <button type="submit" name="buy_now" class="btn" style="background:#e63946;color:#fff;padding:0.9rem 2.2rem;border-radius:30px;font-weight:800;font-size:1.2rem;box-shadow:0 2px 12px rgba(35,41,70,0.13);transition:background 0.2s;">Buy Now</button>
+    </form>
+</div>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -166,7 +174,7 @@ $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
                     <?php foreach ($recommended as $rec): ?>
                     <div class="carousel-card" style="background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.07);padding:1rem;width:200px;text-align:center;flex-shrink:0;margin-right:10px;">
                         <a href="product.php?id=<?php echo $rec['id']; ?>">
-                            <img class="rec-manga-img" data-title="<?php echo htmlspecialchars($rec['title']); ?>" src="../assets/img/placeholder.png" alt="<?php echo htmlspecialchars($rec['title']); ?> cover" style="width:110px;height:160px;object-fit:cover;border-radius:4px;background:#f4f4f4;margin-bottom:0.5rem;">
+                            <img class="rec-manga-img" data-title="<?php echo htmlspecialchars($rec['title']); ?>" src="<?php echo htmlspecialchars($rec['main_image'] ?: '../assets/img/placeholder.png'); ?>" alt="<?php echo htmlspecialchars($rec['title']); ?> cover" style="width:110px;height:160px;object-fit:cover;border-radius:4px;background:#f4f4f4;margin-bottom:0.5rem;">
                         </a>
                         <div style="font-weight:600;font-size:1.05rem;margin-bottom:0.3rem;"><?php echo htmlspecialchars($rec['title']); ?></div>
                         <div style="color:#e63946;font-weight:700;">$<?php echo number_format($rec['price'],2); ?></div>
