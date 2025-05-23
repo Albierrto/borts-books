@@ -30,3 +30,10 @@ try {
 } catch (PDOException $e) {
     die('Database connection failed: ' . htmlspecialchars($e->getMessage()));
 }
+
+// Add ebay_item_id column if it doesn't exist
+try {
+    $db->query("ALTER TABLE products ADD COLUMN IF NOT EXISTS ebay_item_id VARCHAR(255)");
+} catch (PDOException $e) {
+    // Column might already exist, continue
+}
