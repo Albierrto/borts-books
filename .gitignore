@@ -1,5 +1,7 @@
-# Environment files
+# Environment variables
 .env
+
+# Environment files
 .env.*
 
 # IDE files
