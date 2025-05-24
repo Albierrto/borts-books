@@ -30,8 +30,8 @@ if (!empty($cart)) {
         $imgStmt = $db->prepare('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY id ASC LIMIT 1');
         $imgStmt->execute([$prod['id']]);
         $prod['main_image'] = $imgStmt->fetchColumn();
-        $prod['cart_qty'] = $cart[$prod['id']];
-        $prod['cart_total'] = $prod['price'] * $prod['cart_qty'];
+        $prod['cart_qty'] = 1; // Always 1 since we only allow one of each item
+        $prod['cart_total'] = $prod['price']; // Price * 1
         $subtotal += $prod['cart_total'];
     }
     unset($prod);
@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a href="search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
-                    <span class="cart-count"><?php echo array_sum($_SESSION['cart']); ?></span>
+                    <span class="cart-count"><?php echo count($_SESSION['cart']); ?></span>
                 </a>
             </div>
         </div>
@@ -175,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <td><img class="order-img" src="<?php echo htmlspecialchars($prod['main_image'] ?: 'assets/img/placeholder.png'); ?>" alt="<?php echo htmlspecialchars($prod['title']); ?> cover"></td>
                             <td><?php echo htmlspecialchars($prod['title']); ?></td>
                             <td>$<?php echo number_format($prod['price'], 2); ?></td>
-                            <td><?php echo $prod['cart_qty']; ?></td>
+                            <td>1</td>
                             <td>$<?php echo number_format($prod['cart_total'], 2); ?></td>
                         </tr>
                         <?php endforeach; ?>

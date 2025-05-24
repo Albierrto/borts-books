@@ -81,7 +81,20 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Show success notification
+                    // Show notification with appropriate message
+                    notification.textContent = data.message;
+                    
+                    // Change styling based on whether item was already in cart
+                    if (data.already_in_cart) {
+                        notification.style.background = '#fff3cd';
+                        notification.style.color = '#856404';
+                        notification.style.borderColor = '#ffeaa7';
+                    } else {
+                        notification.style.background = '#d4edda';
+                        notification.style.color = '#155724';
+                        notification.style.borderColor = '#c3e6cb';
+                    }
+                    
                     notification.style.display = 'block';
                     
                     // Update cart count in header

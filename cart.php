@@ -14,7 +14,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Add to cart
     if (isset($_POST['product_id']) || isset($_POST['add_to_cart'])) {
         $pid = (int)$_POST['product_id'];
-        $qty = isset($_POST['quantity']) ? max(1, (int)$_POST['quantity']) : 1;
         
         // Get product details for success message
         $stmt = $db->prepare('SELECT title FROM products WHERE id = ?');
@@ -23,11 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($product) {
             if (isset($_SESSION['cart'][$pid])) {
-                $_SESSION['cart'][$pid] += $qty;
+                // Item already in cart - don't add again
+                $success_message = $product['title'] . ' is already in your cart!';
             } else {
-                $_SESSION['cart'][$pid] = $qty;
+                $_SESSION['cart'][$pid] = 1; // Always set quantity to 1
+                $success_message = $product['title'] . ' has been added to your cart!';
             }
-            $success_message = $product['title'] . ' has been added to your cart!';
         }
         
         // Check if this is an AJAX request
@@ -40,7 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode([
                 'success' => true,
                 'message' => $success_message,
-                'cart_count' => array_sum($_SESSION['cart'])
+                'cart_count' => array_sum($_SESSION['cart']),
+                'already_in_cart' => isset($_SESSION['cart'][$pid])
             ]);
             exit;
         } else {
@@ -50,20 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Update quantities
-    if (isset($_POST['update_cart'])) {
-        foreach ($_POST['quantities'] as $pid => $qty) {
-            $pid = (int)$pid;
-            $qty = max(1, (int)$qty);
-            if ($qty > 0) {
-                $_SESSION['cart'][$pid] = $qty;
-            }
-        }
-        header('Location: cart.php');
-        exit;
-    }
-    
-    // Remove item
+    // Remove item (we're removing the update quantity functionality)
     if (isset($_POST['remove_id'])) {
         $rid = (int)$_POST['remove_id'];
         unset($_SESSION['cart'][$rid]);
@@ -90,14 +78,14 @@ if (!empty($cart)) {
         $imgStmt = $db->prepare('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY id ASC LIMIT 1');
         $imgStmt->execute([$prod['id']]);
         $prod['main_image'] = $imgStmt->fetchColumn();
-        $prod['cart_qty'] = $cart[$prod['id']];
-        $prod['cart_total'] = $prod['price'] * $prod['cart_qty'];
+        $prod['cart_qty'] = 1; // Always 1 since we only allow one of each item
+        $prod['cart_total'] = $prod['price']; // Price * 1
         $subtotal += $prod['cart_total'];
     }
     unset($prod);
 }
 // Cart count for header
-$num_items_in_cart = array_sum($cart);
+$num_items_in_cart = count($cart); // Count unique items instead of sum
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -116,7 +104,6 @@ $num_items_in_cart = array_sum($cart);
         .cart-table td { border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
         .cart-img { width: 70px; height: 100px; object-fit: cover; border-radius: 8px; background: #f7f7fa; }
         .cart-remove-btn { background: none; border: none; color: #e63946; font-weight: 700; cursor: pointer; font-size: 1.1rem; }
-        .cart-qty-input { width: 60px; padding: 0.4rem; border-radius: 6px; border: 1px solid #ddd; text-align: center; }
         .cart-summary { text-align: right; font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; }
         .cart-actions { text-align: right; }
         .cart-btn { background: #eebbc3; color: #232946; border: none; border-radius: 30px; padding: 0.8rem 2rem; font-weight: 700; font-size: 1.1rem; cursor: pointer; transition: background 0.2s; margin-left: 1rem; }
@@ -158,39 +145,38 @@ $num_items_in_cart = array_sum($cart);
             <?php if (empty($products)): ?>
                 <div class="empty-cart-msg">Your cart is empty. <a href="/pages/shop.php">Browse manga</a> to get started!</div>
             <?php else: ?>
-            <form method="POST">
-                <table class="cart-table">
-                    <thead>
-                        <tr>
-                            <th>Cover</th>
-                            <th>Title</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Subtotal</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($products as $prod): ?>
-                        <tr>
-                            <td><img class="cart-img" src="<?php echo htmlspecialchars($prod['main_image'] ?: 'assets/img/placeholder.png'); ?>" alt="<?php echo htmlspecialchars($prod['title']); ?> cover"></td>
-                            <td><?php echo htmlspecialchars($prod['title']); ?></td>
-                            <td>$<?php echo number_format($prod['price'], 2); ?></td>
-                            <td><input class="cart-qty-input" type="number" name="quantities[<?php echo $prod['id']; ?>]" value="<?php echo $prod['cart_qty']; ?>" min="1"></td>
-                            <td>$<?php echo number_format($prod['cart_total'], 2); ?></td>
-                            <td>
+            <table class="cart-table">
+                <thead>
+                    <tr>
+                        <th>Cover</th>
+                        <th>Title</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Subtotal</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($products as $prod): ?>
+                    <tr>
+                        <td><img class="cart-img" src="<?php echo htmlspecialchars($prod['main_image'] ?: 'assets/img/placeholder.png'); ?>" alt="<?php echo htmlspecialchars($prod['title']); ?> cover"></td>
+                        <td><?php echo htmlspecialchars($prod['title']); ?></td>
+                        <td>$<?php echo number_format($prod['price'], 2); ?></td>
+                        <td>1</td>
+                        <td>$<?php echo number_format($prod['cart_total'], 2); ?></td>
+                        <td>
+                            <form method="POST" style="display: inline;">
                                 <button class="cart-remove-btn" name="remove_id" value="<?php echo $prod['id']; ?>" title="Remove">&times;</button>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                <div class="cart-summary">Subtotal: $<?php echo number_format($subtotal, 2); ?></div>
-                <div class="cart-actions">
-                    <button type="submit" name="update_cart" class="cart-btn">Update Cart</button>
-                    <a href="checkout.php" class="cart-btn" style="background:#e63946;color:#fff;">Proceed to Checkout</a>
-                </div>
-            </form>
+                            </form>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <div class="cart-summary">Total: $<?php echo number_format($subtotal, 2); ?></div>
+            <div class="cart-actions">
+                <a href="checkout.php" class="cart-btn" style="background:#e63946;color:#fff;">Proceed to Checkout</a>
+            </div>
             <?php endif; ?>
         </div>
     </main>
