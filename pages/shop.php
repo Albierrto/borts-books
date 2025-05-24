@@ -1,9 +1,4 @@
-<?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-session_start();
-require_once '../includes/db.php';
+<?phpini_set('display_errors', 1);ini_set('display_startup_errors', 1);error_reporting(E_ALL);session_start();require_once '../includes/db.php';// Initialize cart if not setif (!isset($_SESSION['cart'])) {    $_SESSION['cart'] = [];}$cart_count = count($_SESSION['cart']);
 $pageTitle = "Shop";
 $currentPage = "shop";
 
@@ -62,6 +57,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .shop-header {
             display: flex;
@@ -100,18 +96,8 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         .products-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 2rem;
-        }
-        .product-card-link {
-            text-decoration: none;
-            color: inherit;
-            display: block;
-            transition: transform 0.12s;
-        }
-        .product-card-link:hover .product-card {
-            box-shadow: 0 6px 24px rgba(0,0,0,0.18);
-            transform: translateY(-4px) scale(1.03);
         }
         .product-card {
             background: #fff;
@@ -121,7 +107,12 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             display: flex;
             flex-direction: column;
             align-items: center;
-            transition: box-shadow 0.2s;
+            transition: box-shadow 0.2s, transform 0.2s;
+            position: relative;
+        }
+        .product-card:hover {
+            box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
         }
         .product-image {
             width: 160px;
@@ -130,12 +121,20 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             border-radius: 4px;
             background: #f4f4f4;
             margin-bottom: 1rem;
+            cursor: pointer;
         }
         .product-title {
             font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
             text-align: center;
+        }
+        .product-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .product-title a:hover {
+            color: #e63946;
         }
         .product-price {
             color: var(--primary, #e63946);
@@ -146,12 +145,76 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .product-description {
             font-size: 0.98rem;
             color: #444;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
             text-align: center;
+            flex-grow: 1;
+        }
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
+            width: 100%;
+        }
+        .view-details-btn {
+            flex: 1;
+            background: #f8f9fa;
+            color: #495057;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.6rem 1rem;
+            text-decoration: none;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .view-details-btn:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+        .add-to-cart-btn {
+            flex: 1;
+            background: #e63946;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.6rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .add-to-cart-btn:hover {
+            background: #d32f3f;
+            transform: translateY(-1px);
+        }
+        .add-to-cart-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .notification.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .notification.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
         }
         @media (max-width: 600px) {
             .shop-header { flex-direction: column; gap: 1rem; }
             .shop-title { font-size: 2rem; }
+            .products-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
         }
     </style>
 </head>
@@ -168,14 +231,18 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="search.php" title="Search"><i class="fas fa-search"></i></a>
-                <a href="cart.php" title="Shopping Cart" class="cart-link">
+                <a href="/pages/search.php" title="Search"><i class="fas fa-search"></i></a>
+                <a href="/cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
-                    <span class="cart-count">0</span>
+                    <span class="cart-count"><?php echo $cart_count; ?></span>
                 </a>
             </div>
         </div>
     </header>
+    
+    <!-- Notification for cart actions -->
+    <div id="cartNotification" class="notification"></div>
+    
     <main class="container">
         <div class="shop-header" style="flex-direction:column;align-items:stretch;gap:1.5rem;">
             <div class="shop-title">Shop Manga</div>
@@ -203,20 +270,86 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div class="products-grid" id="productsGrid">
             <?php foreach ($products as $product): ?>
-                <a href="product.php?id=<?php echo $product['id']; ?>" class="product-card-link">
                 <div class="product-card" data-title="<?php echo htmlspecialchars(strtolower($product['title'])); ?>">
                     <img class="product-image" 
                         src="<?php echo $product['main_image'] ? htmlspecialchars($product['main_image']) : '../assets/img/placeholder.png'; ?>" 
                         alt="<?php echo htmlspecialchars($product['title']); ?> cover"
+                        onclick="window.location.href='product.php?id=<?php echo $product['id']; ?>'"
                         data-title="<?php echo htmlspecialchars($product['title']); ?>">
-                    <div class="product-title"><?php echo htmlspecialchars($product['title']); ?></div>
+                    <div class="product-title">
+                        <a href="product.php?id=<?php echo $product['id']; ?>"><?php echo htmlspecialchars($product['title']); ?></a>
+                    </div>
                     <div class="product-price"><?php echo ($product['price'] > 0) ? '$' . number_format($product['price'], 2) : '<span style="color:#888">Price unavailable</span>'; ?></div>
                     <div class="product-description"><?php echo $product['description'] ? htmlspecialchars($product['description']) : '<span style="color:#aaa">No description</span>'; ?></div>
+                    
+                    <div class="product-actions">
+                        <a href="product.php?id=<?php echo $product['id']; ?>" class="view-details-btn">View Details</a>
+                        <button class="add-to-cart-btn" onclick="addToCart(<?php echo $product['id']; ?>, this)" 
+                                <?php echo isset($_SESSION['cart'][$product['id']]) ? 'disabled' : ''; ?>>
+                            <?php echo isset($_SESSION['cart'][$product['id']]) ? 'In Cart' : 'Add to Cart'; ?>
+                        </button>
+                    </div>
                 </div>
-                </a>
             <?php endforeach; ?>
         </div>
     </main>
-    <!-- No JS needed for filtering; handled by PHP form -->
+    
+    <script>
+        function addToCart(productId, button) {
+            // Disable button and show loading state
+            button.disabled = true;
+            button.textContent = 'Adding...';
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('product_id', productId);
+            formData.append('redirect', 'false');
+            
+            fetch('/cart.php', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show notification
+                    showNotification(data.message, data.already_in_cart ? 'warning' : 'success');
+                    
+                    // Update cart count in header
+                    const cartCount = document.querySelector('.cart-count');
+                    if (cartCount) {
+                        cartCount.textContent = data.cart_count;
+                    }
+                    
+                    // Update button state
+                    button.textContent = 'In Cart';
+                    button.disabled = true;
+                } else {
+                    throw new Error('Failed to add item to cart');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                button.disabled = false;
+                button.textContent = 'Add to Cart';
+                showNotification('Error adding item to cart. Please try again.', 'error');
+            });
+        }
+        
+        function showNotification(message, type) {
+            const notification = document.getElementById('cartNotification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+    </script>
 </body>
 </html> 

@@ -1,5 +1,25 @@
 <?php
-require_once __DIR__ . '/../vendor/autoload.php';
+// Try multiple possible paths for the autoload file
+$possible_paths = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../vendor/autoload.php',
+    __DIR__ . '/../../../vendor/autoload.php',
+    dirname(__DIR__) . '/vendor/autoload.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/vendor/autoload.php',
+];
+
+$autoload_found = false;
+foreach ($possible_paths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $autoload_found = true;
+        break;
+    }
+}
+
+if (!$autoload_found) {
+    throw new Exception('Stripe vendor autoload.php not found. Please run "composer install" to install dependencies.');
+}
 
 // Get Stripe keys from environment variables
 $stripe_publishable_key = $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '';
@@ -29,8 +49,8 @@ function createStripeCheckoutSession($cart, $customerInfo) {
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             foreach ($products as $product) {
-                $quantity = $cart[$product['id']];
-                $line_total = $product['price'] * $quantity;
+                $quantity = 1; // Always 1 since we only allow one of each item
+                $line_total = $product['price'];
                 $subtotal += $line_total;
                 
                 $line_items[] = [
@@ -42,7 +62,7 @@ function createStripeCheckoutSession($cart, $customerInfo) {
                         ],
                         'unit_amount' => round($product['price'] * 100), // Convert to cents
                     ],
-                    'quantity' => $quantity,
+                    'quantity' => 1,
                 ];
             }
         }
