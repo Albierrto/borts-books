@@ -30,12 +30,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success_message = $product['title'] . ' has been added to your cart!';
         }
         
-        // If this was an AJAX request or if we want to stay on cart page, don't redirect
-        if (!isset($_POST['redirect']) || $_POST['redirect'] !== 'false') {
+        // Check if this is an AJAX request
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+                  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+        
+        if ($isAjax || (isset($_POST['redirect']) && $_POST['redirect'] === 'false')) {
+            // Return JSON response for AJAX
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => $success_message,
+                'cart_count' => array_sum($_SESSION['cart'])
+            ]);
+            exit;
+        } else {
+            // Regular redirect for form submission
             header('Location: cart.php?added=1');
             exit;
         }
     }
+    
     // Update quantities
     if (isset($_POST['update_cart'])) {
         foreach ($_POST['quantities'] as $pid => $qty) {
@@ -48,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: cart.php');
         exit;
     }
+    
     // Remove item
     if (isset($_POST['remove_id'])) {
         $rid = (int)$_POST['remove_id'];
@@ -91,6 +106,7 @@ $num_items_in_cart = array_sum($cart);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Cart - Bort's Books</title>
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .cart-container { max-width: 900px; margin: 2.5rem auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(35,41,70,0.08); padding: 2rem; }
         .cart-title { font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem; text-align: center; }

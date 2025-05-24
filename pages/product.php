@@ -422,53 +422,7 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
             }
         });
         
-        // Initialize carousel
-        updateCarousel();
-        
-        // Add to cart with AJAX to show notification without redirect
-        document.getElementById('addToCartForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const button = document.getElementById('addToCartBtn');
-            const notification = document.getElementById('addToCartNotification');
-            
-            // Disable button temporarily
-            button.disabled = true;
-            button.textContent = 'Adding...';
-            
-            fetch('/cart.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text())
-            .then(data => {
-                // Show success notification
-                notification.style.display = 'block';
-                
-                // Update cart count in header
-                const cartCount = document.querySelector('.cart-count');
-                if (cartCount) {
-                    const currentCount = parseInt(cartCount.textContent) || 0;
-                    cartCount.textContent = currentCount + 1;
-                }
-                
-                // Reset button
-                button.disabled = false;
-                button.textContent = 'Add to Cart';
-                
-                // Hide notification after 3 seconds
-                setTimeout(() => {
-                    notification.style.display = 'none';
-                }, 3000);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                button.disabled = false;
-                button.textContent = 'Add to Cart';
-                alert('Error adding item to cart. Please try again.');
-            });
-        });
+                // Initialize carousel        updateCarousel();                // Add to cart with AJAX to show notification without redirect        document.getElementById('addToCartForm').addEventListener('submit', function(e) {            e.preventDefault();                        const formData = new FormData(this);            const button = document.getElementById('addToCartBtn');            const notification = document.getElementById('addToCartNotification');                        // Disable button temporarily            button.disabled = true;            button.textContent = 'Adding...';                        fetch('/cart.php', {                method: 'POST',                headers: {                    'X-Requested-With': 'XMLHttpRequest'                },                body: formData            })            .then(response => response.json())            .then(data => {                if (data.success) {                    // Show success notification                    notification.style.display = 'block';                                        // Update cart count in header                    const cartCount = document.querySelector('.cart-count');                    if (cartCount) {                        cartCount.textContent = data.cart_count;                    }                                        // Reset button                    button.disabled = false;                    button.textContent = 'Add to Cart';                                        // Hide notification after 3 seconds                    setTimeout(() => {                        notification.style.display = 'none';                    }, 3000);                } else {                    throw new Error('Failed to add item to cart');                }            })            .catch(error => {                console.error('Error:', error);                button.disabled = false;                button.textContent = 'Add to Cart';                alert('Error adding item to cart. Please try again.');            });        });
     </script>
 </body>
 </html> 
