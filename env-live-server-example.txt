@@ -17,6 +17,11 @@ STRIPE_SECRET_KEY=sk_test_your_test_secret_key_here
 # STRIPE_PUBLISHABLE_KEY=pk_live_your_live_publishable_key_here
 # STRIPE_SECRET_KEY=sk_live_your_live_secret_key_here
 
+# USPS API Configuration (get these from USPS Business Developer Portal)
+USPS_CONSUMER_KEY=your_actual_usps_consumer_key_here
+USPS_CONSUMER_SECRET=your_actual_usps_consumer_secret_here
+USPS_ORIGIN_ZIP=your_business_zip_code
+
 # Application Settings - CHANGE THIS TO YOUR ACTUAL DOMAIN
 SITE_URL=https://your-actual-domain.com
 ENVIRONMENT=production
@@ -25,4 +30,6 @@ ENVIRONMENT=production
 # 1. Replace "your-actual-domain.com" with your real domain
 # 2. Make sure there are NO SPACES around the = signs
 # 3. Get your correct database credentials from cPanel > MySQL Databases
-# 4. Get your Stripe keys from your Stripe Dashboard 
+# 4. Get your Stripe keys from your Stripe Dashboard
+# 5. Get your USPS API keys from https://developer.usps.com/
+# 6. Set USPS_ORIGIN_ZIP to your business/shipping origin ZIP code 

@@ -11,6 +11,11 @@ DB_CHARSET=utf8mb4
 STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
 STRIPE_SECRET_KEY=sk_test_your_secret_key_here
 
+# USPS API Configuration (get these from USPS Business Developer Portal)
+USPS_CONSUMER_KEY=your_usps_consumer_key_here
+USPS_CONSUMER_SECRET=your_usps_consumer_secret_here
+USPS_ORIGIN_ZIP=90210
+
 # Application Settings
 SITE_URL=http://localhost:8000
 ENVIRONMENT=development 

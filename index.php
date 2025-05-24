@@ -11,6 +11,8 @@ $currentPage = "home";
 
 // Fetch trending manga from database
 require_once 'includes/db.php';
+require_once 'includes/cart-display.php';
+
 $trendingQuery = "SELECT p.*, pi.image_url 
                  FROM products p 
                  LEFT JOIN (
@@ -214,7 +216,7 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
                 <a href="search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
-                    <span class="cart-count">0</span>
+                    <span class="cart-count"><?php echo $cart_count; ?></span>
                 </a>
             </div>
         </div>
@@ -287,7 +289,6 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
         const totalCards = carouselInner.children.length;
 
         function updateCarousel() {
-            // Clamp currentIndex if there are not enough cards
             if (totalCards <= visibleCards) {
                 currentIndex = 0;
             }
@@ -314,10 +315,76 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
                 updateCarousel();
             }
         });
-        // Responsive: update visibleCards on resize
-        window.addEventListener('resize', () => {
-            // Optionally, recalculate visibleCards and clamp currentIndex
-        });
+
+        // Add to cart functionality
+        function addToCart(productId) {
+            fetch('/cart.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: 'product_id=' + productId + '&redirect=false'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update cart count in header
+                    const cartCount = document.querySelector('.cart-count');
+                    if (cartCount) {
+                        cartCount.textContent = data.cart_count;
+                    }
+                    
+                    // Show notification
+                    showNotification(data.message, data.already_in_cart ? 'warning' : 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error adding to cart. Please try again.', 'error');
+            });
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = 'notification notification-' + type;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#d4edda' : type === 'warning' ? '#fff3cd' : '#f8d7da'};
+                color: ${type === 'success' ? '#155724' : type === 'warning' ? '#856404' : '#721c24'};
+                border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'warning' ? '#ffeaa7' : '#f5c6cb'};
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                z-index: 9999;
+                font-weight: 600;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
         </script>
     </section>
 
