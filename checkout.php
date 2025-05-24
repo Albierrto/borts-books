@@ -1,51 +1,94 @@
 <?php
+// Enable debugging for development
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
+
+echo "<!-- DEBUG: Session started -->\n";
+echo "<!-- DEBUG: Cart contents: " . json_encode($_SESSION['cart'] ?? []) . " -->\n";
 
 try {
     require_once 'includes/db.php';
+    echo "<!-- DEBUG: Database included successfully -->\n";
+    
     require_once 'includes/config.php';
+    echo "<!-- DEBUG: Config included successfully -->\n";
+    
     require_once 'includes/stripe-config.php';
+    echo "<!-- DEBUG: Stripe config included successfully -->\n";
+    
     require_once 'includes/cart.php';
+    echo "<!-- DEBUG: Cart utilities included successfully -->\n";
+    
 } catch (Exception $e) {
+    echo "<!-- DEBUG: Include error: " . $e->getMessage() . " -->\n";
+    echo "<!-- DEBUG: File: " . $e->getFile() . " Line: " . $e->getLine() . " -->\n";
     error_log('Checkout Error: ' . $e->getMessage());
-    die('Configuration error. Please check that all required files exist and Stripe is properly configured.');
+    die('Configuration error: ' . $e->getMessage() . '<br>Please check that all required files exist and Stripe is properly configured.');
 }
+
+echo "<!-- DEBUG: All includes loaded successfully -->\n";
 
 // Redirect if cart is empty
 if (empty($_SESSION['cart'])) {
+    echo "<!-- DEBUG: Cart is empty, redirecting to cart.php -->\n";
     header('Location: cart.php');
     exit;
 }
+
+echo "<!-- DEBUG: Cart is not empty, proceeding -->\n";
 
 // Fetch products in cart
 $cart = $_SESSION['cart'];
 $products = [];
 $subtotal = 0;
+
+echo "<!-- DEBUG: Cart data: " . json_encode($cart) . " -->\n";
+
 if (!empty($cart)) {
-    $ids = implode(',', array_map('intval', array_keys($cart)));
-    $stmt = $db->query("SELECT * FROM products WHERE id IN ($ids)");
-    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    // Attach images
-    foreach ($products as &$prod) {
-        $imgStmt = $db->prepare('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY id ASC LIMIT 1');
-        $imgStmt->execute([$prod['id']]);
-        $prod['main_image'] = $imgStmt->fetchColumn();
-        $prod['cart_qty'] = 1; // Always 1 since we only allow one of each item
-        $prod['cart_total'] = $prod['price']; // Price * 1
-        $subtotal += $prod['cart_total'];
+    try {
+        $ids = implode(',', array_map('intval', array_keys($cart)));
+        echo "<!-- DEBUG: Product IDs to fetch: " . $ids . " -->\n";
+        
+        $stmt = $db->query("SELECT * FROM products WHERE id IN ($ids)");
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo "<!-- DEBUG: Found " . count($products) . " products -->\n";
+        
+        // Attach images
+        foreach ($products as &$prod) {
+            $imgStmt = $db->prepare('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY id ASC LIMIT 1');
+            $imgStmt->execute([$prod['id']]);
+            $prod['main_image'] = $imgStmt->fetchColumn();
+            $prod['cart_qty'] = 1; // Always 1 since we only allow one of each item
+            $prod['cart_total'] = $prod['price']; // Price * 1
+            $subtotal += $prod['cart_total'];
+        }
+        unset($prod);
+        
+        echo "<!-- DEBUG: Calculated subtotal: $" . number_format($subtotal, 2) . " -->\n";
+        
+    } catch (Exception $e) {
+        echo "<!-- DEBUG: Database error: " . $e->getMessage() . " -->\n";
+        die('Database error: ' . $e->getMessage());
     }
-    unset($prod);
 }
 
 // Handle order submission
 $errors = [];
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    echo "<!-- DEBUG: Form submitted -->\n";
+    
     $customerInfo = [
         'name' => $_POST['name'] ?? '',
         'email' => $_POST['email'] ?? '',
         'phone' => $_POST['phone'] ?? '',
     ];
+    
+    echo "<!-- DEBUG: Customer info: " . json_encode($customerInfo) . " -->\n";
 
     // Basic validation
     if (empty($customerInfo['name'])) {
@@ -58,14 +101,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Phone number is required';
     }
 
+    echo "<!-- DEBUG: Validation errors: " . json_encode($errors) . " -->\n";
+
     if (empty($errors)) {
         try {
+            echo "<!-- DEBUG: Attempting to create Stripe checkout session -->\n";
+            
             // Create Stripe Checkout Session
             $session = createStripeCheckoutSession($cart, $customerInfo);
+            
+            echo "<!-- DEBUG: Stripe session result: " . ($session ? 'Success' : 'Failed') . " -->\n";
             
             if ($session) {
                 // Store customer info in session for later use
                 $_SESSION['customer_info'] = $customerInfo;
+                
+                echo "<!-- DEBUG: Redirecting to: " . $session->url . " -->\n";
                 
                 // Redirect to Stripe Checkout
                 header('Location: ' . $session->url);
@@ -74,11 +125,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = "There was an error creating your checkout session. Please try again.";
             }
         } catch (Exception $e) {
+            echo "<!-- DEBUG: Stripe checkout error: " . $e->getMessage() . " -->\n";
             error_log('Checkout Session Error: ' . $e->getMessage());
-            $error = "There was an error processing your request. Please try again or contact support.";
+            $error = "There was an error processing your request: " . $e->getMessage();
         }
     }
 }
+
+echo "<!-- DEBUG: Rendering page -->\n";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -107,6 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .order-img { width: 50px; height: 70px; object-fit: cover; border-radius: 6px; background: #f7f7fa; }
         .order-summary-total { text-align: right; font-size: 1.1rem; font-weight: 700; }
         .checkout-errors { background: #ffe0e0; color: #a00; border-radius: 8px; padding: 1em; margin-bottom: 1.5rem; }
+        .debug-info { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: #495057; }
     </style>
 </head>
 <body>
@@ -133,6 +188,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <main>
         <div class="checkout-container">
             <div class="checkout-title">Checkout</div>
+            
+            <!-- Debug Information -->
+            <div class="debug-info">
+                <strong>Debug Information:</strong><br>
+                Cart items: <?php echo count($cart); ?><br>
+                Products found: <?php echo count($products); ?><br>
+                Subtotal: $<?php echo number_format($subtotal, 2); ?><br>
+                <?php if (!empty($error)): ?>
+                    Last error: <?php echo htmlspecialchars($error); ?><br>
+                <?php endif; ?>
+            </div>
             
             <?php if (!empty($errors) || !empty($error)): ?>
                 <div class="checkout-errors">

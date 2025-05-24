@@ -37,12 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($isAjax || (isset($_POST['redirect']) && $_POST['redirect'] === 'false')) {
             // Return JSON response for AJAX
             header('Content-Type: application/json');
-            echo json_encode([
-                'success' => true,
-                'message' => $success_message,
-                'cart_count' => array_sum($_SESSION['cart']),
-                'already_in_cart' => isset($_SESSION['cart'][$pid])
-            ]);
+            echo json_encode([                'success' => true,                'message' => $success_message,                'cart_count' => count($_SESSION['cart']),                'already_in_cart' => isset($_SESSION['cart'][$pid])            ]);
             exit;
         } else {
             // Regular redirect for form submission
