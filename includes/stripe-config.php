@@ -1,9 +1,9 @@
 <?php
 // Load Stripe autoload
-$autoload_path = __DIR__ . '/../vendor/autoload.php';
+$autoload_path = __DIR__ . '/vendor/autoload.php';
 
 if (!file_exists($autoload_path)) {
-    throw new Exception('Stripe vendor autoload.php not found at: ' . $autoload_path . '. Please run "composer install" to install dependencies.');
+    throw new Exception('Stripe vendor autoload.php not found. Please upload the vendor directory to your server at: includes/vendor/');
 }
 
 require_once $autoload_path;

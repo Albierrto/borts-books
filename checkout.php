@@ -189,16 +189,7 @@ echo "<!-- DEBUG: Rendering page -->\n";
         <div class="checkout-container">
             <div class="checkout-title">Checkout</div>
             
-            <!-- Debug Information -->
-            <div class="debug-info">
-                <strong>Debug Information:</strong><br>
-                Cart items: <?php echo count($cart); ?><br>
-                Products found: <?php echo count($products); ?><br>
-                Subtotal: $<?php echo number_format($subtotal, 2); ?><br>
-                <?php if (!empty($error)): ?>
-                    Last error: <?php echo htmlspecialchars($error); ?><br>
-                <?php endif; ?>
-            </div>
+                        <!-- Debug Information -->            <div class="debug-info">                <strong>Debug Information:</strong><br>                Cart items: <?php echo count($cart); ?><br>                Products found: <?php echo count($products); ?><br>                Subtotal: $<?php echo number_format($subtotal, 2); ?><br>                <?php if (defined('STRIPE_DISABLED') && STRIPE_DISABLED): ?>                    <span style="color: orange;">⚠️ Stripe is disabled (vendor directory missing)</span><br>                <?php endif; ?>                <?php if (!empty($error)): ?>                    Last error: <?php echo htmlspecialchars($error); ?><br>                <?php endif; ?>            </div>
             
             <?php if (!empty($errors) || !empty($error)): ?>
                 <div class="checkout-errors">
