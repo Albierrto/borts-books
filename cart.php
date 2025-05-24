@@ -1,6 +1,5 @@
 <?php
 session_start();
-require_once 'includes/db.php';
 
 // Initialize cart if not set
 if (!isset($_SESSION['cart'])) {
@@ -8,9 +7,20 @@ if (!isset($_SESSION['cart'])) {
 }
 
 $success_message = '';
+$db_error = false;
+$db = null;
+
+// Try to connect to database with error handling
+try {
+    require_once 'includes/db.php';
+} catch (Exception $e) {
+    $db_error = true;
+    error_log('Database connection error in cart.php: ' . $e->getMessage());
+    // Continue without database - cart will still work for display
+}
 
 // Handle add/update/remove actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$db_error) {
     // Add to cart
     if (isset($_POST['product_id']) || isset($_POST['add_to_cart'])) {
         $pid = (int)$_POST['product_id'];
@@ -37,7 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($isAjax || (isset($_POST['redirect']) && $_POST['redirect'] === 'false')) {
             // Return JSON response for AJAX
             header('Content-Type: application/json');
-            echo json_encode([                'success' => true,                'message' => $success_message,                'cart_count' => count($_SESSION['cart']),                'already_in_cart' => isset($_SESSION['cart'][$pid])            ]);
+            echo json_encode([
+                'success' => true,
+                'message' => $success_message,
+                'cart_count' => count($_SESSION['cart']),
+                'already_in_cart' => isset($_SESSION['cart'][$pid])
+            ]);
             exit;
         } else {
             // Regular redirect for form submission
@@ -64,21 +79,40 @@ if (isset($_GET['added']) && $_GET['added'] == '1') {
 $cart = $_SESSION['cart'];
 $products = [];
 $subtotal = 0;
-if (!empty($cart)) {
-    $ids = implode(',', array_map('intval', array_keys($cart)));
-    $stmt = $db->query("SELECT * FROM products WHERE id IN ($ids)");
-    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    // Attach images
-    foreach ($products as &$prod) {
-        $imgStmt = $db->prepare('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY id ASC LIMIT 1');
-        $imgStmt->execute([$prod['id']]);
-        $prod['main_image'] = $imgStmt->fetchColumn();
-        $prod['cart_qty'] = 1; // Always 1 since we only allow one of each item
-        $prod['cart_total'] = $prod['price']; // Price * 1
-        $subtotal += $prod['cart_total'];
+
+if (!empty($cart) && !$db_error) {
+    try {
+        $ids = implode(',', array_map('intval', array_keys($cart)));
+        $stmt = $db->query("SELECT * FROM products WHERE id IN ($ids)");
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Attach images
+        foreach ($products as &$prod) {
+            $imgStmt = $db->prepare('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY id ASC LIMIT 1');
+            $imgStmt->execute([$prod['id']]);
+            $prod['main_image'] = $imgStmt->fetchColumn();
+            $prod['cart_qty'] = 1; // Always 1 since we only allow one of each item
+            $prod['cart_total'] = $prod['price']; // Price * 1
+            $subtotal += $prod['cart_total'];
+        }
+        unset($prod);
+    } catch (Exception $e) {
+        $db_error = true;
+        error_log('Database error in cart.php: ' . $e->getMessage());
     }
-    unset($prod);
+} elseif (!empty($cart) && $db_error) {
+    // If database is down but cart has items, show placeholder data
+    foreach ($cart as $product_id => $quantity) {
+        $products[] = [
+            'id' => $product_id,
+            'title' => 'Product #' . $product_id . ' (Database Unavailable)',
+            'price' => 0.00,
+            'main_image' => 'assets/img/placeholder.png',
+            'cart_qty' => 1,
+            'cart_total' => 0.00
+        ];
+    }
 }
+
 // Cart count for header
 $num_items_in_cart = count($cart); // Count unique items instead of sum
 ?>
@@ -104,6 +138,7 @@ $num_items_in_cart = count($cart); // Count unique items instead of sum
         .cart-btn { background: #eebbc3; color: #232946; border: none; border-radius: 30px; padding: 0.8rem 2rem; font-weight: 700; font-size: 1.1rem; cursor: pointer; transition: background 0.2s; margin-left: 1rem; }
         .cart-btn:hover { background: #232946; color: #fff; }
         .empty-cart-msg { text-align: center; color: #888; font-size: 1.2rem; margin: 2.5rem 0; }
+        .db-error-msg { background: #ffe0e0; color: #a00; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; text-align: center; }
     </style>
 </head>
 <body>
@@ -130,6 +165,13 @@ $num_items_in_cart = count($cart); // Count unique items instead of sum
     <main>
         <div class="cart-container">
             <div class="cart-title">Your Shopping Cart</div>
+            
+            <?php if ($db_error): ?>
+                <div class="db-error-msg">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    Database temporarily unavailable. Your cart items are preserved. Please try again shortly or contact support if the issue persists.
+                </div>
+            <?php endif; ?>
             
             <?php if ($success_message): ?>
                 <div style="background: #d4edda; color: #155724; padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px; border: 1px solid #c3e6cb; text-align: center; font-weight: 600;">
@@ -160,9 +202,11 @@ $num_items_in_cart = count($cart); // Count unique items instead of sum
                         <td>1</td>
                         <td>$<?php echo number_format($prod['cart_total'], 2); ?></td>
                         <td>
+                            <?php if (!$db_error): ?>
                             <form method="POST" style="display: inline;">
                                 <button class="cart-remove-btn" name="remove_id" value="<?php echo $prod['id']; ?>" title="Remove">&times;</button>
                             </form>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -170,7 +214,11 @@ $num_items_in_cart = count($cart); // Count unique items instead of sum
             </table>
             <div class="cart-summary">Total: $<?php echo number_format($subtotal, 2); ?></div>
             <div class="cart-actions">
-                <a href="checkout.php" class="cart-btn" style="background:#e63946;color:#fff;">Proceed to Checkout</a>
+                <?php if (!$db_error && !empty($products)): ?>
+                    <a href="checkout.php" class="cart-btn" style="background:#e63946;color:#fff;">Proceed to Checkout</a>
+                <?php elseif ($db_error): ?>
+                    <button class="cart-btn" disabled style="background:#ccc;color:#666;">Checkout Unavailable (Database Error)</button>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>
