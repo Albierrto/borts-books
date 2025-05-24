@@ -212,17 +212,7 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label for="weight">Weight (oz)</label>
-                    <input type="number" id="weight" name="weight" step="0.1" value="<?php echo $product['weight'] ?? ''; ?>" placeholder="e.g. 5.2">
-                    <small style="color: #666; font-size: 0.9rem;">Weight in ounces for shipping calculation</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="dimensions">Dimensions (L x W x H in inches)</label>
-                    <input type="text" id="dimensions" name="dimensions" value="<?php echo htmlspecialchars($product['dimensions'] ?? ''); ?>" placeholder="e.g. 7.5 x 5.0 x 0.8">
-                    <small style="color: #666; font-size: 0.9rem;">Length x Width x Height in inches</small>
-                </div>
+                                <div class="form-group">                    <label>Weight</label>                    <?php                     $total_weight_oz = $product['weight'] ?? 0;                    $lbs = floor($total_weight_oz / 16);                    $oz = $total_weight_oz % 16;                    ?>                    <div style="display: flex; gap: 1rem; align-items: center;">                        <div style="flex: 1;">                            <input type="number" id="weight_lbs" name="weight_lbs" min="0" value="<?php echo $lbs; ?>" placeholder="0">                            <small style="color: #666; font-size: 0.9rem;">lbs</small>                        </div>                        <div style="flex: 1;">                            <input type="number" id="weight_oz" name="weight_oz" step="0.1" min="0" max="15.9" value="<?php echo number_format($oz, 1); ?>" placeholder="0.0">                            <small style="color: #666; font-size: 0.9rem;">oz</small>                        </div>                    </div>                    <small style="color: #666; font-size: 0.9rem;">Weight for shipping calculation</small>                </div>                <div class="form-group">                    <label>Dimensions (inches)</label>                    <?php                     $dims = explode(' x ', $product['dimensions'] ?? '');                    $length = $dims[0] ?? '';                    $width = $dims[1] ?? '';                    $height = $dims[2] ?? '';                    ?>                    <div style="display: flex; gap: 1rem;">                        <div style="flex: 1;">                            <input type="number" id="length" name="length" step="0.1" value="<?php echo $length; ?>" placeholder="7.5">                            <small style="color: #666; font-size: 0.9rem;">Length</small>                        </div>                        <div style="flex: 1;">                            <input type="number" id="width" name="width" step="0.1" value="<?php echo $width; ?>" placeholder="5.0">                            <small style="color: #666; font-size: 0.9rem;">Width</small>                        </div>                        <div style="flex: 1;">                            <input type="number" id="height" name="height" step="0.1" value="<?php echo $height; ?>" placeholder="0.8">                            <small style="color: #666; font-size: 0.9rem;">Height</small>                        </div>                    </div>                    <small style="color: #666; font-size: 0.9rem;">Length x Width x Height for shipping calculation</small>                </div>
 
                 <div class="form-group">
                     <label for="shipping_option">Shipping Option</label>

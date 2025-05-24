@@ -14,10 +14,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = $_POST['description'];
     $price = $_POST['price'];
     $condition = $_POST['condition'];
+    
+    // Calculate total weight in ounces
+    $weight_lbs = floatval($_POST['weight_lbs'] ?? 0);
+    $weight_oz = floatval($_POST['weight_oz'] ?? 0);
+    $total_weight_oz = ($weight_lbs * 16) + $weight_oz;
+    
+    // Combine dimensions
+    $length = $_POST['length'] ?? '';
+    $width = $_POST['width'] ?? '';
+    $height = $_POST['height'] ?? '';
+    $dimensions = '';
+    if ($length && $width && $height) {
+        $dimensions = $length . ' x ' . $width . ' x ' . $height;
+    }
+    
+    // Get shipping fields
+    $shipping_option = $_POST['shipping_option'] ?? 'calculated';
+    $flat_rate = $_POST['flat_rate'] ?? null;
+    
+    // Convert flat_rate to null if empty or if not flat shipping
+    if ($shipping_option !== 'flat' || empty($flat_rate)) {
+        $flat_rate = null;
+    }
 
     try {
-        $stmt = $db->prepare("UPDATE products SET title = ?, description = ?, price = ?, `condition` = ? WHERE id = ?");
-        $stmt->execute([$title, $description, $price, $condition, $product_id]);
+        $stmt = $db->prepare("UPDATE products SET title = ?, description = ?, price = ?, `condition` = ?, weight = ?, dimensions = ?, shipping_option = ?, flat_rate = ? WHERE id = ?");
+        $stmt->execute([$title, $description, $price, $condition, $total_weight_oz, $dimensions, $shipping_option, $flat_rate, $product_id]);
 
         $_SESSION['message'] = "Product updated successfully!";
         $_SESSION['message_type'] = "success";

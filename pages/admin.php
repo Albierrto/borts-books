@@ -135,9 +135,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background: #f8f9fa;
             font-weight: 600;
         }
-        .products-table tr:hover {
-            background: #f8f9fa;
-        }
+                .products-table tr:hover {            background: #f8f9fa;        }        .product-title-link {            color: #232946;            text-decoration: none;            font-weight: 600;            transition: color 0.2s;        }        .product-title-link:hover {            color: #eebbc3;            text-decoration: underline;        }
         .product-image {
             width: 60px;
             height: 80px;
@@ -249,7 +247,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                  alt="<?php echo htmlspecialchars($product['title']); ?>" 
                                  class="product-image">
                         </td>
-                        <td><?php echo htmlspecialchars($product['title']); ?></td>
+                        <td><a href="product.php?id=<?php echo $product['id']; ?>" class="product-title-link"><?php echo htmlspecialchars($product['title']); ?></a></td>
                         <td>$<?php echo number_format($product['price'], 2); ?></td>
                         <td><?php echo htmlspecialchars($product['condition']); ?></td>
                         <td><?php echo date('M j, Y', strtotime($product['created_at'])); ?></td>
