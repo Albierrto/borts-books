@@ -7,20 +7,34 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
+$success_message = '';
+
 // Handle add/update/remove actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Add to cart
-    if (isset($_POST['product_id'])) {
+    if (isset($_POST['product_id']) || isset($_POST['add_to_cart'])) {
         $pid = (int)$_POST['product_id'];
         $qty = isset($_POST['quantity']) ? max(1, (int)$_POST['quantity']) : 1;
-        if (isset($_SESSION['cart'][$pid])) {
-            $_SESSION['cart'][$pid] += $qty;
-        } else {
-            $_SESSION['cart'][$pid] = $qty;
+        
+        // Get product details for success message
+        $stmt = $db->prepare('SELECT title FROM products WHERE id = ?');
+        $stmt->execute([$pid]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($product) {
+            if (isset($_SESSION['cart'][$pid])) {
+                $_SESSION['cart'][$pid] += $qty;
+            } else {
+                $_SESSION['cart'][$pid] = $qty;
+            }
+            $success_message = $product['title'] . ' has been added to your cart!';
         }
-        // Redirect to cart to prevent resubmission
-        header('Location: cart.php');
-        exit;
+        
+        // If this was an AJAX request or if we want to stay on cart page, don't redirect
+        if (!isset($_POST['redirect']) || $_POST['redirect'] !== 'false') {
+            header('Location: cart.php?added=1');
+            exit;
+        }
     }
     // Update quantities
     if (isset($_POST['update_cart'])) {
@@ -41,6 +55,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: cart.php');
         exit;
     }
+}
+
+// Check for success message from redirect
+if (isset($_GET['added']) && $_GET['added'] == '1') {
+    $success_message = 'Item successfully added to your cart!';
 }
 
 // Fetch products in cart
@@ -113,6 +132,13 @@ $num_items_in_cart = array_sum($cart);
     <main>
         <div class="cart-container">
             <div class="cart-title">Your Shopping Cart</div>
+            
+            <?php if ($success_message): ?>
+                <div style="background: #d4edda; color: #155724; padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px; border: 1px solid #c3e6cb; text-align: center; font-weight: 600;">
+                    <?php echo htmlspecialchars($success_message); ?>
+                </div>
+            <?php endif; ?>
+            
             <?php if (empty($products)): ?>
                 <div class="empty-cart-msg">Your cart is empty. <a href="/pages/shop.php">Browse manga</a> to get started!</div>
             <?php else: ?>
