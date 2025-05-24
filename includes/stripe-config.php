@@ -1,25 +1,12 @@
 <?php
-// Try multiple possible paths for the autoload file
-$possible_paths = [
-    __DIR__ . '/../vendor/autoload.php',
-    __DIR__ . '/../../vendor/autoload.php',
-    __DIR__ . '/../../../vendor/autoload.php',
-    dirname(__DIR__) . '/vendor/autoload.php',
-    $_SERVER['DOCUMENT_ROOT'] . '/vendor/autoload.php',
-];
+// Load Stripe autoload
+$autoload_path = __DIR__ . '/../vendor/autoload.php';
 
-$autoload_found = false;
-foreach ($possible_paths as $path) {
-    if (file_exists($path)) {
-        require_once $path;
-        $autoload_found = true;
-        break;
-    }
+if (!file_exists($autoload_path)) {
+    throw new Exception('Stripe vendor autoload.php not found at: ' . $autoload_path . '. Please run "composer install" to install dependencies.');
 }
 
-if (!$autoload_found) {
-    throw new Exception('Stripe vendor autoload.php not found. Please run "composer install" to install dependencies.');
-}
+require_once $autoload_path;
 
 // Get Stripe keys from environment variables
 $stripe_publishable_key = $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '';

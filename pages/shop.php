@@ -1,4 +1,16 @@
-<?phpini_set('display_errors', 1);ini_set('display_startup_errors', 1);error_reporting(E_ALL);session_start();require_once '../includes/db.php';// Initialize cart if not setif (!isset($_SESSION['cart'])) {    $_SESSION['cart'] = [];}$cart_count = count($_SESSION['cart']);
+<?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+session_start();
+require_once '../includes/db.php';
+
+// Initialize cart if not set
+if (!isset($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+}
+$cart_count = count($_SESSION['cart']);
+
 $pageTitle = "Shop";
 $currentPage = "shop";
 
