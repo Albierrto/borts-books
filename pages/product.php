@@ -12,10 +12,10 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once '../includes/db.php';
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    header('Location: shop.php');
+    header('Location: /pages/shop.php');
     exit;
 }
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$id = (int)$_GET['id'];
 
 try {
     // Fetch product
@@ -23,7 +23,7 @@ try {
     $stmt->execute([$id]);
     $product = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$product) {
-        echo '<p>Product not found. <a href="shop.php">Back to shop</a></p>';
+        echo '<p>Product not found. <a href="/pages/shop.php">Back to shop</a></p>';
         exit;
     }
     // Fetch all images for this product
@@ -38,16 +38,7 @@ try {
 $recStmt = $db->prepare("SELECT * FROM products WHERE id != ? AND title IS NOT NULL AND title != '' ORDER BY RAND() LIMIT 7");
 $recStmt->execute([$id]);
 $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
-
-// After product details, add a Buy Now button
 ?>
-<div style="text-align:center;margin:2rem 0;">
-    <form action="cart.php" method="POST" style="display:inline;">
-        <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
-        <input type="hidden" name="quantity" value="1">
-        <button type="submit" name="buy_now" class="btn" style="background:#e63946;color:#fff;padding:0.9rem 2.2rem;border-radius:30px;font-weight:800;font-size:1.2rem;box-shadow:0 2px 12px rgba(35,41,70,0.13);transition:background 0.2s;">Buy Now</button>
-    </form>
-</div>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -118,14 +109,14 @@ $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
     <header>
         <div class="container header-container">
-            <a href="../index.php" class="logo">Bort's <span>Books</span></a>
+            <a href="/index.php" class="logo">Bort's <span>Books</span></a>
             <nav>
                 <ul>
-                    <li><a href="/borts-books/index.php">Home</a></li>
-                    <li><a href="/borts-books/pages/shop.php">Shop</a></li>
-                    <li><a href="/borts-books/pages/collections.php">Collections</a></li>
-                    <li><a href="/borts-books/pages/sell.php">Sell Manga</a></li>
-                    <li><a href="/borts-books/pages/about.php">About</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/collections.php">Collections</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </nav>
         </div>
@@ -142,10 +133,15 @@ $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
                 <img class="product-detail-image" src="../assets/img/placeholder.png" alt="<?php echo htmlspecialchars($product['title']); ?> cover">
             <?php endif; ?>
             <div class="product-detail-title"><?php echo htmlspecialchars($product['title']); ?></div>
-            <div class="product-detail-price"><?php echo ($product['price'] > 0) ? '$' . number_format($product['price'], 2) : '<span style=\"color:#888\">Price unavailable</span>'; ?></div>
+            <div class="product-detail-price"><?php echo ($product['price'] > 0) ? '$' . number_format($product['price'], 2) : '<span style="color:#888">Price unavailable</span>'; ?></div>
             <div class="product-detail-condition">Condition: <?php echo htmlspecialchars($product['condition']); ?></div>
-            <div class="product-detail-description"><?php echo $product['description'] ? htmlspecialchars($product['description']) : '<span style=\"color:#aaa\">No description</span>'; ?></div>
-            <a href="shop.php" class="back-link">&larr; Back to Shop</a>
+            <div class="product-detail-description"><?php echo $product['description'] ? htmlspecialchars($product['description']) : '<span style="color:#aaa">No description</span>'; ?></div>
+            <!-- Add to Cart Button -->
+            <form action="/pages/cart.php" method="POST" style="margin-top:1.5rem;">
+                <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
+                <button type="submit" name="add_to_cart" class="btn" style="background:#e63946;color:#fff;padding:0.9rem 2.2rem;border-radius:30px;font-weight:800;font-size:1.2rem;box-shadow:0 2px 12px rgba(35,41,70,0.13);transition:background 0.2s;">Add to Cart</button>
+            </form>
+            <a href="/pages/shop.php" class="back-link">&larr; Back to Shop</a>
         </div>
         <?php if ($recommended): ?>
         <div style="max-width:660px;margin:2rem auto 0 auto;position:relative;">
@@ -155,12 +151,12 @@ $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
                 <div id="carousel" style="display:flex;transition:transform 0.5s cubic-bezier(.4,2,.6,1);">
                     <?php foreach ($recommended as $rec): ?>
                     <div class="carousel-card" style="background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.07);padding:1rem;width:200px;text-align:center;flex-shrink:0;margin-right:10px;">
-                        <a href="product.php?id=<?php echo $rec['id']; ?>">
-                            <img class="rec-manga-img" data-title="<?php echo htmlspecialchars($rec['title']); ?>" src="<?php echo htmlspecialchars($rec['main_image'] ?: '../assets/img/placeholder.png'); ?>" alt="<?php echo htmlspecialchars($rec['title']); ?> cover" style="width:110px;height:160px;object-fit:cover;border-radius:4px;background:#f4f4f4;margin-bottom:0.5rem;">
+                        <a href="/pages/product.php?id=<?php echo $rec['id']; ?>">
+                            <img class="rec-manga-img" data-title="<?php echo htmlspecialchars($rec['title']); ?>" src="<?php echo htmlspecialchars($rec['main_image'] ?? '../assets/img/placeholder.png'); ?>" alt="<?php echo htmlspecialchars($rec['title']); ?> cover" style="width:110px;height:160px;object-fit:cover;border-radius:4px;background:#f4f4f4;margin-bottom:0.5rem;">
                         </a>
                         <div style="font-weight:600;font-size:1.05rem;margin-bottom:0.3rem;"><?php echo htmlspecialchars($rec['title']); ?></div>
                         <div style="color:#e63946;font-weight:700;">$<?php echo number_format($rec['price'],2); ?></div>
-                        <a href="product.php?id=<?php echo $rec['id']; ?>" style="display:inline-block;margin-top:0.5rem;color:#2a9d8f;font-weight:600;text-decoration:underline;">View</a>
+                        <a href="/pages/product.php?id=<?php echo $rec['id']; ?>" style="display:inline-block;margin-top:0.5rem;color:#2a9d8f;font-weight:600;text-decoration:underline;">View</a>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -178,69 +174,20 @@ $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
         function updateCarousel() {
             carousel.style.transform = `translateX(-${currentIndex * cardWidth}px)`;
         }
-
-        document.getElementById('prevBtn').addEventListener('click', () => {
-            currentIndex = (currentIndex - 1 + totalItems) % totalItems;
-            if (currentIndex > totalItems - visibleCards) currentIndex = totalItems - visibleCards;
-            if (currentIndex < 0) currentIndex = 0;
-            updateCarousel();
-            resetAutoSlide(5000);
+        document.getElementById('prevBtn').addEventListener('click', function() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateCarousel();
+            }
         });
-        document.getElementById('nextBtn').addEventListener('click', () => {
-            currentIndex = (currentIndex + 1) % totalItems;
-            if (currentIndex > totalItems - visibleCards) currentIndex = 0;
-            updateCarousel();
-            resetAutoSlide(5000);
+        document.getElementById('nextBtn').addEventListener('click', function() {
+            if (currentIndex < totalItems - visibleCards) {
+                currentIndex++;
+                updateCarousel();
+            }
         });
-
-        // Auto-slide
-        let autoSlide = setInterval(() => {
-            currentIndex = (currentIndex + 1) % totalItems;
-            if (currentIndex > totalItems - visibleCards) currentIndex = 0;
-            updateCarousel();
-        }, 3000);
-        function resetAutoSlide(pause = 3000) {
-            clearInterval(autoSlide);
-            setTimeout(() => {
-                autoSlide = setInterval(() => {
-                    currentIndex = (currentIndex + 1) % totalItems;
-                    if (currentIndex > totalItems - visibleCards) currentIndex = 0;
-                    updateCarousel();
-                }, 3000);
-            }, pause);
-        }
-        // Kitsu image fetch
-        function loadImages() {
-            document.querySelectorAll('.rec-manga-img').forEach(function(img) {
-                const title = img.getAttribute('data-title');
-                fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(title)}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.data && data.data.length > 0) {
-                            const cover = data.data[0].attributes.posterImage && data.data[0].attributes.posterImage.medium;
-                            if (cover) img.src = cover;
-                        }
-                    });
-            });
-        }
-        loadImages();
         </script>
         <?php endif; ?>
     </main>
-    <script>
-    // Kitsu API fallback for missing images
-    const img = document.getElementById('productImage');
-    if (!img.src || img.src.endsWith('/placeholder.png')) {
-        const title = img.getAttribute('data-title');
-        fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(title)}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.data && data.data.length > 0) {
-                    const cover = data.data[0].attributes.posterImage && data.data[0].attributes.posterImage.large;
-                    if (cover) img.src = cover;
-                }
-            });
-    }
-    </script>
 </body>
 </html> 
