@@ -65,56 +65,9 @@ class USPSShipping {
         return false;
     }
     
-    /**
-     * Calculate shipping rates for a product
-     */
-    public function calculateShipping($product, $destinationZip, $service = 'Priority') {
-        // If it's free shipping, return 0
-        if (($product['shipping_option'] ?? 'calculated') === 'free') {
-            return ['rate' => 0, 'service' => 'Free Shipping', 'days' => '3-5'];
-        }
-        
-        // If it's flat rate, return the flat rate
-        if (($product['shipping_option'] ?? 'calculated') === 'flat') {
-            return [
-                'rate' => $product['flat_rate'] ?? 5.00,
-                'service' => 'Flat Rate',
-                'days' => '3-5'
-            ];
-        }
-        
-        // For calculated shipping, use weight/dimensions
-        $weight = $product['weight'] ?? 6.0; // Default manga weight
-        $dimensions = $this->parseDimensions($product['dimensions'] ?? '7.5x5.0x0.8');
-        
-        // If we have USPS API credentials, use the real API
-        if ($this->accessToken) {
-            return $this->calculateUSPSAPI($weight, $dimensions, $destinationZip, $service);
-        }
-        
-        // Otherwise, use our estimation algorithm
-        return $this->estimateShipping($weight, $dimensions, $destinationZip, $service);
-    }
+        /**     * Calculate shipping rates for a product     */    public function calculateShipping($product, $destinationZip, $service = 'Priority') {        // Add debugging        error_log("USPS Shipping Debug - Product: " . json_encode($product));        error_log("USPS Shipping Debug - Service: $service, Zip: $destinationZip");                // If it's free shipping, return 0        if (($product['shipping_option'] ?? 'calculated') === 'free') {            return ['rate' => 0, 'service' => 'Free Shipping', 'days' => '3-5'];        }                // If it's flat rate, return the flat rate        if (($product['shipping_option'] ?? 'calculated') === 'flat') {            return [                'rate' => $product['flat_rate'] ?? 5.00,                'service' => 'Flat Rate',                'days' => '3-5'            ];        }                // For calculated shipping, use weight/dimensions        $weight = $product['weight'] ?? 6.0; // Default manga weight        $dimensions = $this->parseDimensions($product['dimensions'] ?? '7.5x5.0x0.8');                error_log("USPS Shipping Debug - Weight: $weight, Dimensions: " . json_encode($dimensions));                // If we have USPS API credentials, use the real API        if ($this->accessToken) {            $result = $this->calculateUSPSAPI($weight, $dimensions, $destinationZip, $service);        } else {            // Otherwise, use our estimation algorithm            $result = $this->estimateShipping($weight, $dimensions, $destinationZip, $service);        }                error_log("USPS Shipping Debug - Result: " . json_encode($result));        return $result;    }
     
-    /**
-     * Parse dimensions string (e.g., "7.5x5.0x0.8") into array
-     */
-    private function parseDimensions($dimensionString) {
-        if (empty($dimensionString)) {
-            return ['length' => 7.5, 'width' => 5.0, 'height' => 0.8]; // Default manga
-        }
-        
-        $parts = preg_split('/[x×*\s]+/i', $dimensionString);
-        if (count($parts) >= 3) {
-            return [
-                'length' => (float)$parts[0],
-                'width' => (float)$parts[1],
-                'height' => (float)$parts[2]
-            ];
-        }
-        
-        return ['length' => 7.5, 'width' => 5.0, 'height' => 0.8];
-    }
+        /**     * Parse dimensions string (e.g., "7.5x5.0x0.8" or "7.5 x 5.0 x 0.8") into array     */    private function parseDimensions($dimensionString) {        if (empty($dimensionString)) {            return ['length' => 7.5, 'width' => 5.0, 'height' => 0.8]; // Default manga        }                // Handle different separators: x, ×, *, spaces        $parts = preg_split('/[x×*\s]+/i', trim($dimensionString));        $parts = array_filter($parts); // Remove empty elements                if (count($parts) >= 3) {            return [                'length' => (float)$parts[0],                'width' => (float)$parts[1],                'height' => (float)$parts[2]            ];        }                error_log("Warning: Could not parse dimensions '$dimensionString', using defaults");        return ['length' => 7.5, 'width' => 5.0, 'height' => 0.8];    }
     
     /**
      * Calculate shipping using real USPS API
@@ -189,7 +142,7 @@ class USPSShipping {
         return $this->estimateShipping($weight, $dimensions, $destinationZip, $service);
     }
     
-        /**     * Get estimated delivery days for service     */    private function getDeliveryDays($service) {        $deliveryTimes = [            'Media' => '2-8 business days',            'Ground' => '2-5 business days',            'Priority' => '1-3 business days',            'Express' => '1-2 business days'        ];                return $deliveryTimes[$service] ?? '1-3 business days';    }
+    /**     * Get estimated delivery days for service     */    private function getDeliveryDays($service) {        $deliveryTimes = [            'Media' => '2-8 business days',            'Ground' => '2-5 business days',            'Priority' => '1-3 business days',            'Express' => '1-2 business days'        ];                return $deliveryTimes[$service] ?? '1-3 business days';    }
     
     /**
      * Estimate shipping using realistic USPS rates (fallback)
@@ -212,17 +165,7 @@ class USPSShipping {
         $volume = $dimensions['length'] * $dimensions['width'] * $dimensions['height'];
         $sizeCost = $volume > 50 ? ($volume - 50) * 0.05 : 0;
         
-        $totalCost = $baseRate + $weightCost + $zoneCost + $sizeCost;
-        
-                // Service delivery times        $deliveryTimes = [            'Media' => '2-8 business days',            'Ground' => '3-5 business days',            'Priority' => '1-3 business days',            'Express' => 'Next business day'        ];
-        
-        return [
-            'rate' => round($totalCost, 2),
-            'service' => "USPS $service Mail",
-            'days' => $deliveryTimes[$service] ?? '1-3 business days',
-            'zone' => $zone,
-            'estimated' => true
-        ];
+                $totalCost = $baseRate + $weightCost + $zoneCost + $sizeCost;                // Ensure minimum shipping cost        $totalCost = max($totalCost, $baseRate);                // Service delivery times        $deliveryTimes = [            'Media' => '2-8 business days',            'Ground' => '3-5 business days',            'Priority' => '1-3 business days',            'Express' => 'Next business day'        ];                $result = [            'rate' => round($totalCost, 2),            'service' => "USPS $service Mail",            'days' => $deliveryTimes[$service] ?? '1-3 business days',            'zone' => $zone,            'estimated' => true        ];                error_log("Estimate shipping calculation: base=$baseRate, weight=$weightCost, zone=$zoneCost, size=$sizeCost, total=$totalCost");        return $result;
     }
     
     /**

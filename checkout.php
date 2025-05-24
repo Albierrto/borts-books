@@ -29,6 +29,10 @@ try {
 
 try {
     require_once 'includes/cart.php';
+    require_once 'includes/cart-display.php';
+    
+    // Clean up cart to remove any deleted items
+    cleanupCart();
 } catch (Exception $e) {
     $error_messages[] = 'Cart utilities error: ' . $e->getMessage();
 }
@@ -114,6 +118,41 @@ if (!empty($cart) && !$db_error) {
     }
 }
 
+// Handle AJAX shipping calculation FIRST
+if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip']) && !empty($products)) {
+    try {
+        require_once 'includes/usps-shipping.php';
+        $service = $_POST['shipping_service'] ?? 'Ground';
+        $calculated_shipping = 0;
+        
+        foreach ($products as $product) {
+            $usps = new USPSShipping();
+            $shipping_result = $usps->calculateShipping($product, $_POST['zip'], $service);
+            $calculated_shipping += $shipping_result['rate'];
+        }
+        
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'shipping_cost' => $calculated_shipping,
+            'subtotal' => $subtotal,
+            'total' => $subtotal + $calculated_shipping,
+            'service' => $service
+        ]);
+        exit;
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'error' => 'Unable to calculate shipping: ' . $e->getMessage(),
+            'shipping_cost' => 5.00,
+            'subtotal' => $subtotal,
+            'total' => $subtotal + 5.00
+        ]);
+        exit;
+    }
+}
+
 // Handle order submission and shipping calculation
 $errors = [];
 $error = '';
@@ -158,7 +197,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Valid ZIP code is required';
         }
         
-                // Calculate shipping if address is provided        if (empty($errors) && !empty($customerInfo['zip']) && !empty($products)) {            try {                require_once 'includes/usps-shipping.php';                $selected_service = $_POST['shipping_service'] ?? 'Ground'; // Default to Ground instead of Priority                $total_shipping = 0;                                foreach ($products as $product) {                    $usps = new USPSShipping();                    $shipping_result = $usps->calculateShipping($product, $customerInfo['zip'], $selected_service);                    $total_shipping += $shipping_result['rate'];                }                                $shipping_cost = $total_shipping;            } catch (Exception $e) {                // Fallback to flat rate if shipping calculation fails                $shipping_cost = 5.00;                error_log('Shipping calculation error: ' . $e->getMessage());            }        } else {            // Default shipping cost            $shipping_cost = 5.00;        }
+        // Calculate shipping if address is provided
+        if (empty($errors) && !empty($customerInfo['zip']) && !empty($products)) {
+            try {
+                require_once 'includes/usps-shipping.php';
+                $selected_service = $_POST['shipping_service'] ?? 'Ground';
+                $total_shipping = 0;
+                
+                foreach ($products as $product) {
+                    $usps = new USPSShipping();
+                    $shipping_result = $usps->calculateShipping($product, $customerInfo['zip'], $selected_service);
+                    $total_shipping += $shipping_result['rate'];
+                }
+                
+                $shipping_cost = $total_shipping;
+            } catch (Exception $e) {
+                // Fallback to flat rate if shipping calculation fails
+                $shipping_cost = 5.00;
+                error_log('Shipping calculation error: ' . $e->getMessage());
+            }
+        } else {
+            // Default shipping cost
+            $shipping_cost = 5.00;
+        }
 
         if (empty($errors)) {
             try {
@@ -184,7 +245,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Handle AJAX shipping calculationif (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip']) && !empty($products)) {    try {        require_once 'includes/usps-shipping.php';        $service = $_POST['shipping_service'] ?? 'Ground';        $calculated_shipping = 0;                foreach ($products as $product) {            $usps = new USPSShipping();            $shipping_result = $usps->calculateShipping($product, $_POST['zip'], $service);            $calculated_shipping += $shipping_result['rate'];        }                header('Content-Type: application/json');        echo json_encode([            'success' => true,            'shipping_cost' => $calculated_shipping,            'subtotal' => $subtotal,            'total' => $subtotal + $calculated_shipping,            'service' => $service        ]);        exit;    } catch (Exception $e) {        header('Content-Type: application/json');        echo json_encode([            'success' => false,            'error' => 'Unable to calculate shipping',            'shipping_cost' => 5.00,            'subtotal' => $subtotal,            'total' => $subtotal + 5.00        ]);        exit;    }}// Calculate shipping for display if ZIP is provided but not processing orderif (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shipping_only'])) {    try {        require_once 'includes/usps-shipping.php';        $calculated_shipping = 0;                foreach ($products as $product) {            $usps = new USPSShipping();            $shipping_result = $usps->calculateShipping($product, $_POST['zip'], 'Priority');            $calculated_shipping += $shipping_result['rate'];        }                $shipping_cost = $calculated_shipping;    } catch (Exception $e) {        $shipping_cost = 5.00; // fallback    }} elseif (empty($_POST['zip'])) {    $shipping_cost = 0; // Show "Enter ZIP to calculate"}
+// Calculate shipping for display if ZIP is provided but not processing order
+if (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shipping_only'])) {
+    try {
+        require_once 'includes/usps-shipping.php';
+        $service = $_POST['shipping_service'] ?? 'Ground';
+        $calculated_shipping = 0;
+        
+        foreach ($products as $product) {
+            $usps = new USPSShipping();
+            $shipping_result = $usps->calculateShipping($product, $_POST['zip'], $service);
+            $calculated_shipping += $shipping_result['rate'];
+        }
+        
+        $shipping_cost = $calculated_shipping;
+    } catch (Exception $e) {
+        $shipping_cost = 5.00; // fallback
+    }
+} elseif (empty($_POST['zip'])) {
+    $shipping_cost = 0; // Show "Enter ZIP to calculate"
+}
 
 ?>
 <!DOCTYPE html>
@@ -201,7 +281,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .checkout-title { font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem; text-align: center; }
         .checkout-form { max-width: 420px; margin: 0 auto 2rem auto; }
         .checkout-form label { font-weight: 600; margin-bottom: 0.3rem; display: block; }
-        .checkout-form input, .checkout-form textarea { width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 1.2rem; font-size: 1rem; }
+        .checkout-form input, .checkout-form textarea, .checkout-form select { width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 1.2rem; font-size: 1rem; }
         .checkout-form textarea { min-height: 80px; }
         .checkout-btn { background: #eebbc3; color: #232946; border: none; border-radius: 30px; padding: 0.9rem 2.2rem; font-weight: 800; font-size: 1.2rem; box-shadow: 0 2px 12px rgba(35,41,70,0.13); transition: background 0.2s; cursor: pointer; }
         .checkout-btn:hover { background: #232946; color: #fff; }
@@ -293,7 +373,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="city">City *</label>
                 <input type="text" id="city" name="city" required value="<?php echo htmlspecialchars($_POST['city'] ?? ''); ?>">
                 
-                                <div class="address-row">                    <div class="address-col">                        <label for="state">State *</label>                        <input type="text" id="state" name="state" required value="<?php echo htmlspecialchars($_POST['state'] ?? ''); ?>" placeholder="e.g. CA">                    </div>                    <div class="address-col">                        <label for="zip">ZIP Code *</label>                        <input type="text" id="zip" name="zip" required value="<?php echo htmlspecialchars($_POST['zip'] ?? ''); ?>" placeholder="e.g. 90210">                    </div>                </div>                                <div class="form-group" style="margin-top: 1.5rem;">                    <label for="shipping_service">Shipping Method *</label>                    <select id="shipping_service" name="shipping_service" required style="width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 1.2rem; font-size: 1rem;">                        <option value="">Select shipping method</option>                        <option value="Media" <?php echo ($_POST['shipping_service'] ?? '') === 'Media' ? 'selected' : ''; ?>>Media Mail (2-8 days) - Books & Educational Materials</option>                        <option value="Ground" <?php echo ($_POST['shipping_service'] ?? 'Ground') === 'Ground' ? 'selected' : ''; ?>>USPS Ground Advantage (3-5 days)</option>                        <option value="Priority" <?php echo ($_POST['shipping_service'] ?? '') === 'Priority' ? 'selected' : ''; ?>>Priority Mail (1-3 days)</option>                    </select>                </div>                                <button type="submit" class="checkout-btn">Calculate Shipping & Proceed</button>            </form>            <script>            // Auto-calculate shipping when ZIP is entered or service is changed            document.getElementById('zip').addEventListener('blur', calculateShippingFromForm);            document.getElementById('shipping_service').addEventListener('change', calculateShippingFromForm);                        function calculateShippingFromForm() {                const zip = document.getElementById('zip').value;                const service = document.getElementById('shipping_service').value;                                if (zip && zip.match(/^\d{5}(-\d{4})?$/) && service) {                    calculateShipping(zip, service);                }            }                        function calculateShipping(zip, service) {                // Show loading state                const shippingElements = document.querySelectorAll('.order-summary-total');                if (shippingElements.length >= 2) {                    shippingElements[1].innerHTML = 'Shipping: Calculating...';                }                                // Create form data                const formData = new FormData();                formData.append('zip', zip);                formData.append('shipping_service', service || 'Ground');                formData.append('calculate_shipping_only', '1');                                fetch('checkout.php', {                    method: 'POST',                    body: formData                })                .then(response => response.json())                .then(data => {                    const shippingElements = document.querySelectorAll('.order-summary-total');                    if (data.success && shippingElements.length >= 3) {                        shippingElements[1].innerHTML = 'Shipping (' + data.service + '): $' + data.shipping_cost.toFixed(2);                        shippingElements[2].innerHTML = 'Total: $' + data.total.toFixed(2);                    } else {                        shippingElements[1].innerHTML = 'Shipping: $' + data.shipping_cost.toFixed(2);                        shippingElements[2].innerHTML = 'Total: $' + data.total.toFixed(2);                    }                })                .catch(error => {                    console.error('Error calculating shipping:', error);                    const shippingElements = document.querySelectorAll('.order-summary-total');                    if (shippingElements.length >= 2) {                        shippingElements[1].innerHTML = 'Shipping: Error calculating';                    }                });            }            </script>
+                <div class="address-row">
+                    <div class="address-col">
+                        <label for="state">State *</label>
+                        <input type="text" id="state" name="state" required value="<?php echo htmlspecialchars($_POST['state'] ?? ''); ?>" placeholder="e.g. CA">
+                    </div>
+                    <div class="address-col">
+                        <label for="zip">ZIP Code *</label>
+                        <input type="text" id="zip" name="zip" required value="<?php echo htmlspecialchars($_POST['zip'] ?? ''); ?>" placeholder="e.g. 90210">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label for="shipping_service">Shipping Method *</label>
+                    <select id="shipping_service" name="shipping_service" required>
+                        <option value="">Select shipping method</option>
+                        <option value="Media" <?php echo ($_POST['shipping_service'] ?? '') === 'Media' ? 'selected' : ''; ?>>Media Mail (2-8 days) - Books & Educational Materials</option>
+                        <option value="Ground" <?php echo ($_POST['shipping_service'] ?? 'Ground') === 'Ground' ? 'selected' : ''; ?>>USPS Ground Advantage (3-5 days)</option>
+                        <option value="Priority" <?php echo ($_POST['shipping_service'] ?? '') === 'Priority' ? 'selected' : ''; ?>>Priority Mail (1-3 days)</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="checkout-btn">Calculate Shipping & Proceed</button>
+            </form>
+            
+            <script>
+            // Auto-calculate shipping when ZIP is entered or service is changed
+            document.getElementById('zip').addEventListener('blur', calculateShippingFromForm);
+            document.getElementById('shipping_service').addEventListener('change', calculateShippingFromForm);
+            
+            function calculateShippingFromForm() {
+                const zip = document.getElementById('zip').value;
+                const service = document.getElementById('shipping_service').value;
+                
+                if (zip && zip.match(/^\d{5}(-\d{4})?$/) && service) {
+                    calculateShipping(zip, service);
+                }
+            }
+            
+            function calculateShipping(zip, service) {
+                // Show loading state
+                const shippingElements = document.querySelectorAll('.order-summary-total');
+                if (shippingElements.length >= 2) {
+                    shippingElements[1].innerHTML = 'Shipping: Calculating...';
+                }
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('zip', zip);
+                formData.append('shipping_service', service || 'Ground');
+                formData.append('calculate_shipping_only', '1');
+                
+                                 fetch('checkout.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Shipping calculation response:', data); // Debug log
+                    const shippingElements = document.querySelectorAll('.order-summary-total');
+                    if (data.success && shippingElements.length >= 3) {
+                        shippingElements[1].innerHTML = 'Shipping (' + data.service + '): $' + data.shipping_cost.toFixed(2);
+                        shippingElements[2].innerHTML = 'Total: $' + data.total.toFixed(2);
+                    } else {
+                        shippingElements[1].innerHTML = 'Shipping: Error - ' + (data.error || 'Unknown error');
+                        console.error('Shipping calculation failed:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error calculating shipping:', error);
+                    const shippingElements = document.querySelectorAll('.order-summary-total');
+                    if (shippingElements.length >= 2) {
+                        shippingElements[1].innerHTML = 'Shipping: Network error';
+                    }
+                });
+            }
+            </script>
             
             <?php endif; ?>
             
