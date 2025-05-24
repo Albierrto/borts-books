@@ -22,7 +22,7 @@ if (empty($stripe_secret_key)) {
 /**
  * Create a Stripe Checkout Session
  */
-function createStripeCheckoutSession($cart, $customerInfo) {
+function createStripeCheckoutSession($cart, $customerInfo, $shipping_cost = null) {
     global $db, $stripe_publishable_key;
     
     try {
@@ -54,16 +54,18 @@ function createStripeCheckoutSession($cart, $customerInfo) {
             }
         }
         
-        // Add shipping
-        if ($subtotal > 0) {
+        // Add shipping - use calculated shipping cost or fallback to default
+        $shipping_amount = $shipping_cost !== null ? $shipping_cost : (defined('SHIPPING_RATE') ? SHIPPING_RATE : 5.00);
+        
+        if ($subtotal > 0 && $shipping_amount > 0) {
             $line_items[] = [
                 'price_data' => [
                     'currency' => 'usd',
                     'product_data' => [
                         'name' => 'Shipping',
-                        'description' => 'Standard shipping',
+                        'description' => 'USPS Shipping',
                     ],
-                    'unit_amount' => round(SHIPPING_RATE * 100), // Convert to cents
+                    'unit_amount' => round($shipping_amount * 100), // Convert to cents
                 ],
                 'quantity' => 1,
             ];
@@ -80,6 +82,7 @@ function createStripeCheckoutSession($cart, $customerInfo) {
             'metadata' => [
                 'customer_name' => $customerInfo['name'],
                 'customer_phone' => $customerInfo['phone'],
+                'shipping_address' => ($customerInfo['address'] ?? '') . ', ' . ($customerInfo['city'] ?? '') . ', ' . ($customerInfo['state'] ?? '') . ' ' . ($customerInfo['zip'] ?? ''),
             ],
         ]);
         

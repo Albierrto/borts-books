@@ -142,6 +142,15 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background: #fdecea;
             color: #b71c1c;
         }
+        .product-title-link {
+            color: #eebbc3;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .product-title-link:hover {
+            color: #232946;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -160,9 +169,9 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </header>
 
     <div class="container">
-        <a href="admin-dashboard.php" style="display:inline-block;margin-bottom:1.5rem;color:#232946;font-weight:600;text-decoration:underline;"><i class="fas fa-arrow-left"></i> Back to Admin Dashboard</a>
+        <a href="admin.php" style="display:inline-block;margin-bottom:1.5rem;color:#232946;font-weight:600;text-decoration:underline;"><i class="fas fa-arrow-left"></i> Back to All Products</a>
         <div class="edit-container">
-            <h1>Edit Product</h1>
+            <h1>Edit Product: <a href="product.php?id=<?php echo $product['id']; ?>" class="product-title-link" title="View Product Page"><?php echo htmlspecialchars($product['title']); ?></a></h1>
             
             <?php if (isset($_SESSION['message'])): ?>
                 <div class="message <?php echo $_SESSION['message_type']; ?>">
@@ -192,7 +201,52 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <input type="number" id="price" name="price" step="0.01" value="<?php echo $product['price']; ?>" required>
                 </div>
 
-                <div class="form-group">                    <label for="condition">Condition</label>                    <select id="condition" name="condition">                        <option value="New" <?php echo $product['condition'] === 'New' ? 'selected' : ''; ?>>New</option>                        <option value="Like New" <?php echo $product['condition'] === 'Like New' ? 'selected' : ''; ?>>Like New</option>                        <option value="Very Good" <?php echo $product['condition'] === 'Very Good' ? 'selected' : ''; ?>>Very Good</option>                        <option value="Good" <?php echo $product['condition'] === 'Good' ? 'selected' : ''; ?>>Good</option>                        <option value="Acceptable" <?php echo $product['condition'] === 'Acceptable' ? 'selected' : ''; ?>>Acceptable</option>                    </select>                </div>                <div class="form-group">                    <label for="weight">Weight (oz)</label>                    <input type="number" id="weight" name="weight" step="0.1" value="<?php echo $product['weight'] ?? ''; ?>" placeholder="e.g. 5.2">                    <small style="color: #666; font-size: 0.9rem;">Weight in ounces for shipping calculation</small>                </div>                <div class="form-group">                    <label for="dimensions">Dimensions (L x W x H in inches)</label>                    <input type="text" id="dimensions" name="dimensions" value="<?php echo htmlspecialchars($product['dimensions'] ?? ''); ?>" placeholder="e.g. 7.5 x 5.0 x 0.8">                    <small style="color: #666; font-size: 0.9rem;">Length x Width x Height in inches</small>                </div>                <div class="form-group">                    <label for="shipping_option">Shipping Option</label>                    <select id="shipping_option" name="shipping_option" onchange="toggleFlatRate()">                        <option value="calculated" <?php echo ($product['shipping_option'] ?? 'calculated') === 'calculated' ? 'selected' : ''; ?>>Calculated (USPS)</option>                        <option value="free" <?php echo ($product['shipping_option'] ?? '') === 'free' ? 'selected' : ''; ?>>Free Shipping</option>                        <option value="flat" <?php echo ($product['shipping_option'] ?? '') === 'flat' ? 'selected' : ''; ?>>Flat Rate</option>                    </select>                </div>                <div class="form-group" id="flat-rate-group" style="display: <?php echo ($product['shipping_option'] ?? 'calculated') === 'flat' ? 'block' : 'none'; ?>;">                    <label for="flat_rate">Flat Rate Amount ($)</label>                    <input type="number" id="flat_rate" name="flat_rate" step="0.01" value="<?php echo $product['flat_rate'] ?? ''; ?>" placeholder="e.g. 5.99">                </div>                <button type="submit" class="btn">Save Changes</button>                                <script>                function toggleFlatRate() {                    const select = document.getElementById('shipping_option');                    const flatGroup = document.getElementById('flat-rate-group');                    flatGroup.style.display = select.value === 'flat' ? 'block' : 'none';                }                </script>
+                <div class="form-group">
+                    <label for="condition">Condition</label>
+                    <select id="condition" name="condition">
+                        <option value="New" <?php echo $product['condition'] === 'New' ? 'selected' : ''; ?>>New</option>
+                        <option value="Like New" <?php echo $product['condition'] === 'Like New' ? 'selected' : ''; ?>>Like New</option>
+                        <option value="Very Good" <?php echo $product['condition'] === 'Very Good' ? 'selected' : ''; ?>>Very Good</option>
+                        <option value="Good" <?php echo $product['condition'] === 'Good' ? 'selected' : ''; ?>>Good</option>
+                        <option value="Acceptable" <?php echo $product['condition'] === 'Acceptable' ? 'selected' : ''; ?>>Acceptable</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="weight">Weight (oz)</label>
+                    <input type="number" id="weight" name="weight" step="0.1" value="<?php echo $product['weight'] ?? ''; ?>" placeholder="e.g. 5.2">
+                    <small style="color: #666; font-size: 0.9rem;">Weight in ounces for shipping calculation</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="dimensions">Dimensions (L x W x H in inches)</label>
+                    <input type="text" id="dimensions" name="dimensions" value="<?php echo htmlspecialchars($product['dimensions'] ?? ''); ?>" placeholder="e.g. 7.5 x 5.0 x 0.8">
+                    <small style="color: #666; font-size: 0.9rem;">Length x Width x Height in inches</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="shipping_option">Shipping Option</label>
+                    <select id="shipping_option" name="shipping_option" onchange="toggleFlatRate()">
+                        <option value="calculated" <?php echo ($product['shipping_option'] ?? 'calculated') === 'calculated' ? 'selected' : ''; ?>>Calculated (USPS)</option>
+                        <option value="free" <?php echo ($product['shipping_option'] ?? '') === 'free' ? 'selected' : ''; ?>>Free Shipping</option>
+                        <option value="flat" <?php echo ($product['shipping_option'] ?? '') === 'flat' ? 'selected' : ''; ?>>Flat Rate</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="flat-rate-group" style="display: <?php echo ($product['shipping_option'] ?? 'calculated') === 'flat' ? 'block' : 'none'; ?>;">
+                    <label for="flat_rate">Flat Rate Amount ($)</label>
+                    <input type="number" id="flat_rate" name="flat_rate" step="0.01" value="<?php echo $product['flat_rate'] ?? ''; ?>" placeholder="e.g. 5.99">
+                </div>
+
+                <button type="submit" class="btn">Save Changes</button>
+                
+                <script>
+                function toggleFlatRate() {
+                    const select = document.getElementById('shipping_option');
+                    const flatGroup = document.getElementById('flat-rate-group');
+                    flatGroup.style.display = select.value === 'flat' ? 'block' : 'none';
+                }
+                </script>
             </form>
 
             <div class="image-section">

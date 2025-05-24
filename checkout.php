@@ -1,13 +1,5 @@
 <?php
-// Enable debugging for development
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 session_start();
-
-echo "<!-- DEBUG: Session started -->\n";
-echo "<!-- DEBUG: Cart contents: " . json_encode($_SESSION['cart'] ?? []) . " -->\n";
 
 $db_error = false;
 $config_error = false;
@@ -16,42 +8,33 @@ $error_messages = [];
 
 try {
     require_once 'includes/db.php';
-    echo "<!-- DEBUG: Database included successfully -->\n";
 } catch (Exception $e) {
     $db_error = true;
     $error_messages[] = 'Database connection failed: ' . $e->getMessage();
-    echo "<!-- DEBUG: Database error: " . $e->getMessage() . " -->\n";
 }
 
 try {
     require_once 'includes/config.php';
-    echo "<!-- DEBUG: Config included successfully -->\n";
 } catch (Exception $e) {
     $config_error = true;
     $error_messages[] = 'Configuration error: ' . $e->getMessage();
-    echo "<!-- DEBUG: Config error: " . $e->getMessage() . " -->\n";
 }
 
 try {
     require_once 'includes/stripe-config.php';
-    echo "<!-- DEBUG: Stripe config included successfully -->\n";
 } catch (Exception $e) {
     $stripe_error = true;
     $error_messages[] = 'Stripe configuration error: ' . $e->getMessage();
-    echo "<!-- DEBUG: Stripe error: " . $e->getMessage() . " -->\n";
 }
 
 try {
     require_once 'includes/cart.php';
-    echo "<!-- DEBUG: Cart utilities included successfully -->\n";
 } catch (Exception $e) {
     $error_messages[] = 'Cart utilities error: ' . $e->getMessage();
-    echo "<!-- DEBUG: Cart utilities error: " . $e->getMessage() . " -->\n";
 }
 
 // If there are critical errors, display them
 if ($db_error || $config_error) {
-    echo "<!-- DEBUG: Critical errors detected -->\n";
     $critical_error = 'System temporarily unavailable. ';
     if ($db_error) $critical_error .= 'Database connection failed. ';
     if ($config_error) $critical_error .= 'Configuration error. ';
@@ -96,33 +79,23 @@ if ($db_error || $config_error) {
     exit;
 }
 
-echo "<!-- DEBUG: All includes loaded successfully -->\n";
-
 // Redirect if cart is empty
 if (empty($_SESSION['cart'])) {
-    echo "<!-- DEBUG: Cart is empty, redirecting to cart.php -->\n";
     header('Location: cart.php');
     exit;
 }
-
-echo "<!-- DEBUG: Cart is not empty, proceeding -->\n";
 
 // Fetch products in cart
 $cart = $_SESSION['cart'];
 $products = [];
 $subtotal = 0;
 
-echo "<!-- DEBUG: Cart data: " . json_encode($cart) . " -->\n";
-
 if (!empty($cart) && !$db_error) {
     try {
         $ids = implode(',', array_map('intval', array_keys($cart)));
-        echo "<!-- DEBUG: Product IDs to fetch: " . $ids . " -->\n";
         
         $stmt = $db->query("SELECT * FROM products WHERE id IN ($ids)");
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        echo "<!-- DEBUG: Found " . count($products) . " products -->\n";
         
         // Attach images
         foreach ($products as &$prod) {
@@ -135,33 +108,32 @@ if (!empty($cart) && !$db_error) {
         }
         unset($prod);
         
-        echo "<!-- DEBUG: Calculated subtotal: $" . number_format($subtotal, 2) . " -->\n";
-        
     } catch (Exception $e) {
-        echo "<!-- DEBUG: Database error: " . $e->getMessage() . " -->\n";
         $db_error = true;
         $error_messages[] = 'Error loading cart items: ' . $e->getMessage();
     }
 }
 
-// Handle order submission
+// Handle order submission and shipping calculation
 $errors = [];
 $error = '';
+$shipping_cost = 0;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    echo "<!-- DEBUG: Form submitted -->\n";
     
     // Check if Stripe is available
     if ($stripe_error) {
         $error = 'Payment system temporarily unavailable. Please try again later.';
-        echo "<!-- DEBUG: Stripe unavailable -->\n";
     } else {
         $customerInfo = [
             'name' => $_POST['name'] ?? '',
             'email' => $_POST['email'] ?? '',
             'phone' => $_POST['phone'] ?? '',
+            'address' => $_POST['address'] ?? '',
+            'city' => $_POST['city'] ?? '',
+            'state' => $_POST['state'] ?? '',
+            'zip' => $_POST['zip'] ?? '',
         ];
-        
-        echo "<!-- DEBUG: Customer info: " . json_encode($customerInfo) . " -->\n";
 
         // Basic validation
         if (empty($customerInfo['name'])) {
@@ -173,23 +145,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($customerInfo['phone'])) {
             $errors[] = 'Phone number is required';
         }
-
-        echo "<!-- DEBUG: Validation errors: " . json_encode($errors) . " -->\n";
+        if (empty($customerInfo['address'])) {
+            $errors[] = 'Address is required';
+        }
+        if (empty($customerInfo['city'])) {
+            $errors[] = 'City is required';
+        }
+        if (empty($customerInfo['state'])) {
+            $errors[] = 'State is required';
+        }
+        if (empty($customerInfo['zip']) || !preg_match('/^\d{5}(-\d{4})?$/', $customerInfo['zip'])) {
+            $errors[] = 'Valid ZIP code is required';
+        }
+        
+        // Calculate shipping if address is provided
+        if (empty($errors) && !empty($customerInfo['zip']) && !empty($products)) {
+            try {
+                require_once 'includes/usps-shipping.php';
+                $total_shipping = 0;
+                
+                foreach ($products as $product) {
+                    $usps = new USPSShipping();
+                    $shipping_result = $usps->calculateShipping($product, $customerInfo['zip'], 'Priority');
+                    $total_shipping += $shipping_result['rate'];
+                }
+                
+                $shipping_cost = $total_shipping;
+            } catch (Exception $e) {
+                // Fallback to flat rate if shipping calculation fails
+                $shipping_cost = 5.00;
+                error_log('Shipping calculation error: ' . $e->getMessage());
+            }
+        } else {
+            // Default shipping cost
+            $shipping_cost = 5.00;
+        }
 
         if (empty($errors)) {
             try {
-                echo "<!-- DEBUG: Attempting to create Stripe checkout session -->\n";
-                
-                // Create Stripe Checkout Session
-                $session = createStripeCheckoutSession($cart, $customerInfo);
-                
-                echo "<!-- DEBUG: Stripe session result: " . ($session ? 'Success' : 'Failed') . " -->\n";
+                // Create Stripe Checkout Session with calculated shipping
+                $session = createStripeCheckoutSession($cart, $customerInfo, $shipping_cost);
                 
                 if ($session) {
                     // Store customer info in session for later use
                     $_SESSION['customer_info'] = $customerInfo;
-                    
-                    echo "<!-- DEBUG: Redirecting to: " . $session->url . " -->\n";
+                    $_SESSION['shipping_cost'] = $shipping_cost;
                     
                     // Redirect to Stripe Checkout
                     header('Location: ' . $session->url);
@@ -198,7 +198,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = "There was an error creating your checkout session. Please try again.";
                 }
             } catch (Exception $e) {
-                echo "<!-- DEBUG: Stripe checkout error: " . $e->getMessage() . " -->\n";
                 error_log('Checkout Session Error: ' . $e->getMessage());
                 $error = "There was an error processing your request: " . $e->getMessage();
             }
@@ -206,7 +205,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-echo "<!-- DEBUG: Rendering page -->\n";
+// Handle AJAX shipping calculationif (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip']) && !empty($products)) {    try {        require_once 'includes/usps-shipping.php';        $calculated_shipping = 0;                foreach ($products as $product) {            $usps = new USPSShipping();            $shipping_result = $usps->calculateShipping($product, $_POST['zip'], 'Priority');            $calculated_shipping += $shipping_result['rate'];        }                header('Content-Type: application/json');        echo json_encode([            'success' => true,            'shipping_cost' => $calculated_shipping,            'subtotal' => $subtotal,            'total' => $subtotal + $calculated_shipping        ]);        exit;    } catch (Exception $e) {        header('Content-Type: application/json');        echo json_encode([            'success' => false,            'error' => 'Unable to calculate shipping',            'shipping_cost' => 5.00,            'subtotal' => $subtotal,            'total' => $subtotal + 5.00        ]);        exit;    }}// Calculate shipping for display if ZIP is provided but not processing orderif (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shipping_only'])) {    try {        require_once 'includes/usps-shipping.php';        $calculated_shipping = 0;                foreach ($products as $product) {            $usps = new USPSShipping();            $shipping_result = $usps->calculateShipping($product, $_POST['zip'], 'Priority');            $calculated_shipping += $shipping_result['rate'];        }                $shipping_cost = $calculated_shipping;    } catch (Exception $e) {        $shipping_cost = 5.00; // fallback    }} elseif (empty($_POST['zip'])) {    $shipping_cost = 0; // Show "Enter ZIP to calculate"}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -235,8 +235,9 @@ echo "<!-- DEBUG: Rendering page -->\n";
         .order-img { width: 50px; height: 70px; object-fit: cover; border-radius: 6px; background: #f7f7fa; }
         .order-summary-total { text-align: right; font-size: 1.1rem; font-weight: 700; }
         .checkout-errors { background: #ffe0e0; color: #a00; border-radius: 8px; padding: 1em; margin-bottom: 1.5rem; }
-        .debug-info { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: #495057; }
         .system-status { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; color: #856404; }
+        .address-row { display: flex; gap: 1rem; }
+        .address-col { flex: 1; }
     </style>
 </head>
 <body>
@@ -273,19 +274,6 @@ echo "<!-- DEBUG: Rendering page -->\n";
                 </div>
             <?php endif; ?>
             
-            <!-- Debug Information -->
-            <div class="debug-info">
-                <strong>Debug Information:</strong><br>
-                Cart items: <?php echo count($cart); ?><br>
-                Products found: <?php echo count($products); ?><br>
-                Subtotal: $<?php echo number_format($subtotal, 2); ?><br>
-                Database: <?php echo $db_error ? '<span style="color: red;">❌ Unavailable</span>' : '<span style="color: green;">✅ Connected</span>'; ?><br>
-                Stripe: <?php echo $stripe_error ? '<span style="color: red;">❌ Unavailable</span>' : '<span style="color: green;">✅ Available</span>'; ?><br>
-                <?php if (!empty($error)): ?>
-                    Last error: <?php echo htmlspecialchars($error); ?><br>
-                <?php endif; ?>
-            </div>
-            
             <?php if (!empty($errors) || !empty($error)): ?>
                 <div class="checkout-errors">
                     <?php 
@@ -318,8 +306,26 @@ echo "<!-- DEBUG: Rendering page -->\n";
                 <label for="phone">Phone Number *</label>
                 <input type="tel" id="phone" name="phone" required value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
                 
-                <button type="submit" class="checkout-btn">Proceed to Payment</button>
-            </form>
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #232946;">Shipping Address</h3>
+                
+                <label for="address">Address *</label>
+                <input type="text" id="address" name="address" required value="<?php echo htmlspecialchars($_POST['address'] ?? ''); ?>">
+                
+                <label for="city">City *</label>
+                <input type="text" id="city" name="city" required value="<?php echo htmlspecialchars($_POST['city'] ?? ''); ?>">
+                
+                <div class="address-row">
+                    <div class="address-col">
+                        <label for="state">State *</label>
+                        <input type="text" id="state" name="state" required value="<?php echo htmlspecialchars($_POST['state'] ?? ''); ?>" placeholder="e.g. CA">
+                    </div>
+                    <div class="address-col">
+                        <label for="zip">ZIP Code *</label>
+                        <input type="text" id="zip" name="zip" required value="<?php echo htmlspecialchars($_POST['zip'] ?? ''); ?>" placeholder="e.g. 90210">
+                    </div>
+                </div>
+                
+                                                <button type="submit" class="checkout-btn">Calculate Shipping & Proceed</button>            </form>                        <script>            // Auto-calculate shipping when ZIP is entered            document.getElementById('zip').addEventListener('blur', function() {                const zip = this.value;                if (zip && zip.match(/^\d{5}(-\d{4})?$/)) {                    calculateShipping(zip);                }            });                        function calculateShipping(zip) {                // Show loading state                const shippingElements = document.querySelectorAll('.order-summary-total');                if (shippingElements.length >= 2) {                    shippingElements[1].innerHTML = 'Shipping: Calculating...';                }                                // Create form data                const formData = new FormData();                formData.append('zip', zip);                formData.append('calculate_shipping_only', '1');                                fetch('checkout.php', {                    method: 'POST',                    body: formData                })                .then(response => response.json())                .then(data => {                    const shippingElements = document.querySelectorAll('.order-summary-total');                    if (data.success && shippingElements.length >= 3) {                        shippingElements[1].innerHTML = 'Shipping: $' + data.shipping_cost.toFixed(2);                        shippingElements[2].innerHTML = 'Total: $' + data.total.toFixed(2);                    } else {                        shippingElements[1].innerHTML = 'Shipping: $' + data.shipping_cost.toFixed(2);                        shippingElements[2].innerHTML = 'Total: $' + data.total.toFixed(2);                    }                })                .catch(error => {                    console.error('Error calculating shipping:', error);                    const shippingElements = document.querySelectorAll('.order-summary-total');                    if (shippingElements.length >= 2) {                        shippingElements[1].innerHTML = 'Shipping: Error calculating';                    }                });            }            </script>
             
             <?php endif; ?>
             
@@ -356,9 +362,9 @@ echo "<!-- DEBUG: Rendering page -->\n";
                     </tbody>
                 </table>
                 <div class="order-summary-total">Subtotal: $<?php echo number_format($subtotal, 2); ?></div>
-                <div class="order-summary-total">Shipping: $5.00</div>
+                <div class="order-summary-total">Shipping: <?php echo (!empty($_POST['zip']) && $shipping_cost > 0) ? '$' . number_format($shipping_cost, 2) : 'Enter ZIP to calculate'; ?></div>
                 <div class="order-summary-total" style="border-top: 2px solid #eebbc3; padding-top: 0.5rem; margin-top: 0.5rem;">
-                    Total: $<?php echo number_format($subtotal + 5.00, 2); ?>
+                    Total: $<?php echo number_format($subtotal + $shipping_cost, 2); ?>
                 </div>
             </div>
         </div>
