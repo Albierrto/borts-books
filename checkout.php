@@ -1,9 +1,4 @@
-<?php
-session_start();
-require_once 'includes/db.php';
-require_once 'includes/config.php';
-require_once 'includes/stripe-config.php';
-require_once 'includes/cart.php';
+<?phpsession_start();try {    require_once 'includes/db.php';    require_once 'includes/config.php';    require_once 'includes/stripe-config.php';    require_once 'includes/cart.php';} catch (Exception $e) {    error_log('Checkout Error: ' . $e->getMessage());    die('Configuration error. Please check that all required files exist and Stripe is properly configured.');}
 
 // Redirect if cart is empty
 if (empty($_SESSION['cart'])) {
@@ -31,29 +26,7 @@ if (!empty($cart)) {
     unset($prod);
 }
 
-// Handle order submission
-$errors = [];
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $customerInfo = [
-        'name' => $_POST['name'] ?? '',
-        'email' => $_POST['email'] ?? '',
-        'phone' => $_POST['phone'] ?? '',
-    ];
-
-    // Create Stripe Checkout Session
-    $session = createStripeCheckoutSession($cart, $customerInfo);
-    
-    if ($session) {
-        // Store customer info in session for later use
-        $_SESSION['customer_info'] = $customerInfo;
-        
-        // Redirect to Stripe Checkout
-        header('Location: ' . $session->url);
-        exit;
-    } else {
-        $error = "There was an error creating your checkout session. Please try again.";
-    }
-}
+// Handle order submission$errors = [];$error = '';if ($_SERVER['REQUEST_METHOD'] === 'POST') {    $customerInfo = [        'name' => $_POST['name'] ?? '',        'email' => $_POST['email'] ?? '',        'phone' => $_POST['phone'] ?? '',    ];    // Basic validation    if (empty($customerInfo['name'])) {        $errors[] = 'Name is required';    }    if (empty($customerInfo['email']) || !filter_var($customerInfo['email'], FILTER_VALIDATE_EMAIL)) {        $errors[] = 'Valid email is required';    }    if (empty($customerInfo['phone'])) {        $errors[] = 'Phone number is required';    }    if (empty($errors)) {        try {            // Create Stripe Checkout Session            $session = createStripeCheckoutSession($cart, $customerInfo);                        if ($session) {                // Store customer info in session for later use                $_SESSION['customer_info'] = $customerInfo;                                // Redirect to Stripe Checkout                header('Location: ' . $session->url);                exit;            } else {                $error = "There was an error creating your checkout session. Please try again.";            }        } catch (Exception $e) {            error_log('Checkout Session Error: ' . $e->getMessage());            $error = "There was an error processing your request. Please try again or contact support.";        }    }}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -107,11 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <main>
         <div class="checkout-container">
             <div class="checkout-title">Checkout</div>
-            <?php if (!empty($errors)): ?>
-                <div class="checkout-errors">
-                    <?php foreach ($errors as $err) echo htmlspecialchars($err) . '<br>'; ?>
-                </div>
-            <?php endif; ?>
+                        <?php if (!empty($errors) || !empty($error)): ?>                <div class="checkout-errors">                    <?php                     if (!empty($errors)) {                        foreach ($errors as $err) echo htmlspecialchars($err) . '<br>';                     }                    if (!empty($error)) {                        echo htmlspecialchars($error);                    }                    ?>                </div>            <?php endif; ?>
             <form class="checkout-form" method="POST">
                 <label for="name">Full Name</label>
                 <input type="text" id="name" name="name" value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>" required>
