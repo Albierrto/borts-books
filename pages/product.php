@@ -1,12 +1,22 @@
 <?php
-<<<<<<< HEAD
-=======
-echo 'PHP is working<br>';
->>>>>>> 77392b2d00a84874d491967ba54a0565aa58707d
+// --- DEBUG GANG: Always show errors and key variables ---
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-session_start();
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../php_error.log');
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Debug: Output GET/POST/session variables
+echo "<pre style='background:#222;color:#0f0;padding:1em;'>";
+echo "DEBUG: \$_GET = "; var_dump($_GET);
+echo "DEBUG: \$_POST = "; var_dump($_POST);
+echo "DEBUG: \$_SESSION = "; var_dump($_SESSION);
+echo "</pre>";
+
 require_once '../includes/db.php';
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     $debug = isset($_GET['debug']) && $_GET['debug'] == '1';
@@ -46,6 +56,9 @@ try {
         echo '<b>Debug:</b> No images found for product ID ' . htmlspecialchars($id) . '<br>';
         echo '</div>';
     }
+    // Debug: Output product and images
+    echo "<pre style='background:#222;color:#ff0;padding:1em;'>DEBUG: product = "; var_dump($product); echo "</pre>";
+    echo "<pre style='background:#222;color:#0ff;padding:1em;'>DEBUG: images = "; var_dump($images); echo "</pre>";
 } catch (Exception $e) {
     if ($debug) {
         echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
