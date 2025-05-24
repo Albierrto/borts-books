@@ -1,8 +1,8 @@
 <?php
-// --- DEBUG GANG: Always show errors and key variables ---
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// --- Production error settings: do NOT display errors to users ---
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../php_error.log');
 
@@ -10,27 +10,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Debug: Output GET/POST/session variables
-echo "<pre style='background:#222;color:#0f0;padding:1em;'>";
-echo "DEBUG: \$_GET = "; var_dump($_GET);
-echo "DEBUG: \$_POST = "; var_dump($_POST);
-echo "DEBUG: \$_SESSION = "; var_dump($_SESSION);
-echo "</pre>";
-
 require_once '../includes/db.php';
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    $debug = isset($_GET['debug']) && $_GET['debug'] == '1';
-    if ($debug) {
-        echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
-        echo '<b>Debug:</b> Invalid or missing product ID.<br>ID: ' . htmlspecialchars($_GET['id'] ?? 'N/A') . '<br>';
-        echo '</div>';
-        exit;
-    }
     header('Location: shop.php');
     exit;
 }
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$debug = isset($_GET['debug']) && $_GET['debug'] == '1';
 
 try {
     // Fetch product
@@ -38,12 +23,6 @@ try {
     $stmt->execute([$id]);
     $product = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$product) {
-        if ($debug) {
-            echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
-            echo '<b>Debug:</b> Product not found.<br>ID: ' . htmlspecialchars($id) . '<br>';
-            echo 'Query: SELECT * FROM products WHERE id = ' . htmlspecialchars($id) . '<br>';
-            echo '</div>';
-        }
         echo '<p>Product not found. <a href="shop.php">Back to shop</a></p>';
         exit;
     }
@@ -51,22 +30,8 @@ try {
     $imgStmt = $db->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC');
     $imgStmt->execute([$id]);
     $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
-    if ($debug && count($images) === 0) {
-        echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
-        echo '<b>Debug:</b> No images found for product ID ' . htmlspecialchars($id) . '<br>';
-        echo '</div>';
-    }
-    // Debug: Output product and images
-    echo "<pre style='background:#222;color:#ff0;padding:1em;'>DEBUG: product = "; var_dump($product); echo "</pre>";
-    echo "<pre style='background:#222;color:#0ff;padding:1em;'>DEBUG: images = "; var_dump($images); echo "</pre>";
 } catch (Exception $e) {
-    if ($debug) {
-        echo '<div style="background:#ffe0e0;color:#a00;padding:1em;margin:1em 0;border-radius:8px;">';
-        echo '<b>Debug Exception:</b> ' . htmlspecialchars($e->getMessage()) . '<br>';
-        echo '</div>';
-    } else {
-        echo '<p>There was an error loading this product.</p>';
-    }
+    echo '<p>There was an error loading this product.</p>';
     exit;
 }
 // Fetch up to 7 random recommended products (excluding current)
