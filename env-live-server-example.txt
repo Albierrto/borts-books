@@ -1,0 +1,28 @@
+# .env file for LIVE SERVER
+# Copy this content to your .env file on the live server
+
+# Database Configuration (cPanel hosting)
+DB_HOST=localhost
+DB_NAME=bortmpcz_borts_books
+DB_USER=bortmpcz_Bort
+DB_PASS=your_actual_database_password_here
+DB_CHARSET=utf8mb4
+
+# Stripe Configuration
+# For testing, use test keys:
+STRIPE_PUBLISHABLE_KEY=pk_test_your_test_publishable_key_here
+STRIPE_SECRET_KEY=sk_test_your_test_secret_key_here
+
+# For live payments, use live keys:
+# STRIPE_PUBLISHABLE_KEY=pk_live_your_live_publishable_key_here
+# STRIPE_SECRET_KEY=sk_live_your_live_secret_key_here
+
+# Application Settings - CHANGE THIS TO YOUR ACTUAL DOMAIN
+SITE_URL=https://your-actual-domain.com
+ENVIRONMENT=production
+
+# Notes:
+# 1. Replace "your-actual-domain.com" with your real domain
+# 2. Make sure there are NO SPACES around the = signs
+# 3. Get your correct database credentials from cPanel > MySQL Databases
+# 4. Get your Stripe keys from your Stripe Dashboard 
