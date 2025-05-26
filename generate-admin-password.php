@@ -5,7 +5,7 @@
  */
 
 // Change this to your desired password
-$your_password = 'bortbooks2024!'; // Change this to your preferred password
+$your_password = 'LolaSombra1!'; // Current admin password
 
 // Generate secure hash
 $hash = password_hash($your_password, PASSWORD_DEFAULT);

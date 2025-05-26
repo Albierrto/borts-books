@@ -7,7 +7,7 @@
 session_start();
 
 // Admin authentication
-$admin_username = 'Bort';
+$admin_username = 'bort';
 $admin_password = 'LolaSombra1!';
 
 // Check if user is trying to login

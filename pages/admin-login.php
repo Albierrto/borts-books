@@ -3,7 +3,7 @@ session_start();
 
 // Secure admin credentials with hashed password
 $ADMIN_USER = 'bort';
-$ADMIN_PASS_HASH = '$2y$10$z8K4rN2oP6vM9xW7eF1jS.3hT8mL5qA9dR6nX2cY4fB7pE1wQ9sI5'; // Securely hashed password
+$ADMIN_PASS_HASH = '$2y$10$IVtHXvOw/nLpIDZ7mDuul.zw.lYPLPIpcbk4Q5SW64ssuFe9baMue'; // LolaSombra1!
 
 // If you want to use your own password, uncomment this line and run it once:
 // echo password_hash('your_new_password', PASSWORD_DEFAULT) . "\n"; exit;
