@@ -748,6 +748,23 @@ $cart_count = count($_SESSION['cart']);
             <div class="sell-header">
                 <h1><i class="fas fa-book-open"></i> Sell Your Manga Sets</h1>
                 <p>Turn your manga collection into cash! We buy complete sets in good condition.</p>
+                <div style="margin-top: 20px;">
+                    <a href="/pages/how-it-works-sell.php" class="btn btn-secondary" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; transition: all 0.3s ease;">
+                        <i class="fas fa-question-circle"></i>
+                        How It Works
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quote Guarantee Banner -->
+            <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);">
+                <h3 style="margin: 0 0 10px 0; font-size: 1.4rem; font-weight: 700;">
+                    <i class="fas fa-clock" style="margin-right: 10px;"></i>
+                    24-Hour Quote Guarantee
+                </h3>
+                <p style="margin: 0; font-size: 1.1rem; opacity: 0.95;">
+                    Submit your collection today and receive a detailed quote within 24 hours!
+                </p>
             </div>
 
             <div class="info-box">
@@ -759,6 +776,34 @@ $cart_count = count($_SESSION['cart']);
                     <li><strong>English language</strong> - We currently only accept English manga</li>
                     <li><strong>Competitive prices</strong> - We pay up to 80% of current eBay market prices</li>
                 </ul>
+            </div>
+
+            <!-- Payment Methods Section -->
+            <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin-bottom: 30px; border: 2px solid #e1e5e9;">
+                <h3 style="margin: 0 0 20px 0; color: #333; font-size: 1.3rem; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-credit-card" style="color: #667eea;"></i>
+                    Payment Methods
+                </h3>
+                <p style="margin: 0 0 15px 0; color: #666; font-size: 1rem;">
+                    Once we accept your collection, choose how you'd like to receive payment:
+                </p>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-top: 20px;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 100px;">
+                        <i class="fab fa-paypal" style="font-size: 2rem; color: #0070ba;"></i>
+                        <span style="font-weight: 600; color: #333;">PayPal</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 100px;">
+                        <i class="fas fa-mobile-alt" style="font-size: 2rem; color: #6c5ce7;"></i>
+                        <span style="font-weight: 600; color: #333;">Zelle</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 100px;">
+                        <i class="fas fa-dollar-sign" style="font-size: 2rem; color: #00d632;"></i>
+                        <span style="font-weight: 600; color: #333;">CashApp</span>
+                    </div>
+                </div>
+                <p style="margin: 15px 0 0 0; color: #666; font-size: 0.95rem; text-align: center; font-style: italic;">
+                    Fast, secure payments sent within 1-2 business days after verification
+                </p>
             </div>
 
             <div class="success-message" id="successMessage">
