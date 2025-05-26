@@ -121,65 +121,41 @@ if (!empty($cart) && !$db_error) {
 
 // Handle AJAX shipping calculation FIRST
 if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip'])) {
-    // Display errors directly instead of JSON for debugging
-    ini_set('display_errors', 1);
-    error_reporting(E_ALL);
-    
-    echo "<h2>Shipping Calculation Debug</h2>";
-    echo "<p><strong>ZIP:</strong> " . htmlspecialchars($_POST['zip']) . "</p>";
-    echo "<p><strong>Service:</strong> " . htmlspecialchars($_POST['shipping_service'] ?? 'Ground') . "</p>";
-    
-    // Check if we have products
-    if (empty($products)) {
-        echo "<p style='color: red;'><strong>Error:</strong> No products in cart for shipping calculation</p>";
-        echo "<p>Products array: " . print_r($products, true) . "</p>";
-        echo "<p>Cart contents: " . print_r($_SESSION['cart'] ?? [], true) . "</p>";
-        exit;
-    }
-    
-    echo "<p><strong>Products found:</strong> " . count($products) . "</p>";
-    foreach ($products as $prod) {
-        echo "<p>- {$prod['title']} (${$prod['price']})</p>";
-    }
+    header('Content-Type: application/json');
     
     try {
-        echo "<p>Loading USPS shipping class...</p>";
-        require_once 'includes/usps-shipping.php';
-        echo "<p>✓ USPS shipping class loaded</p>";
+        // Check if we have products
+        if (empty($products)) {
+            echo json_encode(['error' => 'No products in cart for shipping calculation']);
+            exit;
+        }
         
+        require_once 'includes/usps-shipping.php';
         $service = $_POST['shipping_service'] ?? 'Ground';
         $calculated_shipping = 0;
         
-        echo "<p>Calculating shipping for each product:</p>";
         foreach ($products as $product) {
-            echo "<p>Calculating for: {$product['title']}</p>";
-            
             $usps = new USPSShipping();
-            echo "<p>✓ USPS object created</p>";
-            
             $shipping_result = $usps->calculateShipping($product, $_POST['zip'], $service);
-            echo "<p>✓ Calculation result: " . print_r($shipping_result, true) . "</p>";
-            
             $calculated_shipping += $shipping_result['rate'];
-            echo "<p>Running total: $" . number_format($calculated_shipping, 2) . "</p>";
         }
         
-        echo "<h3 style='color: green;'>SUCCESS!</h3>";
-        echo "<p><strong>Total Shipping Cost:</strong> $" . number_format($calculated_shipping, 2) . "</p>";
-        echo "<p><strong>Subtotal:</strong> $" . number_format($subtotal, 2) . "</p>";
-        echo "<p><strong>Total:</strong> $" . number_format($subtotal + $calculated_shipping, 2) . "</p>";
+        echo json_encode([
+            'success' => true,
+            'shipping_cost' => $calculated_shipping,
+            'formatted_shipping' => '$' . number_format($calculated_shipping, 2),
+            'subtotal' => $subtotal,
+            'total' => $subtotal + $calculated_shipping,
+            'formatted_total' => '$' . number_format($subtotal + $calculated_shipping, 2)
+        ]);
         
     } catch (Exception $e) {
-        echo "<h3 style='color: red;'>ERROR OCCURRED!</h3>";
-        echo "<p><strong>Error Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
-        echo "<p><strong>File:</strong> " . htmlspecialchars($e->getFile()) . "</p>";
-        echo "<p><strong>Line:</strong> " . $e->getLine() . "</p>";
-        echo "<p><strong>Stack Trace:</strong></p>";
-        echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+        echo json_encode([
+            'error' => 'Shipping calculation failed: ' . $e->getMessage(),
+            'fallback_shipping' => 5.00
+        ]);
     }
     
-    echo "<hr>";
-    echo "<p><a href='checkout.php'>← Back to Checkout</a></p>";
     exit;
 }
 
@@ -446,6 +422,7 @@ if (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shippi
                 const shippingElements = document.querySelectorAll('.order-summary-total');
                 if (shippingElements.length >= 2) {
                     shippingElements[1].innerHTML = 'Shipping: Calculating...';
+                    shippingElements[2].innerHTML = 'Total: Calculating...';
                 }
                 
                 // Create form data
@@ -458,26 +435,32 @@ if (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shippi
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.text())  // Changed from .json() to .text()
+                .then(response => response.json())
                 .then(data => {
-                    // Open debug output in new window or redirect to see full error
-                    const newWindow = window.open('', '_blank');
-                    newWindow.document.write(data);
-                    newWindow.document.close();
-                    
-                    // Update shipping display to show debug was triggered
-                    const shippingElements = document.querySelectorAll('.order-summary-total');
-                    if (shippingElements.length >= 2) {
-                        shippingElements[1].innerHTML = 'Shipping: Debug window opened - check for errors';
+                    if (data.error) {
+                        console.error('Shipping calculation error:', data.error);
+                        const fallback = data.fallback_shipping || 5.00;
+                        updateShippingDisplay(fallback, fallback);
+                    } else {
+                        updateShippingDisplay(data.shipping_cost, data.total);
                     }
                 })
                 .catch(error => {
-                    console.error('Error calculating shipping:', error);
+                    console.error('Network error calculating shipping:', error);
                     const shippingElements = document.querySelectorAll('.order-summary-total');
                     if (shippingElements.length >= 2) {
-                        shippingElements[1].innerHTML = 'Shipping: Network error - ' + error.message;
+                        shippingElements[1].innerHTML = 'Shipping: Error - using fallback $5.00';
+                        shippingElements[2].innerHTML = 'Total: $' + (<?php echo $subtotal; ?> + 5.00).toFixed(2);
                     }
                 });
+            }
+            
+            function updateShippingDisplay(shippingCost, totalCost) {
+                const shippingElements = document.querySelectorAll('.order-summary-total');
+                if (shippingElements.length >= 2) {
+                    shippingElements[1].innerHTML = 'Shipping: $' + parseFloat(shippingCost).toFixed(2);
+                    shippingElements[2].innerHTML = 'Total: $' + parseFloat(totalCost).toFixed(2);
+                }
             }
             </script>
             
