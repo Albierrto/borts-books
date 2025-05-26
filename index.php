@@ -491,21 +491,38 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             opacity: 0.9;
         }
         .newsletter-form { 
-            display: flex; 
-            justify-content: center; 
-            gap: 1rem; 
-            flex-wrap: wrap;
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
         }
-        .newsletter-form input[type="email"] {
+        .newsletter-inputs {
+            display: flex; 
+            gap: 1rem; 
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+        .newsletter-name,
+        .newsletter-email {
             padding: 1rem 1.5rem;
             border-radius: 50px;
             border: none;
             font-size: 1rem;
-            flex: 1;
-            min-width: 250px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .newsletter-name {
+            flex: 0 1 180px;
+            min-width: 150px;
+        }
+        .newsletter-email {
+            flex: 1 1 250px;
+            min-width: 250px;
+        }
+        .newsletter-name:focus,
+        .newsletter-email:focus {
+            box-shadow: 0 4px 20px rgba(238, 187, 195, 0.3);
+            transform: translateY(-1px);
         }
         .newsletter-form button {
             background: linear-gradient(45deg, #eebbc3, #f7c7d0);
@@ -518,24 +535,49 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-width: 150px;
+            position: relative;
         }
-        .newsletter-form button:hover {
+        .newsletter-form button:hover:not(:disabled) {
             background: linear-gradient(45deg, #fff, #eebbc3);
             transform: translateY(-2px);
         }
+        .newsletter-form button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .newsletter-status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .newsletter-status.success {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+        .newsletter-status.error {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
         
-        @media (max-width: 600px) {
-            .newsletter-form {
+        @media (max-width: 768px) {
+            .newsletter-inputs {
                 flex-direction: column;
-                align-items: center;
+                align-items: stretch;
             }
-            .newsletter-form input[type="email"] {
+            .newsletter-name,
+            .newsletter-email {
                 width: 100%;
                 max-width: 350px;
+                margin: 0 auto;
             }
             .newsletter-form button {
                 width: 100%;
                 max-width: 200px;
+                margin: 0 auto;
             }
         }
     </style>
@@ -682,13 +724,21 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
 
     <section class="newsletter-section">
         <h3>Get Exclusive Deals & New Arrivals</h3>
-        <p>Join thousands of manga fans and be the first to know about new releases and special offers!</p>
-        <form class="newsletter-form">
-            <input type="email" placeholder="Your email address" required>
-            <button type="submit">
-                <i class="fas fa-envelope"></i>
-                Subscribe
-            </button>
+        <p>Join thousands of manga fans and be the first to know about new releases, special offers, and rare finds!</p>
+        <form class="newsletter-form" id="newsletter-form">
+            <div class="newsletter-inputs">
+                <input type="text" name="name" placeholder="Your name (optional)" class="newsletter-name">
+                <input type="email" name="email" placeholder="Your email address" required class="newsletter-email">
+                <button type="submit">
+                    <i class="fas fa-envelope"></i>
+                    <span class="btn-text">Subscribe</span>
+                    <span class="btn-loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Subscribing...
+                    </span>
+                </button>
+            </div>
+            <div class="newsletter-status" style="display: none;"></div>
         </form>
     </section>
 
@@ -855,15 +905,75 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
         `;
         document.head.appendChild(style);
 
-        // Newsletter form handling
-        document.querySelector('.newsletter-form').addEventListener('submit', function(e) {
+        // Enhanced Newsletter form handling with AJAX
+        document.getElementById('newsletter-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            const email = this.querySelector('input[type="email"]').value;
-            if (email) {
-                showNotification('Thank you for subscribing! You\'ll receive our latest updates soon.', 'success');
-                this.reset();
+            
+            const form = this;
+            const email = form.querySelector('.newsletter-email').value.trim();
+            const name = form.querySelector('.newsletter-name').value.trim();
+            const button = form.querySelector('button[type="submit"]');
+            const btnText = button.querySelector('.btn-text');
+            const btnLoading = button.querySelector('.btn-loading');
+            const statusDiv = form.querySelector('.newsletter-status');
+            
+            if (!email) {
+                showNewsletterStatus('Please enter a valid email address', 'error');
+                return;
             }
+            
+            // Show loading state
+            button.disabled = true;
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'inline-flex';
+            hideNewsletterStatus();
+            
+            // Send AJAX request
+            const formData = new FormData();
+            formData.append('action', 'newsletter_signup');
+            formData.append('email', email);
+            formData.append('name', name);
+            formData.append('source', 'homepage');
+            
+            fetch('/includes/email-system.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNewsletterStatus(data.message, 'success');
+                    form.reset();
+                    
+                    // Also show the floating notification
+                    showNotification(data.message, 'success');
+                } else {
+                    showNewsletterStatus(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Newsletter signup error:', error);
+                showNewsletterStatus('Sorry, there was an error. Please try again later.', 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                button.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+            });
         });
+        
+        function showNewsletterStatus(message, type) {
+            const statusDiv = document.querySelector('.newsletter-status');
+            statusDiv.textContent = message;
+            statusDiv.className = `newsletter-status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+        
+        function hideNewsletterStatus() {
+            const statusDiv = document.querySelector('.newsletter-status');
+            statusDiv.style.display = 'none';
+        }
     </script>
 </body>
 </html>
