@@ -4,6 +4,166 @@
  * Use this to manually import your eBay reviews
  */
 
+session_start();
+
+// Admin authentication
+$admin_username = 'Bort';
+$admin_password = 'LolaSombra1!';
+
+// Check if user is trying to login
+if (isset($_POST['login'])) {
+    if ($_POST['username'] === $admin_username && $_POST['password'] === $admin_password) {
+        $_SESSION['admin_logged_in'] = true;
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    } else {
+        $login_error = 'Invalid username or password';
+    }
+}
+
+// Check if user is trying to logout
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+// Check if user is logged in
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    // Show login form
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Admin Login - Bort's Books</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        <style>
+            body {
+                font-family: 'Inter', sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                margin: 0;
+                padding: 0;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .login-container {
+                background: white;
+                border-radius: 12px;
+                padding: 2rem;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+                width: 100%;
+                max-width: 400px;
+            }
+            
+            .login-header {
+                text-align: center;
+                margin-bottom: 2rem;
+            }
+            
+            .login-header h1 {
+                color: #333;
+                margin: 0 0 0.5rem 0;
+            }
+            
+            .login-header p {
+                color: #666;
+                margin: 0;
+            }
+            
+            .form-group {
+                margin-bottom: 1.5rem;
+            }
+            
+            .form-group label {
+                display: block;
+                margin-bottom: 0.5rem;
+                color: #333;
+                font-weight: 600;
+            }
+            
+            .form-group input {
+                width: 100%;
+                padding: 12px;
+                border: 2px solid #e1e5e9;
+                border-radius: 8px;
+                font-size: 1rem;
+                transition: border-color 0.3s ease;
+                box-sizing: border-box;
+            }
+            
+            .form-group input:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+            
+            .btn-login {
+                width: 100%;
+                background: #667eea;
+                color: white;
+                border: none;
+                padding: 12px;
+                border-radius: 8px;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .btn-login:hover {
+                background: #5a6fd8;
+                transform: translateY(-1px);
+            }
+            
+            .error {
+                background: #f8d7da;
+                color: #721c24;
+                padding: 1rem;
+                border-radius: 8px;
+                margin-bottom: 1rem;
+                border: 1px solid #f5c6cb;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="login-container">
+            <div class="login-header">
+                <h1><i class="fas fa-lock"></i> Admin Login</h1>
+                <p>Bort's Books Administration</p>
+            </div>
+            
+            <?php if (isset($login_error)): ?>
+                <div class="error">
+                    <i class="fas fa-exclamation-triangle"></i> <?php echo $login_error; ?>
+                </div>
+            <?php endif; ?>
+            
+            <form method="POST">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" name="login" class="btn-login">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </form>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 require_once '../includes/db.php';
 require_once '../includes/reviews-system.php';
 
@@ -262,9 +422,12 @@ if ($_POST['action'] === 'import' && $_POST['confirm'] === 'yes') {
             </form>
         </div>
         
-        <div style="text-align: center; margin-top: 2rem;">
+        <div style="text-align: center; margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
             <a href="../index.php" class="btn">
                 <i class="fas fa-home"></i> Back to Website
+            </a>
+            <a href="?logout=1" class="btn btn-danger">
+                <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
     </div>

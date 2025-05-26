@@ -244,6 +244,13 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             transform: translateY(-2px);
         }
 
+        /* Hide price banner on mobile */
+        @media (max-width: 768px) {
+            .price-comparison-banner {
+                display: none;
+            }
+        }
+
         /* Price Comparison Banner */
         .price-comparison-banner {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
