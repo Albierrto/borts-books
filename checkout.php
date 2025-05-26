@@ -121,35 +121,56 @@ if (!empty($cart) && !$db_error) {
 
 // Handle AJAX shipping calculation FIRST
 if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip']) && !empty($products)) {
+    // Enable error display for this AJAX request
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+    
     try {
+        error_log("AJAX shipping calculation started - ZIP: " . $_POST['zip'] . ", Service: " . ($_POST['shipping_service'] ?? 'Ground'));
+        
         require_once 'includes/usps-shipping.php';
         $service = $_POST['shipping_service'] ?? 'Ground';
         $calculated_shipping = 0;
         
         foreach ($products as $product) {
+            error_log("Calculating shipping for product: " . $product['title']);
             $usps = new USPSShipping();
             $shipping_result = $usps->calculateShipping($product, $_POST['zip'], $service);
             $calculated_shipping += $shipping_result['rate'];
+            error_log("Product shipping result: " . json_encode($shipping_result));
         }
         
-        header('Content-Type: application/json');
-        echo json_encode([
+        $response = [
             'success' => true,
             'shipping_cost' => $calculated_shipping,
             'subtotal' => $subtotal,
             'total' => $subtotal + $calculated_shipping,
             'service' => $service
-        ]);
+        ];
+        
+        error_log("AJAX shipping calculation successful: " . json_encode($response));
+        
+        header('Content-Type: application/json');
+        echo json_encode($response);
         exit;
     } catch (Exception $e) {
-        header('Content-Type: application/json');
-        echo json_encode([
+        error_log("AJAX shipping calculation error: " . $e->getMessage());
+        
+        $error_response = [
             'success' => false,
             'error' => 'Unable to calculate shipping: ' . $e->getMessage(),
             'shipping_cost' => 5.00,
             'subtotal' => $subtotal,
-            'total' => $subtotal + 5.00
-        ]);
+            'total' => $subtotal + 5.00,
+            'debug_info' => [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]
+        ];
+        
+        header('Content-Type: application/json');
+        echo json_encode($error_response);
         exit;
     }
 }
