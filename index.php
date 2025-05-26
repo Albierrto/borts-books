@@ -713,7 +713,6 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
                 <h3>Help</h3>
                 <ul>
                     <li><a href="/pages/faq.php">FAQ</a></li>
-                    <li><a href="/pages/shipping.php">Shipping</a></li>
                     <li><a href="/pages/returns.php">Returns</a></li>
                     <li><a href="/pages/contact.php">Contact Us</a></li>
                 </ul>
@@ -724,7 +723,6 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
                 <ul>
                     <li><i class="fas fa-envelope"></i> info@bortsbooks.com</li>
                     <li><i class="fas fa-phone"></i> (123) 456-7890</li>
-                    <li><i class="fas fa-map-marker-alt"></i> 123 Manga St, Anime City, AC 12345</li>
                 </ul>
             </div>
         </div>

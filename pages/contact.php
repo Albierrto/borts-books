@@ -460,38 +460,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     All times Pacific Standard Time (PST)
                 </p>
             </div>
-
-            <div class="contact-card">
-                <h3><i class="fas fa-map-marker-alt"></i> Visit Our Store</h3>
-                
-                <div class="contact-method">
-                    <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
-                    <div class="details">
-                        <h4>Physical Location</h4>
-                        <p>123 Manga Street<br>
-                        Anime City, AC 12345<br>
-                        United States</p>
-                    </div>
-                </div>
-                
-                <div class="contact-method">
-                    <div class="icon"><i class="fas fa-car"></i></div>
-                    <div class="details">
-                        <h4>Parking</h4>
-                        <p>Free parking available</p>
-                        <p>Street parking and lot</p>
-                    </div>
-                </div>
-                
-                <div class="contact-method">
-                    <div class="icon"><i class="fas fa-subway"></i></div>
-                    <div class="details">
-                        <h4>Public Transit</h4>
-                        <p>Bus routes 12, 34, 56</p>
-                        <p>Manga Station (2 blocks)</p>
-                    </div>
-                </div>
-            </div>
         </div>
     </main>
 
@@ -525,7 +493,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h3>Help</h3>
                 <ul>
                     <li><a href="faq.php">FAQ</a></li>
-                    <li><a href="shipping.php">Shipping</a></li>
                     <li><a href="returns.php">Returns</a></li>
                     <li><a href="contact.php" class="active">Contact Us</a></li>
                 </ul>
@@ -536,7 +503,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <ul>
                     <li><i class="fas fa-envelope"></i> info@bortsbooks.com</li>
                     <li><i class="fas fa-phone"></i> (123) 456-7890</li>
-                    <li><i class="fas fa-map-marker-alt"></i> 123 Manga St, Anime City, AC 12345</li>
                 </ul>
             </div>
         </div>

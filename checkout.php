@@ -1,4 +1,9 @@
 <?php
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 
 $db_error = false;
@@ -37,7 +42,7 @@ try {
 if (!$db_error) {
     try {
         require_once 'includes/cart-display.php';
-        cleanupCart();
+        // cleanupCart(); // Temporarily commented out for debugging
     } catch (Exception $e) {
         error_log('Cart cleanup error in checkout: ' . $e->getMessage());
         // Don't let cleanup errors break checkout
@@ -90,11 +95,11 @@ if ($db_error || $config_error) {
     exit;
 }
 
-// Redirect if cart is empty
-if (empty($_SESSION['cart'])) {
-    header('Location: cart.php');
-    exit;
-}
+// Redirect if cart is empty - temporarily commented out for debugging
+// if (empty($_SESSION['cart'])) {
+//     header('Location: cart.php');
+//     exit;
+// }
 
 // Fetch products in cart
 $cart = $_SESSION['cart'];

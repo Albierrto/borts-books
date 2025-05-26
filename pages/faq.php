@@ -258,12 +258,7 @@ $currentPage = "faq";
                     <i class="fas fa-plus faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    <p>Shipping costs are calculated based on the weight and dimensions of your order and your location. We offer three options:</p>
-                    <ul>
-                        <li><strong>Media Mail:</strong> $3.00 (2-8 business days) - For books and educational materials</li>
-                        <li><strong>Ground Advantage:</strong> $4.50 (3-5 business days) - Standard shipping</li>
-                        <li><strong>Priority Mail:</strong> $7.50 (1-3 business days) - Fast delivery</li>
-                    </ul>
+                    <p>Shipping costs are calculated by USPS based on the weight and dimensions of your order and your delivery location. The exact cost will be calculated and displayed at checkout before you complete your purchase.</p>
                 </div>
             </div>
 
@@ -407,7 +402,6 @@ $currentPage = "faq";
                 <h3>Help</h3>
                 <ul>
                     <li><a href="faq.php" class="active">FAQ</a></li>
-                    <li><a href="shipping.php">Shipping</a></li>
                     <li><a href="returns.php">Returns</a></li>
                     <li><a href="contact.php">Contact Us</a></li>
                 </ul>
@@ -418,7 +412,6 @@ $currentPage = "faq";
                 <ul>
                     <li><i class="fas fa-envelope"></i> info@bortsbooks.com</li>
                     <li><i class="fas fa-phone"></i> (123) 456-7890</li>
-                    <li><i class="fas fa-map-marker-alt"></i> 123 Manga St, Anime City, AC 12345</li>
                 </ul>
             </div>
         </div>

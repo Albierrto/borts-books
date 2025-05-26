@@ -531,7 +531,6 @@ $currentPage = "returns";
                 <h3>Help</h3>
                 <ul>
                     <li><a href="faq.php">FAQ</a></li>
-                    <li><a href="shipping.php">Shipping</a></li>
                     <li><a href="returns.php" class="active">Returns</a></li>
                     <li><a href="contact.php">Contact Us</a></li>
                 </ul>
@@ -542,7 +541,6 @@ $currentPage = "returns";
                 <ul>
                     <li><i class="fas fa-envelope"></i> info@bortsbooks.com</li>
                     <li><i class="fas fa-phone"></i> (123) 456-7890</li>
-                    <li><i class="fas fa-map-marker-alt"></i> 123 Manga St, Anime City, AC 12345</li>
                 </ul>
             </div>
         </div>
