@@ -5,11 +5,11 @@ require_once '../includes/email-system.php';
 
 // Check if user is logged in as admin
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: admin.php');
+    header('Location: admin-login.php');
     exit;
 }
 
-$pageTitle = "Email Management";
+$pageTitle = "Email Marketing";
 $currentPage = "admin";
 
 $emailSystem = new EmailSystem($db);
@@ -83,24 +83,29 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?> - Bort's Books Admin</title>
+    <title><?php echo $pageTitle; ?> - Bort's Books</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        body { background: #f7f7fa; }
         .admin-container {
             max-width: 1200px;
-            margin: 2rem auto;
+            margin: 3rem auto;
             padding: 0 1rem;
         }
         .admin-header {
             background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 4px 25px rgba(35,41,70,0.08);
-            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
+            padding: 2.5rem 2rem;
             margin-bottom: 2rem;
+            text-align: center;
         }
         .admin-title {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: 800;
             color: #232946;
             margin-bottom: 0.5rem;
@@ -108,6 +113,19 @@ try {
         .admin-subtitle {
             color: #666;
             font-size: 1.1rem;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #e63946;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            transition: color 0.3s ease;
+        }
+        .back-link:hover {
+            color: #232946;
         }
         .stats-grid {
             display: grid;
@@ -117,8 +135,8 @@ try {
         }
         .stat-card {
             background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 4px 25px rgba(35,41,70,0.08);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
             padding: 2rem;
             text-align: center;
             position: relative;
@@ -153,12 +171,12 @@ try {
         }
         .panel {
             background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 4px 25px rgba(35,41,70,0.08);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
             overflow: hidden;
         }
         .panel-header {
-            background: linear-gradient(45deg, #232946, #395aa0);
+            background: #232946;
             color: #fff;
             padding: 1.5rem;
             font-weight: 700;
@@ -219,7 +237,7 @@ try {
             border-color: #eebbc3;
         }
         .btn {
-            background: linear-gradient(45deg, #eebbc3, #f7c7d0);
+            background: #eebbc3;
             color: #232946;
             border: none;
             border-radius: 8px;
@@ -233,7 +251,7 @@ try {
             text-decoration: none;
         }
         .btn:hover {
-            background: linear-gradient(45deg, #232946, #395aa0);
+            background: #232946;
             color: #fff;
             transform: translateY(-1px);
         }
@@ -273,6 +291,12 @@ try {
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             }
+            .admin-container {
+                margin: 1rem auto;
+            }
+            .admin-header {
+                padding: 1.5rem;
+            }
         }
     </style>
 </head>
@@ -282,10 +306,10 @@ try {
             <a href="../index.php" class="logo">Bort's <span>Books</span></a>
             <nav>
                 <ul>
-                    <li><a href="/pages/admin-dashboard.php">Dashboard</a></li>
-                    <li><a href="/pages/mass-edit.php">Products</a></li>
-                    <li><a href="/pages/admin-email.php" class="active">Email</a></li>
-                    <li><a href="/pages/admin.php">Logout</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </nav>
         </div>
@@ -293,9 +317,14 @@ try {
 
     <main>
         <div class="admin-container">
+            <a href="admin-dashboard.php" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                Back to Dashboard
+            </a>
+            
             <div class="admin-header">
-                <h1 class="admin-title">Email Marketing Dashboard</h1>
-                <p class="admin-subtitle">Manage subscribers and track email campaign performance</p>
+                <h1 class="admin-title">Email Marketing</h1>
+                <p class="admin-subtitle">Manage newsletter subscribers and track email campaigns</p>
             </div>
 
             <?php if ($message): ?>

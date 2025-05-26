@@ -117,6 +117,16 @@ $pageTitle = "Admin Dashboard";
                 <h3>View Sell Submissions</h3>
                 <p>Review and manage manga sell requests from users.</p>
             </a>
+            <a href="admin-email.php" class="dashboard-card">
+                <i class="fas fa-envelope"></i>
+                <h3>Email Marketing</h3>
+                <p>Manage newsletter subscribers and email campaigns.</p>
+            </a>
+            <a href="track-order.php" class="dashboard-card">
+                <i class="fas fa-search"></i>
+                <h3>Track Orders</h3>
+                <p>Look up customer orders and tracking information.</p>
+            </a>
         </div>
         <a href="admin-login.php?logout=1" class="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>

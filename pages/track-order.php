@@ -6,6 +6,9 @@ require_once '../includes/email-system.php';
 $pageTitle = "Track Your Order";
 $currentPage = "track";
 
+// Check if accessed from admin
+$isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+
 $order = null;
 $error = '';
 
@@ -43,13 +46,27 @@ $cart_count = count($_SESSION['cart']);
     <link rel="stylesheet" href="../assets/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        body { background: #f7f7fa; }
         .track-container {
             max-width: 800px;
             margin: 2rem auto;
             background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 4px 25px rgba(35,41,70,0.08);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
             padding: 2.5rem;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #e63946;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            transition: color 0.3s ease;
+        }
+        .back-link:hover {
+            color: #232946;
         }
         .track-title {
             font-size: 2rem;
@@ -90,7 +107,7 @@ $cart_count = count($_SESSION['cart']);
             box-shadow: 0 0 0 3px rgba(238, 187, 195, 0.1);
         }
         .track-btn {
-            background: linear-gradient(45deg, #eebbc3, #f7c7d0);
+            background: #eebbc3;
             color: #232946;
             border: none;
             border-radius: 12px;
@@ -106,7 +123,7 @@ $cart_count = count($_SESSION['cart']);
             gap: 0.5rem;
         }
         .track-btn:hover {
-            background: linear-gradient(45deg, #232946, #395aa0);
+            background: #232946;
             color: #fff;
             transform: translateY(-2px);
         }
@@ -240,6 +257,13 @@ $cart_count = count($_SESSION['cart']);
 
     <main>
         <div class="track-container">
+            <?php if ($isAdmin): ?>
+                <a href="admin-dashboard.php" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Dashboard
+                </a>
+            <?php endif; ?>
+            
             <h1 class="track-title">Track Your Order</h1>
             <p class="track-subtitle">Enter your email address and order number to view your order details</p>
             
