@@ -133,25 +133,50 @@ if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip'])) {
         require_once 'includes/usps-shipping.php';
         $service = $_POST['shipping_service'] ?? 'Ground';
         $calculated_shipping = 0;
+        $warnings = [];
+        $api_status = [];
         
         foreach ($products as $product) {
             $usps = new USPSShipping();
             $shipping_result = $usps->calculateShipping($product, $_POST['zip'], $service);
             $calculated_shipping += $shipping_result['rate'];
+            
+            // Collect any warnings or API status info
+            if (isset($shipping_result['warning'])) {
+                $warnings[] = $shipping_result['warning'];
+            }
+            
+            if ($usps->getLastError()) {
+                $warnings[] = $usps->getLastError();
+            }
+            
+            $api_status[] = isset($shipping_result['usps_api']) ? 'USPS API' : 'Estimated';
         }
         
-        echo json_encode([
+        // Remove duplicate warnings
+        $warnings = array_unique($warnings);
+        
+        $response = [
             'success' => true,
             'shipping_cost' => $calculated_shipping,
             'formatted_shipping' => '$' . number_format($calculated_shipping, 2),
             'subtotal' => $subtotal,
             'total' => $subtotal + $calculated_shipping,
-            'formatted_total' => '$' . number_format($subtotal + $calculated_shipping, 2)
-        ]);
+            'formatted_total' => '$' . number_format($subtotal + $calculated_shipping, 2),
+            'api_status' => array_unique($api_status)
+        ];
+        
+        // Add warnings if any
+        if (!empty($warnings)) {
+            $response['warnings'] = $warnings;
+        }
+        
+        echo json_encode($response);
         
     } catch (Exception $e) {
         echo json_encode([
             'error' => 'Shipping calculation failed: ' . $e->getMessage(),
+            'fallback_message' => 'We apologize for the inconvenience. Please contact us for shipping rates.',
             'fallback_shipping' => 5.00
         ]);
     }
@@ -318,7 +343,6 @@ if (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shippi
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count"><?php echo count($_SESSION['cart'] ?? []); ?></span>

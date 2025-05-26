@@ -247,7 +247,6 @@ $cart_count = count($_SESSION['cart']);
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="../search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="../cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count"><?php echo $cart_count; ?></span>

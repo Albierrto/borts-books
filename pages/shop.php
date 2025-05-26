@@ -244,7 +244,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="/pages/search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="/cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count"><?php echo $cart_count; ?></span>

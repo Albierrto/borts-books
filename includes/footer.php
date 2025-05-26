@@ -10,6 +10,7 @@
                 <ul>
                     <li><a href="/index.php">Home</a></li>
                     <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/track-order.php">Track Order</a></li>
                     <li><a href="/pages/sell.php">Sell Manga</a></li>
                     <li><a href="/pages/about.php">About</a></li>
                 </ul>
@@ -19,7 +20,6 @@
                 <h3>Help</h3>
                 <ul>
                     <li><a href="/pages/faq.php">FAQ</a></li>
-                    <li><a href="/pages/shipping.php">Shipping</a></li>
                     <li><a href="/pages/returns.php">Returns</a></li>
                     <li><a href="/pages/contact.php">Contact Us</a></li>
                 </ul>

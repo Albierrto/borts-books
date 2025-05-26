@@ -22,12 +22,12 @@ $currentPage = "order-success";
                 <ul>
                     <li><a href="/index.php">Home</a></li>
                     <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/track-order.php">Track Order</a></li>
                     <li><a href="/pages/sell.php">Sell Manga</a></li>
                     <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count">0</span>
@@ -118,6 +118,7 @@ $currentPage = "order-success";
                 <ul>
                     <li><a href="/index.php">Home</a></li>
                     <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/track-order.php">Track Order</a></li>
                     <li><a href="/pages/sell.php">Sell Manga</a></li>
                     <li><a href="/pages/about.php">About</a></li>
                 </ul>
@@ -126,7 +127,6 @@ $currentPage = "order-success";
                 <h3>Help</h3>
                 <ul>
                     <li><a href="/pages/faq.php">FAQ</a></li>
-                    <li><a href="/pages/shipping.php">Shipping</a></li>
                     <li><a href="/pages/returns.php">Returns</a></li>
                     <li><a href="/pages/contact.php">Contact Us</a></li>
                 </ul>

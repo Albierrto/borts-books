@@ -374,9 +374,9 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             
             .sell-hero-content {
                 flex-direction: column;
-                gap: 2rem;
+            gap: 2rem;
                 text-align: center;
-            }
+        }
             .sell-hero img {
                 width: 180px;
                 height: 180px;
@@ -596,7 +596,6 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count"><?php echo $cart_count; ?></span>
@@ -607,9 +606,9 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
 
     <section class="hero">
         <div class="hero-content">
-            <h1>Discover, Collect, and Sell Manga</h1>
-            <p>Your ultimate destination for authentic manga, rare finds, and unbeatable deals. Shop, sell, and join a passionate manga community!</p>
-            <div class="hero-ctas">
+        <h1>Discover, Collect, and Sell Manga</h1>
+        <p>Your ultimate destination for authentic manga, rare finds, and unbeatable deals. Shop, sell, and join a passionate manga community!</p>
+        <div class="hero-ctas">
                 <a href="/pages/shop.php" class="btn-primary">
                     <i class="fas fa-shopping-bag"></i>
                     Shop Now

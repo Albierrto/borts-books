@@ -303,12 +303,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <ul>
                     <li><a href="../index.php">Home</a></li>
                     <li><a href="shop.php">Shop</a></li>
+                    <li><a href="track-order.php">Track Order</a></li>
                     <li><a href="sell.php">Sell Manga</a></li>
                     <li><a href="about.php">About</a></li>
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="../search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="../cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count"><?php echo $cart_count; ?></span>
@@ -484,6 +484,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <ul>
                     <li><a href="../index.php">Home</a></li>
                     <li><a href="shop.php">Shop</a></li>
+                    <li><a href="track-order.php">Track Order</a></li>
                     <li><a href="sell.php">Sell Manga</a></li>
                     <li><a href="about.php">About</a></li>
                 </ul>

@@ -11,16 +11,46 @@ class USPSShipping {
     private $consumerSecret;
     private $accessToken;
     private $apiBaseUrl = 'https://api.usps.com'; // Production URL
+    private $lastError = null; // Store last error for user display
     
     public function __construct($originZip = null, $consumerKey = null, $consumerSecret = null) {
-        // Load from environment variables if not provided
+        // Load environment variables if .env file exists
+        $this->loadEnvironmentVariables();
+        
+        // Use provided values or fall back to environment variables
         $this->originZip = $originZip ?? $_ENV['USPS_ORIGIN_ZIP'] ?? '90210';
         $this->consumerKey = $consumerKey ?? $_ENV['USPS_CONSUMER_KEY'] ?? null;
         $this->consumerSecret = $consumerSecret ?? $_ENV['USPS_CONSUMER_SECRET'] ?? null;
         
+        // Debug logging
+        error_log("USPS Constructor - Origin ZIP: " . $this->originZip);
+        error_log("USPS Constructor - Has Consumer Key: " . ($this->consumerKey ? 'Yes (' . substr($this->consumerKey, 0, 10) . '...)' : 'No'));
+        error_log("USPS Constructor - Has Consumer Secret: " . ($this->consumerSecret ? 'Yes' : 'No'));
+        
         // Get access token if credentials are available
         if ($this->consumerKey && $this->consumerSecret) {
             $this->getAccessToken();
+        } else {
+            $this->lastError = "USPS API credentials not configured. Using estimated rates.";
+        }
+    }
+    
+    /**
+     * Load environment variables from .env file
+     */
+    private function loadEnvironmentVariables() {
+        $envPath = __DIR__ . '/../.env';
+        if (file_exists($envPath)) {
+            $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos(trim($line), '#') === 0) continue; // Skip comments
+                if (strpos($line, '=') === false) continue; // Skip invalid lines
+                list($name, $value) = array_map('trim', explode('=', $line, 2));
+                $_ENV[$name] = $value;
+            }
+            error_log("USPS - Environment variables loaded from .env file");
+        } else {
+            error_log("USPS - No .env file found at: $envPath");
         }
     }
     
@@ -43,9 +73,13 @@ class USPSShipping {
                     'Content-Type: application/x-www-form-urlencoded',
                     'Accept: application/json'
                 ],
-                'content' => http_build_query($data)
+                'content' => http_build_query($data),
+                'timeout' => 30
             ]
         ];
+        
+        error_log("USPS OAuth - Attempting to get access token from: $url");
+        error_log("USPS OAuth - Using client_id: " . substr($this->consumerKey, 0, 10) . '...');
         
         try {
             $context = stream_context_create($options);
@@ -53,22 +87,53 @@ class USPSShipping {
             
             if ($response) {
                 $result = json_decode($response, true);
+                error_log("USPS OAuth - Response: " . $response);
+                
                 if (isset($result['access_token'])) {
                     $this->accessToken = $result['access_token'];
+                    error_log("USPS OAuth - Access token acquired successfully");
                     return true;
+                } else {
+                    // Handle specific USPS API errors
+                    if (isset($result['error'])) {
+                        switch ($result['error']) {
+                            case 'invalid_client':
+                                $this->lastError = "Invalid USPS API credentials. Please check your API keys.";
+                                break;
+                            case 'unauthorized':
+                                $this->lastError = "USPS API access denied. Please verify your account status.";
+                                break;
+                            default:
+                                $this->lastError = "USPS API error: " . ($result['error_description'] ?? $result['error']);
+                        }
+                    } else {
+                        $this->lastError = "USPS API returned unexpected response. Using estimated rates.";
+                    }
                 }
+            } else {
+                $this->lastError = "Unable to connect to USPS API. Please check your internet connection.";
             }
         } catch (Exception $e) {
-            error_log('USPS OAuth Error: ' . $e->getMessage());
+            $this->lastError = "USPS API connection failed: " . $e->getMessage();
         }
         
         return false;
     }
     
     /**
+     * Get last error message for user display
+     */
+    public function getLastError() {
+        return $this->lastError;
+    }
+    
+    /**
      * Calculate shipping rates for a product
      */
     public function calculateShipping($product, $destinationZip, $service = 'Priority') {
+        // Clear previous errors
+        $this->lastError = null;
+        
         // Add debugging
         error_log("USPS Shipping Debug - Product: " . json_encode($product));
         error_log("USPS Shipping Debug - Service: $service, Zip: $destinationZip");
@@ -99,6 +164,7 @@ class USPSShipping {
         } else {
             // Otherwise, use our estimation algorithm
             $result = $this->estimateShipping($weight, $dimensions, $destinationZip, $service);
+            $result['warning'] = $this->lastError ?? "Using estimated rates. For exact rates, USPS API integration is required.";
         }
         
         error_log("USPS Shipping Debug - Result: " . json_encode($result));
@@ -228,73 +294,86 @@ class USPSShipping {
     private function estimateShipping($weight, $dimensions, $destinationZip, $service = 'Priority') {
         $distance = $this->estimateDistance($this->originZip, $destinationZip);
         
-        // Base rates for different services
+        // MUCH MORE REALISTIC base rates based on current USPS pricing
         $baseRates = [
-            'Media' => 3.00,
-            'Ground' => 4.50,
-            'Priority' => 7.50,
-            'Express' => 25.00
+            'Media' => 4.63,    // Current Media Mail starting rate
+            'Ground' => 5.50,   // Current Ground Advantage starting rate
+            'Priority' => 9.35, // Current Priority Mail starting rate
+            'Express' => 28.50  // Current Express starting rate
         ];
         
         $baseRate = $baseRates[$service] ?? $baseRates['Priority'];
         
-        // Ensure weight is in pounds (convert from ounces if needed)
-        if ($weight > 50) {
-            // Likely in ounces, convert to pounds
-            $weightInPounds = $weight / 16;
-        } else {
-            // Already in pounds
-            $weightInPounds = $weight;
+        // Convert weight to pounds if needed
+        $weightInPounds = $weight > 50 ? $weight / 16 : $weight;
+        
+        // More realistic weight-based pricing
+        $weightCost = 0;
+        if ($weightInPounds > 1) {
+            switch ($service) {
+                case 'Media':
+                    $weightCost = ($weightInPounds - 1) * 0.73; // Media Mail additional pound rate
+                    break;
+                case 'Ground':
+                    $weightCost = ($weightInPounds - 1) * 1.05; // Ground additional pound rate
+                    break;
+                case 'Priority':
+                    $weightCost = ($weightInPounds - 1) * 1.25; // Priority additional pound rate
+                    break;
+                case 'Express':
+                    $weightCost = ($weightInPounds - 1) * 2.10; // Express additional pound rate
+                    break;
+            }
         }
         
-        // Weight multiplier - USPS charges more for heavier packages
-        // Most manga books are 0.5-1 lb, so charge extra for anything over 2 lbs
-        $weightCost = max(0, ($weightInPounds - 2) * 1.50);
+        // Zone-based pricing (more realistic USPS zones)
+        $zone = min(8, max(1, ceil($distance / 600)));
+        $zoneCost = 0;
+        if ($service !== 'Media') { // Media Mail doesn't use zones
+            $zoneMultipliers = [1 => 0, 2 => 0.5, 3 => 1.0, 4 => 1.8, 5 => 2.5, 6 => 3.2, 7 => 4.0, 8 => 5.5];
+            $zoneCost = $zoneMultipliers[$zone] ?? 0;
+        }
         
-        // Distance multiplier (zones 1-8)
-        $zone = min(8, max(1, ceil($distance / 600))); // Rough zone calculation
-        $zoneCost = ($zone - 1) * 1.25;
-        
-        // Size adjustment for large items (more reasonable calculation)
+        // Size-based surcharges (more realistic)
         $volume = $dimensions['length'] * $dimensions['width'] * $dimensions['height'];
-        // Only add size cost for packages larger than a typical book box
         $sizeCost = 0;
-        if ($volume > 200) { // About 8x8x3 inches
-            $sizeCost = min(($volume - 200) * 0.01, 15.00); // Cap at $15 size surcharge
+        
+        // Large package surcharge (over 1 cubic foot)
+        if ($volume > 1728) { // 12x12x12 inches
+            $sizeCost = 15.00; // USPS large package surcharge
+        } elseif ($volume > 864) { // 9x8x12 inches
+            $sizeCost = 4.00; // Medium package surcharge
         }
         
         $totalCost = $baseRate + $weightCost + $zoneCost + $sizeCost;
         
-        // Reasonable shipping limits
+        // Apply service-specific limits
         $minShipping = $baseRate;
-        $maxShipping = $service === 'Express' ? 50.00 : 30.00; // Cap shipping costs
+        $maxShipping = [
+            'Media' => 25.00,
+            'Ground' => 35.00,
+            'Priority' => 50.00,
+            'Express' => 75.00
+        ][$service] ?? 50.00;
+        
         $totalCost = max($minShipping, min($maxShipping, $totalCost));
         
         // Service delivery times
         $deliveryTimes = [
             'Media' => '2-8 business days',
-            'Ground' => '3-5 business days',
+            'Ground' => '2-5 business days',
             'Priority' => '1-3 business days',
-            'Express' => 'Next business day'
+            'Express' => '1-2 business days'
         ];
         
         $result = [
             'rate' => round($totalCost, 2),
-            'service' => "USPS $service Mail",
+            'service' => "USPS $service Mail (Estimated)",
             'days' => $deliveryTimes[$service] ?? '1-3 business days',
             'zone' => $zone,
-            'estimated' => true,
-            'debug' => [
-                'weight_pounds' => $weightInPounds,
-                'volume' => $volume,
-                'base' => $baseRate,
-                'weight_cost' => $weightCost,
-                'zone_cost' => $zoneCost,
-                'size_cost' => $sizeCost
-            ]
+            'estimated' => true
         ];
         
-        error_log("Fixed shipping calculation: weight_lbs={$weightInPounds}, base=$baseRate, weight_cost=$weightCost, zone_cost=$zoneCost, size_cost=$sizeCost, total=$totalCost");
         return $result;
     }
     

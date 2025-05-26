@@ -165,10 +165,9 @@ $num_items_in_cart = count($cart); // Count unique items instead of sum
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
-                    <span class="cart-count"><?php echo $num_items_in_cart; ?></span>
+                    <span class="cart-count">0</span>
                 </a>
             </div>
         </div>

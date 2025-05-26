@@ -90,7 +90,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="search.php" title="Search"><i class="fas fa-search"></i></a>
                 <a href="cart.php" title="Shopping Cart" class="cart-link">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count">0</span>
@@ -216,7 +215,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h3>Help</h3>
                 <ul>
                     <li><a href="/pages/faq.php">FAQ</a></li>
-                    <li><a href="/pages/shipping.php">Shipping</a></li>
                     <li><a href="/pages/returns.php">Returns</a></li>
                     <li><a href="/pages/contact.php">Contact Us</a></li>
                 </ul>
