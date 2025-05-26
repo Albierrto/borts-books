@@ -120,10 +120,23 @@ if (!empty($cart) && !$db_error) {
 }
 
 // Handle AJAX shipping calculation FIRST
-if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip']) && !empty($products)) {
+if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip'])) {
+    // Immediate output to check if we reach this point
+    error_log("AJAX shipping request received");
+    
     // Enable error display for this AJAX request
     ini_set('display_errors', 1);
     error_reporting(E_ALL);
+    
+    // Check if we have products
+    if (empty($products)) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'error' => 'No products in cart for shipping calculation'
+        ]);
+        exit;
+    }
     
     try {
         error_log("AJAX shipping calculation started - ZIP: " . $_POST['zip'] . ", Service: " . ($_POST['shipping_service'] ?? 'Ground'));
@@ -446,7 +459,7 @@ if (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shippi
                 formData.append('shipping_service', service || 'Ground');
                 formData.append('calculate_shipping_only', '1');
                 
-                                 fetch('checkout.php', {
+                                 fetch('ajax-test.php', {
                     method: 'POST',
                     body: formData
                 })
