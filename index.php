@@ -580,20 +580,217 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
                 margin: 0 auto;
             }
         }
+
+        /* Newsletter Section */
+        .newsletter-section {
+            background: #f8f9fa;
+            padding: 3rem 1rem;
+            text-align: center;
+        }
+        .newsletter-section h3 {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            color: #232946;
+            margin-bottom: 1rem;
+            font-weight: 800;
+        }
+        .newsletter-section p {
+            color: #666;
+            margin-bottom: 2rem;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        .newsletter-form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .newsletter-inputs {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .newsletter-inputs input {
+            flex: 1;
+            min-width: 200px;
+            padding: 1rem 1.5rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 50px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .newsletter-inputs input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .newsletter-inputs button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .newsletter-inputs button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+        .newsletter-status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .newsletter-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .newsletter-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        @media (max-width: 768px) {
+            .newsletter-inputs {
+                flex-direction: column;
+            }
+            .newsletter-inputs input {
+                min-width: auto;
+            }
+        }
+
+        /* Responsive Mobile Navigation */
+        .topnav {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .topnav a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .topnav a:hover,
+        .topnav a.active {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        /* Hide the hamburger icon by default */
+        .topnav .icon {
+            display: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .topnav .icon:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        /* Mobile Navigation Styles */
+        @media screen and (max-width: 768px) {
+            .header-container {
+                flex-wrap: wrap;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .topnav {
+                order: 3;
+                width: 100%;
+                flex-direction: column;
+                gap: 0;
+                background: #fff;
+                border-top: 1px solid #e1e5e9;
+                margin-top: 1rem;
+                padding-top: 1rem;
+                display: none;
+            }
+
+            .topnav.responsive {
+                display: flex;
+            }
+
+            .topnav a:not(.icon) {
+                display: block;
+                width: 100%;
+                text-align: left;
+                padding: 1rem;
+                border-bottom: 1px solid #f0f0f0;
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .topnav a:not(.icon):last-of-type {
+                border-bottom: none;
+            }
+
+            .topnav .icon {
+                display: block;
+                position: absolute;
+                right: 20px;
+                top: 1rem;
+                order: 4;
+            }
+
+            .search-cart {
+                order: 2;
+            }
+
+            .logo {
+                order: 1;
+            }
+        }
+
+        /* Enhanced header container for mobile */
+        @media screen and (max-width: 768px) {
+            .header-container {
+                position: relative;
+                padding: 1rem 20px;
+            }
+        }
+
+        /* Ensure cart icon doesn't interfere with hamburger */
+        @media screen and (max-width: 768px) {
+            .search-cart {
+                margin-right: 3rem;
+            }
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="container header-container">
             <a href="index.php" class="logo">Bort's <span>Books</span></a>
-            <nav>
-                <ul>
-                    <li><a href="/index.php" <?php echo $currentPage === 'home' ? 'class="active"' : ''; ?>>Home</a></li>
-                    <li><a href="/pages/shop.php" <?php echo $currentPage === 'shop' ? 'class="active"' : ''; ?>>Shop</a></li>
-                    <li><a href="/pages/track-order.php" <?php echo $currentPage === 'track' ? 'class="active"' : ''; ?>>Track Order</a></li>
-                    <li><a href="/pages/sell.php" <?php echo $currentPage === 'sell' ? 'class="active"' : ''; ?>>Sell Manga</a></li>
-                    <li><a href="/pages/about.php" <?php echo $currentPage === 'about' ? 'class="active"' : ''; ?>>About</a></li>
-                </ul>
+            <nav class="topnav" id="myTopnav">
+                <a href="/index.php" <?php echo $currentPage === 'home' ? 'class="active"' : ''; ?>>Home</a>
+                <a href="/pages/shop.php" <?php echo $currentPage === 'shop' ? 'class="active"' : ''; ?>>Shop</a>
+                <a href="/pages/track-order.php" <?php echo $currentPage === 'track' ? 'class="active"' : ''; ?>>Track Order</a>
+                <a href="/pages/sell.php" <?php echo $currentPage === 'sell' ? 'class="active"' : ''; ?>>Sell Manga</a>
+                <a href="/pages/about.php" <?php echo $currentPage === 'about' ? 'class="active"' : ''; ?>>About</a>
+                <a href="javascript:void(0);" class="icon" onclick="toggleMobileNav()">
+                    <i class="fa fa-bars"></i>
+                </a>
             </nav>
             <div class="search-cart">
                 <!-- REMOVED SEARCH BUTTON -->
@@ -976,6 +1173,34 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             const statusDiv = document.querySelector('.newsletter-status');
             statusDiv.style.display = 'none';
         }
+
+        // Mobile Navigation Toggle Function
+        function toggleMobileNav() {
+            var x = document.getElementById("myTopnav");
+            if (x.className === "topnav") {
+                x.className += " responsive";
+            } else {
+                x.className = "topnav";
+            }
+        }
+
+        // Close mobile nav when clicking outside
+        document.addEventListener('click', function(e) {
+            const nav = document.getElementById("myTopnav");
+            const hamburger = nav.querySelector('.icon');
+            
+            if (!nav.contains(e.target) && nav.classList.contains('responsive')) {
+                nav.className = "topnav";
+            }
+        });
+
+        // Close mobile nav when clicking on a link
+        document.querySelectorAll('.topnav a:not(.icon)').forEach(link => {
+            link.addEventListener('click', function() {
+                const nav = document.getElementById("myTopnav");
+                nav.className = "topnav";
+            });
+        });
     </script>
 </body>
 </html>

@@ -244,7 +244,13 @@ $currentPage = "returns";
             margin: 0;
         }
         @media (max-width: 768px) {
+            .returns-container {
+                margin: 2rem 1rem;
+            }
             .policy-grid {
+                grid-template-columns: 1fr;
+            }
+            .info-grid {
                 grid-template-columns: 1fr;
             }
             .process-steps {
@@ -260,20 +266,117 @@ $currentPage = "returns";
                 justify-content: center;
             }
         }
+
+        /* Responsive Mobile Navigation */
+        .topnav {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .topnav a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .topnav a:hover,
+        .topnav a.active {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        /* Hide the hamburger icon by default */
+        .topnav .icon {
+            display: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .topnav .icon:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        /* Mobile Navigation Styles */
+        @media screen and (max-width: 768px) {
+            .header-container {
+                flex-wrap: wrap;
+                justify-content: space-between;
+                align-items: center;
+                position: relative;
+                padding: 1rem 20px;
+            }
+
+            .topnav {
+                order: 3;
+                width: 100%;
+                flex-direction: column;
+                gap: 0;
+                background: #fff;
+                border-top: 1px solid #e1e5e9;
+                margin-top: 1rem;
+                padding-top: 1rem;
+                display: none;
+            }
+
+            .topnav.responsive {
+                display: flex;
+            }
+
+            .topnav a:not(.icon) {
+                display: block;
+                width: 100%;
+                text-align: left;
+                padding: 1rem;
+                border-bottom: 1px solid #f0f0f0;
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .topnav a:not(.icon):last-of-type {
+                border-bottom: none;
+            }
+
+            .topnav .icon {
+                display: block;
+                position: absolute;
+                right: 20px;
+                top: 1rem;
+                order: 4;
+            }
+
+            .search-cart {
+                order: 2;
+                margin-right: 3rem;
+            }
+
+            .logo {
+                order: 1;
+            }
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="container header-container">
             <a href="../index.php" class="logo">Bort's <span>Books</span></a>
-            <nav>
-                <ul>
-                    <li><a href="../index.php">Home</a></li>
-                    <li><a href="shop.php">Shop</a></li>
-                    <li><a href="track-order.php">Track Order</a></li>
-                    <li><a href="sell.php">Sell Manga</a></li>
-                    <li><a href="about.php">About</a></li>
-                </ul>
+            <nav class="topnav" id="myTopnav">
+                <a href="../index.php" <?php echo $currentPage === 'home' ? 'class="active"' : ''; ?>>Home</a>
+                <a href="shop.php" <?php echo $currentPage === 'shop' ? 'class="active"' : ''; ?>>Shop</a>
+                <a href="track-order.php" <?php echo $currentPage === 'track' ? 'class="active"' : ''; ?>>Track Order</a>
+                <a href="sell.php" <?php echo $currentPage === 'sell' ? 'class="active"' : ''; ?>>Sell Manga</a>
+                <a href="about.php" <?php echo $currentPage === 'about' ? 'class="active"' : ''; ?>>About</a>
+                <a href="javascript:void(0);" class="icon" onclick="toggleMobileNav()">
+                    <i class="fa fa-bars"></i>
+                </a>
             </nav>
             <div class="search-cart">
                 <a href="../cart.php" title="Shopping Cart" class="cart-link">
@@ -550,5 +653,35 @@ $currentPage = "returns";
             <p>&copy; <?php echo date('Y'); ?> Bort's Books. All rights reserved.</p>
         </div>
     </footer>
+
+    <script>
+        // Mobile Navigation Toggle Function
+        function toggleMobileNav() {
+            var x = document.getElementById("myTopnav");
+            if (x.className === "topnav") {
+                x.className += " responsive";
+            } else {
+                x.className = "topnav";
+            }
+        }
+
+        // Close mobile nav when clicking outside
+        document.addEventListener('click', function(e) {
+            const nav = document.getElementById("myTopnav");
+            const hamburger = nav.querySelector('.icon');
+            
+            if (!nav.contains(e.target) && nav.classList.contains('responsive')) {
+                nav.className = "topnav";
+            }
+        });
+
+        // Close mobile nav when clicking on a link
+        document.querySelectorAll('.topnav a:not(.icon)').forEach(link => {
+            link.addEventListener('click', function() {
+                const nav = document.getElementById("myTopnav");
+                nav.className = "topnav";
+            });
+        });
+    </script>
 </body>
 </html> 

@@ -93,6 +93,189 @@ $cart_count = count($_SESSION['cart']);
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
+        /* Header and Navigation Styles */
+        header {
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #333;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .logo span {
+            color: #667eea;
+        }
+
+        .logo:hover {
+            transform: translateY(-1px);
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 2rem;
+        }
+
+        nav a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .search-cart {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .cart-link {
+            position: relative;
+            color: #333;
+            font-size: 1.2rem;
+            text-decoration: none;
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .cart-link:hover {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Footer Styles */
+        footer {
+            background: #2c3e50;
+            color: #fff;
+            margin-top: 3rem;
+        }
+
+        footer .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 20px 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 1rem;
+            color: #fff;
+            font-size: 1.2rem;
+        }
+
+        .footer-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section ul li a {
+            color: #bdc3c7;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section ul li a:hover {
+            color: #fff;
+        }
+
+        .footer-bottom {
+            background: #1a252f;
+            padding: 1rem 0;
+            text-align: center;
+            border-top: 1px solid #34495e;
+        }
+
+        .footer-bottom .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .footer-bottom p {
+            margin: 0;
+            color: #bdc3c7;
+            font-size: 0.9rem;
+        }
+
+        /* Mobile Navigation */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav ul {
+                flex-direction: column;
+                gap: 0.5rem;
+                width: 100%;
+                text-align: center;
+            }
+
+            .search-cart {
+                width: 100%;
+                justify-content: center;
+            }
+
+            footer .container {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+        }
+
         .sell-header {
             text-align: center;
             margin-bottom: 30px;
@@ -563,7 +746,7 @@ $cart_count = count($_SESSION['cart']);
     <main>
         <div class="sell-container">
             <div class="sell-header">
-                <h1><i class="fas fa-books"></i> Sell Your Manga Sets</h1>
+                <h1><i class="fas fa-book-open"></i> Sell Your Manga Sets</h1>
                 <p>Turn your manga collection into cash! We buy complete sets in good condition.</p>
             </div>
 
@@ -574,6 +757,7 @@ $cart_count = count($_SESSION['cart']);
                     <li><strong>Good condition</strong> - Books should be readable with minimal wear</li>
                     <li><strong>Popular series</strong> - Mainstream and sought-after titles get better prices</li>
                     <li><strong>English language</strong> - We currently only accept English manga</li>
+                    <li><strong>Competitive prices</strong> - We pay up to 80% of current eBay market prices</li>
                 </ul>
             </div>
 
@@ -675,16 +859,6 @@ $cart_count = count($_SESSION['cart']);
                     </div>
                 </div>
 
-                <!-- Submit -->
-                <div class="button-group">
-                    <button type="submit" id="submitBtn" class="btn btn-primary">
-                        <i class="fas fa-paper-plane loading" style="display: none;"></i>
-                        <i class="fas fa-paper-plane btn-icon"></i>
-                        <span class="btn-text">Submit for Review</span>
-                        <span class="loading">Submitting...</span>
-                    </button>
-                </div>
-
                 <!-- Photo Upload Section -->
                 <div class="form-section">
                     <h3><i class="fas fa-camera"></i> Photos of Your Collection *</h3>
@@ -715,6 +889,16 @@ $cart_count = count($_SESSION['cart']);
                             <span id="photoCount" class="photo-count">0 photos selected</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="button-group">
+                    <button type="submit" id="submitBtn" class="btn btn-primary">
+                        <i class="fas fa-paper-plane loading" style="display: none;"></i>
+                        <i class="fas fa-paper-plane btn-icon"></i>
+                        <span class="btn-text">Submit for Review</span>
+                        <span class="loading">Submitting...</span>
+                    </button>
                 </div>
             </form>
         </div>
