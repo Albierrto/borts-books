@@ -596,7 +596,8 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
                 </ul>
             </nav>
             <div class="search-cart">
-                <a href="cart.php" title="Shopping Cart" class="cart-link">
+                <!-- REMOVED SEARCH BUTTON -->
+                <a href="/pages/cart.php" class="cart-icon" title="Shopping Cart">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count"><?php echo $cart_count; ?></span>
                 </a>

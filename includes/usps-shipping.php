@@ -130,7 +130,7 @@ class USPSShipping {
     /**
      * Calculate shipping rates for a product
      */
-    public function calculateShipping($product, $destinationZip, $service = 'Priority') {
+    public function calculateShipping($product, $destinationZip, $service = 'Ground') {
         // Clear previous errors
         $this->lastError = null;
         
@@ -198,7 +198,7 @@ class USPSShipping {
     /**
      * Calculate shipping using real USPS API
      */
-    private function calculateUSPSAPI($weight, $dimensions, $destinationZip, $service = 'Priority') {
+    private function calculateUSPSAPI($weight, $dimensions, $destinationZip, $service = 'Ground') {
         if (!$this->accessToken) {
             return $this->estimateShipping($weight, $dimensions, $destinationZip, $service);
         }
@@ -208,12 +208,10 @@ class USPSShipping {
         // Convert service names to USPS API format
         $serviceMapping = [
             'Media' => 'MEDIA_MAIL',
-            'Ground' => 'USPS_GROUND_ADVANTAGE',
-            'Priority' => 'PRIORITY_MAIL',
-            'Express' => 'PRIORITY_MAIL_EXPRESS'
+            'Ground' => 'USPS_GROUND_ADVANTAGE'
         ];
         
-        $uspsService = $serviceMapping[$service] ?? 'PRIORITY_MAIL';
+        $uspsService = $serviceMapping[$service] ?? 'USPS_GROUND_ADVANTAGE';
         
         // Convert weight to pounds and ounces
         $pounds = floor($weight / 16);
@@ -280,29 +278,25 @@ class USPSShipping {
     private function getDeliveryDays($service) {
         $deliveryTimes = [
             'Media' => '2-8 business days',
-            'Ground' => '2-5 business days',
-            'Priority' => '1-3 business days',
-            'Express' => '1-2 business days'
+            'Ground' => '2-5 business days'
         ];
         
-        return $deliveryTimes[$service] ?? '1-3 business days';
+        return $deliveryTimes[$service] ?? '2-5 business days';
     }
     
     /**
      * Estimate shipping using realistic USPS rates (fallback)
      */
-    private function estimateShipping($weight, $dimensions, $destinationZip, $service = 'Priority') {
+    private function estimateShipping($weight, $dimensions, $destinationZip, $service = 'Ground') {
         $distance = $this->estimateDistance($this->originZip, $destinationZip);
         
         // MUCH MORE REALISTIC base rates based on current USPS pricing
         $baseRates = [
             'Media' => 4.63,    // Current Media Mail starting rate
-            'Ground' => 5.50,   // Current Ground Advantage starting rate
-            'Priority' => 9.35, // Current Priority Mail starting rate
-            'Express' => 28.50  // Current Express starting rate
+            'Ground' => 5.50    // Current Ground Advantage starting rate
         ];
         
-        $baseRate = $baseRates[$service] ?? $baseRates['Priority'];
+        $baseRate = $baseRates[$service] ?? $baseRates['Ground'];
         
         // Convert weight to pounds if needed
         $weightInPounds = $weight > 50 ? $weight / 16 : $weight;
@@ -316,12 +310,6 @@ class USPSShipping {
                     break;
                 case 'Ground':
                     $weightCost = ($weightInPounds - 1) * 1.05; // Ground additional pound rate
-                    break;
-                case 'Priority':
-                    $weightCost = ($weightInPounds - 1) * 1.25; // Priority additional pound rate
-                    break;
-                case 'Express':
-                    $weightCost = ($weightInPounds - 1) * 2.10; // Express additional pound rate
                     break;
             }
         }
@@ -351,25 +339,21 @@ class USPSShipping {
         $minShipping = $baseRate;
         $maxShipping = [
             'Media' => 25.00,
-            'Ground' => 35.00,
-            'Priority' => 50.00,
-            'Express' => 75.00
-        ][$service] ?? 50.00;
+            'Ground' => 35.00
+        ][$service] ?? 35.00;
         
         $totalCost = max($minShipping, min($maxShipping, $totalCost));
         
         // Service delivery times
         $deliveryTimes = [
             'Media' => '2-8 business days',
-            'Ground' => '2-5 business days',
-            'Priority' => '1-3 business days',
-            'Express' => '1-2 business days'
+            'Ground' => '2-5 business days'
         ];
         
         $result = [
             'rate' => round($totalCost, 2),
             'service' => "USPS $service Mail (Estimated)",
-            'days' => $deliveryTimes[$service] ?? '1-3 business days',
+            'days' => $deliveryTimes[$service] ?? '2-5 business days',
             'zone' => $zone,
             'estimated' => true
         ];
@@ -443,8 +427,8 @@ class USPSShipping {
             ]];
         }
         
-        // For calculated shipping, offer multiple services
-        $services = ['Media', 'Ground', 'Priority'];
+        // For calculated shipping, offer only Media and Ground
+        $services = ['Media', 'Ground'];
         
         foreach ($services as $service) {
             $result = $this->calculateShipping($product, $destinationZip, $service);
@@ -494,7 +478,7 @@ function calculateCartShipping($cartItems, $destinationZip, $selectedServices = 
     $totalShipping = 0;
     
     foreach ($cartItems as $item) {
-        $serviceType = $selectedServices[$item['id']] ?? 'Priority';
+        $serviceType = $selectedServices[$item['id']] ?? 'Ground';
         $shipping = $usps->calculateShipping($item, $destinationZip, $serviceType);
         $totalShipping += $shipping['rate'];
     }
