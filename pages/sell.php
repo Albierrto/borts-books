@@ -80,6 +80,7 @@ $cart_count = count($_SESSION['cart']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sell Your Manga Sets - Bort's Books</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -252,22 +253,71 @@ $cart_count = count($_SESSION['cart']);
         }
 
         /* Mobile Navigation */
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #333;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .mobile-menu-toggle:hover {
+            color: #667eea;
+        }
+
         @media (max-width: 768px) {
             .header-container {
-                flex-direction: column;
-                gap: 1rem;
+                position: relative;
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            nav {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: white;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                border-radius: 0 0 12px 12px;
+                display: none;
+                z-index: 1000;
+            }
+
+            nav.active {
+                display: block;
             }
 
             nav ul {
                 flex-direction: column;
-                gap: 0.5rem;
+                gap: 0;
+                padding: 1rem 0;
+            }
+
+            nav ul li {
                 width: 100%;
-                text-align: center;
+            }
+
+            nav a {
+                display: block;
+                padding: 1rem 2rem;
+                border-radius: 0;
+                border-bottom: 1px solid #f0f0f0;
+            }
+
+            nav a:last-child {
+                border-bottom: none;
             }
 
             .search-cart {
-                width: 100%;
-                justify-content: center;
+                position: absolute;
+                right: 60px;
+                top: 50%;
+                transform: translateY(-50%);
             }
 
             footer .container {
@@ -725,7 +775,7 @@ $cart_count = count($_SESSION['cart']);
     <header>
         <div class="container header-container">
             <a href="/index.php" class="logo">Bort's <span>Books</span></a>
-            <nav>
+            <nav id="mobileNav">
                 <ul>
                     <li><a href="/index.php">Home</a></li>
                     <li><a href="/pages/shop.php">Shop</a></li>
@@ -740,6 +790,10 @@ $cart_count = count($_SESSION['cart']);
                     <span class="cart-count"><?php echo $cart_count; ?></span>
                 </a>
             </div>
+
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
     </header>
 
@@ -802,7 +856,7 @@ $cart_count = count($_SESSION['cart']);
                     </div>
                 </div>
                 <p style="margin: 15px 0 0 0; color: #666; font-size: 0.95rem; text-align: center; font-style: italic;">
-                    Fast, secure payments sent within 1-2 business days after verification
+                    Fast, secure payments sent within 24-48 hours after receiving your shipment
                 </p>
             </div>
 
@@ -1349,6 +1403,49 @@ $cart_count = count($_SESSION['cart']);
 
         // Make removePhoto function global
         window.removePhoto = removePhoto;
+
+        // Mobile menu toggle functionality
+        document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+            const nav = document.getElementById('mobileNav');
+            const icon = this.querySelector('i');
+            
+            nav.classList.toggle('active');
+            
+            // Toggle hamburger/close icon
+            if (nav.classList.contains('active')) {
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-times');
+            } else {
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+            }
+        });
+
+        // Close mobile menu when clicking on a link
+        document.querySelectorAll('#mobileNav a').forEach(link => {
+            link.addEventListener('click', function() {
+                const nav = document.getElementById('mobileNav');
+                const toggle = document.getElementById('mobileMenuToggle');
+                const icon = toggle.querySelector('i');
+                
+                nav.classList.remove('active');
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+            });
+        });
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const nav = document.getElementById('mobileNav');
+            const toggle = document.getElementById('mobileMenuToggle');
+            const icon = toggle.querySelector('i');
+            
+            if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+                nav.classList.remove('active');
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+            }
+        });
     </script>
 </body>
 </html> 

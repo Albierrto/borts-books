@@ -197,6 +197,76 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background: #d32f3f;
             transform: translateY(-1px);
         }
+        /* Price Comparison Banner */
+        .price-comparison-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .price-comparison-banner h2 {
+            margin: 0 0 1rem 0;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 800;
+        }
+
+        .price-comparison-banner p {
+            margin: 0 0 1.5rem 0;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            opacity: 0.95;
+        }
+
+        .competitor-logos {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .competitor-logo {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .competitor-logo:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Price Comparison Banner */
+        .price-comparison-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .price-comparison-banner h2 {
+            margin: 0 0 1rem 0;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 800;
+        }
+
+        .price-comparison-banner p {
+            margin: 0 0 1.5rem 0;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            opacity: 0.95;
+        }
+
         .add-to-cart-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
@@ -256,6 +326,19 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div id="cartNotification" class="notification"></div>
     
     <main class="container">
+        <!-- Price Comparison Banner -->
+        <div class="price-comparison-banner">
+            <h2><i class="fas fa-trophy"></i> Lowest Prices Guaranteed!</h2>
+            <p>We consistently beat our competitors' prices. Compare us to anyone!</p>
+            <div class="competitor-logos">
+                <div class="competitor-logo">Amazon</div>
+                <div class="competitor-logo">eBay</div>
+                <div class="competitor-logo">Crunchyroll</div>
+                <div class="competitor-logo">Barnes & Noble</div>
+                <div class="competitor-logo">RightStuf</div>
+            </div>
+        </div>
+
         <div class="shop-header" style="flex-direction:column;align-items:stretch;gap:1.5rem;">
             <div class="shop-title">Shop Manga</div>
             <form id="shopFilters" method="get" style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;background:#fff;border-radius:2em;box-shadow:var(--shadow);padding:1em 1.5em 0.5em 1.5em;margin-bottom:0.5em;">

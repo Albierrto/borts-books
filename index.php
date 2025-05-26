@@ -12,6 +12,7 @@ $currentPage = "home";
 // Fetch trending manga from database
 require_once 'includes/db.php';
 require_once 'includes/cart-display.php';
+require_once 'includes/reviews-system.php';
 
 $trendingQuery = "SELECT p.*, pi.image_url 
                  FROM products p 
@@ -79,11 +80,42 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
         }
         .hero p { 
             font-size: clamp(1.1rem, 2.5vw, 1.4rem); 
-            margin-bottom: 2.5rem; 
+            margin-bottom: 1.5rem; 
             max-width: 600px;
             margin-left: auto;
             margin-right: auto;
             line-height: 1.6;
+        }
+
+        /* Price Guarantee Banner */
+        .price-guarantee {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            margin: 1.5rem auto 2.5rem auto;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .price-guarantee h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+            font-weight: 800;
+        }
+
+        .price-guarantee p {
+            margin: 0;
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            opacity: 0.95;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
         }
         
         /* Enhanced CTA Buttons */
@@ -806,6 +838,12 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
         <div class="hero-content">
         <h1>Discover, Collect, and Sell Manga</h1>
         <p>Your ultimate destination for authentic manga, rare finds, and unbeatable deals. Shop, sell, and join a passionate manga community!</p>
+        
+        <div class="price-guarantee">
+            <h3><i class="fas fa-trophy"></i> LOWEST PRICES GUARANTEED</h3>
+            <p>We beat Amazon, eBay, Crunchyroll & all competitors!</p>
+        </div>
+        
         <div class="hero-ctas">
                 <a href="/pages/shop.php" class="btn-primary">
                     <i class="fas fa-shopping-bag"></i>
@@ -896,29 +934,14 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <section class="reviews-section">
-        <div class="section-title">What Our Customers Say</div>
-        <div class="reviews-grid">
-            <div class="review-card">
-                <img src="https://randomuser.me/api/portraits/men/32.jpg" class="avatar">
-                <div class="name">Alex R.</div>
-                <div class="stars">★★★★★</div>
-                <p>"Super fast shipping and the manga was in perfect condition! Will definitely buy again."</p>
-            </div>
-            <div class="review-card">
-                <img src="https://randomuser.me/api/portraits/women/44.jpg" class="avatar">
-                <div class="name">Mina S.</div>
-                <div class="stars">★★★★★</div>
-                <p>"Love the selection and the prices. Found rare volumes I couldn't get anywhere else."</p>
-            </div>
-            <div class="review-card">
-                <img src="https://randomuser.me/api/portraits/men/65.jpg" class="avatar">
-                <div class="name">Jordan K.</div>
-                <div class="stars">★★★★★</div>
-                <p>"Selling my collection was so easy. Great communication and quick payment!"</p>
-            </div>
-        </div>
-    </section>
+    <!-- Customer Reviews Section -->
+    <?php 
+    // Display reviews widget
+    if (isset($reviewsSystem)) {
+        echo $reviewsSystem->getReviewsCSS();
+        echo $reviewsSystem->displayReviewsWidget(null, 6);
+    }
+    ?>
 
     <section class="newsletter-section">
         <h3>Get Exclusive Deals & New Arrivals</h3>

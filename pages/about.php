@@ -147,9 +147,30 @@ $currentPage = "about";
             <p class="about-content">
                 <b>Bort's Books</b> is your trusted source for manga collections since 2023. We're passionate about connecting manga fans with the stories and series they love—whether you're a seasoned collector or just starting your journey.
             </p>
+            
+            <!-- Pricing Promise Section -->
+            <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 2rem; border-radius: 12px; margin: 2rem 0; text-align: center; box-shadow: 0 4px 20px rgba(40, 167, 69, 0.3);">
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.8rem; font-weight: 800;">
+                    <i class="fas fa-shield-alt"></i> Our Pricing Promise
+                </h2>
+                <p style="margin: 0 0 1rem 0; font-size: 1.2rem; font-weight: 600;">
+                    ✅ NO FAKE SALES - Our prices are always genuine<br>
+                    ✅ LOWEST PRICES GUARANTEED - We beat Amazon, eBay, Crunchyroll & all competitors<br>
+                    ✅ TRANSPARENT PRICING - What you see is what you pay, no hidden fees
+                </p>
+                <p style="margin: 0; font-size: 1rem; opacity: 0.95; font-style: italic;">
+                    "We don't play pricing games. Our everyday prices are lower than others' 'sale' prices!"
+                </p>
+            </div>
+
             <p class="about-content">
-                Our mission is to make manga accessible and affordable for everyone. We offer a curated selection of both popular and rare titles, competitive prices, and a friendly, knowledgeable team ready to help you find your next favorite read.
+                Our mission is to make manga accessible and affordable for everyone. We offer a curated selection of both popular and rare titles, <strong>genuinely competitive prices</strong>, and a friendly, knowledgeable team ready to help you find your next favorite read.
             </p>
+            
+            <p class="about-content">
+                <strong>Why choose Bort's Books?</strong> Unlike other retailers who use inflated "MSRP" prices to create fake discounts, we believe in honest, transparent pricing. Our prices are consistently lower than major competitors like Amazon, eBay, and Crunchyroll - not just during "sales" but every single day.
+            </p>
+            
             <p class="about-content">
                 We believe in community, transparency, and a love for all things manga. Thank you for supporting our small business and being part of the Bort's Books family!
             </p>
