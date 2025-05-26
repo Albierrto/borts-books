@@ -79,349 +79,461 @@ $cart_count = count($_SESSION['cart']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?> - Bort's Books</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>Sell Your Manga Sets - Bort's Books</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            background: #f8f9fa;
-        }
-        
+        /* Mobile-First Responsive Design */
         .sell-container {
             max-width: 800px;
-            margin: 2rem auto;
+            margin: 0 auto;
+            padding: 20px;
             background: #fff;
-            border-radius: 16px;
+            border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            padding: 3rem 2.5rem;
-            position: relative;
-            overflow: hidden;
         }
-        
-        .sell-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 6px;
-            background: linear-gradient(90deg, #eebbc3, #232946);
-        }
-        
-        .page-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: #232946;
-            margin-bottom: 0.5rem;
+
+        .sell-header {
             text-align: center;
-        }
-        
-        .page-subtitle {
-            color: #666;
-            font-size: 1.2rem;
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        .info-banner {
-            background: linear-gradient(135deg, #e8f5e8, #d4f1d4);
-            color: #1b5e20;
-            padding: 1.5rem;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             border-radius: 12px;
-            font-size: 1.1rem;
-            margin-bottom: 2.5rem;
-            font-weight: 600;
-            text-align: center;
-            border: 2px solid #c8e6c9;
         }
-        
-        .how-it-works {
-            margin-bottom: 3rem;
+
+        .sell-header h1 {
+            margin: 0 0 10px 0;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
         }
-        
-        .how-it-works h2 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 2rem;
-            text-align: center;
-            color: #232946;
+
+        .sell-header p {
+            margin: 0;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            opacity: 0.9;
         }
-        
-        .steps-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-        
-        .step {
-            text-align: center;
-            padding: 1.5rem;
-            background: #f8f9fa;
-            border-radius: 12px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .step:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        }
-        
-        .step-number {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: #eebbc3;
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-        
-        .step-title {
-            font-weight: 700;
-            color: #232946;
-            margin-bottom: 0.5rem;
-        }
-        
-        .step-desc {
-            font-size: 0.95rem;
-            color: #666;
-            line-height: 1.5;
-        }
-        
+
         .form-section {
-            margin-bottom: 2.5rem;
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            background: #f8f9fa;
         }
-        
+
         .form-section h3 {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #232946;
-            margin-bottom: 1rem;
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 10px;
         }
-        
+
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 20px;
         }
-        
+
         .form-group label {
             display: block;
+            margin-bottom: 8px;
             font-weight: 600;
-            color: #232946;
-            margin-bottom: 0.5rem;
+            color: #333;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
         }
-        
+
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 1rem;
-            border: 2px solid #e9ecef;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
             border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            font-family: 'Inter', sans-serif;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            transition: all 0.3s ease;
+            box-sizing: border-box;
         }
-        
+
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #eebbc3;
-            box-shadow: 0 0 0 3px rgba(238, 187, 195, 0.1);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
-        
-        .set-row {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
         }
-        
-        .btn {
-            border: none;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            text-decoration: none;
-            font-family: 'Inter', sans-serif;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        
-        .btn-primary {
-            background: #232946;
-            color: #fff;
-            padding: 1rem 2rem;
-        }
-        
-        .btn-primary:hover {
-            background: #1a1f35;
-        }
-        
-        .btn-secondary {
-            background: #eebbc3;
-            color: #232946;
-            padding: 0.75rem 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .btn-secondary:hover {
-            background: #e5a4b0;
-        }
-        
-        .btn-submit {
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: #fff;
-            padding: 1.2rem 3rem;
-            font-size: 1.1rem;
-            font-weight: 800;
+
+        .manga-set {
+            background: white;
+            border: 2px solid #e1e5e9;
             border-radius: 12px;
-            width: 100%;
-            margin-top: 2rem;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
         }
-        
-        .btn-submit:hover {
-            background: linear-gradient(135deg, #218838, #1ba085);
-        }
-        
-        .success-message {
-            background: linear-gradient(135deg, #d4edda, #c3e6cb);
-            color: #155724;
-            padding: 1.5rem;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            margin-bottom: 2rem;
-            font-weight: 600;
-            text-align: center;
-            border: 2px solid #b8dabc;
-        }
-        
-        .optional-note {
-            font-weight: 400;
-            font-size: 0.9rem;
-            color: #888;
-        }
-        
-        .helper-text {
-            font-size: 0.95rem;
-            color: #666;
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border-left: 4px solid #eebbc3;
-        }
-        
-        .photo-list {
-            list-style: none;
-            padding: 0;
-            margin-top: 1rem;
-        }
-        
-        .photo-item {
+
+        .manga-set h4 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: clamp(1.1rem, 2.8vw, 1.3rem);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.75rem;
-            background: #f8f9fa;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            border: 1px solid #e9ecef;
         }
-        
-        .photo-remove {
+
+        .remove-set-btn {
             background: #dc3545;
-            color: #fff;
+            color: white;
             border: none;
-            border-radius: 4px;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.85rem;
+            padding: 8px 12px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: background 0.3s ease;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
-        
+
+        .remove-set-btn:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        @media (min-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: clamp(1rem, 2.5vw, 1.1rem);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+            min-height: 50px;
+            box-sizing: border-box;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        @media (min-width: 768px) {
+            .button-group {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-box h3 {
+            margin: 0 0 15px 0;
+            color: #1976d2;
+            font-size: clamp(1.1rem, 2.8vw, 1.3rem);
+        }
+
+        .info-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .info-box li {
+            margin-bottom: 8px;
+            font-size: clamp(0.9rem, 2.3vw, 1rem);
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 767px) {
+            .sell-container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .form-section {
+                padding: 15px;
+            }
+            
+            .manga-set {
+                padding: 15px;
+            }
+            
+            .btn {
+                width: 100%;
+                padding: 18px 20px;
+            }
+        }
+
+        /* Loading state */
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .loading {
+            display: none;
+        }
+
+        .btn.loading .loading {
+            display: inline-block;
+        }
+
+        .btn.loading .btn-text {
+            display: none;
+        }
+
+        /* Success message */
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        /* Photo Upload Styles */
+        .upload-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .upload-info p {
+            margin: 0 0 10px 0;
+            font-size: clamp(0.9rem, 2.3vw, 1rem);
+        }
+
+        .upload-info p:last-child {
+            margin-bottom: 0;
+        }
+
+        .upload-area {
+            display: block;
+            width: 100%;
+            min-height: 150px;
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #5a6fd8;
+            background: #f0f3ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .upload-content {
+            text-align: center;
+            padding: 30px 20px;
+            color: #667eea;
+        }
+
+        .upload-content i {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .upload-content h4 {
+            margin: 0 0 10px 0;
+            font-size: clamp(1.1rem, 2.8vw, 1.3rem);
+            color: #333;
+        }
+
+        .upload-content p {
+            margin: 0 0 10px 0;
+            font-size: clamp(0.9rem, 2.3vw, 1rem);
+            color: #666;
+        }
+
+        .upload-note {
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            color: #888;
+            font-style: italic;
+        }
+
+        .photo-preview-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .photo-preview-container {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+
+        .photo-preview {
+            position: relative;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            aspect-ratio: 1;
+        }
+
+        .photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .photo-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
         .photo-remove:hover {
             background: #c82333;
+            transform: scale(1.1);
         }
-        
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            .sell-container {
-                margin: 1rem;
-                padding: 2rem 1.5rem;
-            }
-            
-            .page-title {
-                font-size: 2rem;
-            }
-            
-            .steps-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .step {
-                padding: 1rem;
-            }
-            
-            .step-number {
-                font-size: 2rem;
-            }
-            
-            .set-row {
-                grid-template-columns: 1fr;
-                gap: 0.75rem;
-            }
-            
-            .btn-submit {
-                padding: 1rem 2rem;
-                font-size: 1rem;
-            }
+
+        .photo-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px;
+            font-size: 0.8rem;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        
-        @media (max-width: 480px) {
-            .sell-container {
-                padding: 1.5rem 1rem;
+
+        .upload-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .photo-count {
+            font-size: clamp(0.9rem, 2.3vw, 1rem);
+            color: #666;
+            font-weight: 500;
+        }
+
+        /* Mobile optimizations for photo upload */
+        @media (max-width: 767px) {
+            .upload-content {
+                padding: 20px 15px;
             }
             
-            .page-title {
-                font-size: 1.75rem;
+            .photo-preview-container {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                gap: 10px;
             }
             
-            .page-subtitle {
-                font-size: 1rem;
+            .upload-actions {
+                flex-direction: column;
+                align-items: stretch;
             }
             
-            .info-banner {
-                padding: 1rem;
-                font-size: 1rem;
-            }
-            
-            .form-group input,
-            .form-group select {
-                padding: 0.75rem;
+            .upload-actions .btn {
+                width: 100%;
             }
         }
     </style>
@@ -429,7 +541,7 @@ $cart_count = count($_SESSION['cart']);
 <body>
     <header>
         <div class="container header-container">
-            <a href="../index.php" class="logo">Bort's <span>Books</span></a>
+            <a href="/index.php" class="logo">Bort's <span>Books</span></a>
             <nav>
                 <ul>
                     <li><a href="/index.php">Home</a></li>
@@ -448,191 +560,566 @@ $cart_count = count($_SESSION['cart']);
         </div>
     </header>
 
-    <section class="sell-container">
-        <h1 class="page-title">Sell Your Manga Sets</h1>
-        <p class="page-subtitle">Turn your manga collection into cash</p>
-        
-        <div class="info-banner">
-            <i class="fas fa-star" style="margin-right:0.5rem;"></i>
-            <span>We specialize in <strong>complete manga sets</strong> and pay <strong>50-70% of current market value</strong> for quality collections!</span>
-        </div>
-        
-        <div class="how-it-works">
-            <h2>How It Works</h2>
-            <div class="steps-grid">
-                <div class="step">
-                    <span class="step-number">1</span>
-                    <div class="step-title">List Your Sets</div>
-                    <div class="step-desc">Tell us about your complete manga sets and upload photos</div>
-                </div>
-                <div class="step">
-                    <span class="step-number">2</span>
-                    <div class="step-title">Get an Offer</div>
-                    <div class="step-desc">We'll evaluate your sets and provide a competitive cash offer</div>
-                </div>
-                <div class="step">
-                    <span class="step-number">3</span>
-                    <div class="step-title">Ship for Free</div>
-                    <div class="step-desc">We provide prepaid shipping labels for accepted offers</div>
-                </div>
-                <div class="step">
-                    <span class="step-number">4</span>
-                    <div class="step-title">Get Paid Fast</div>
-                    <div class="step-desc">Receive payment within 24 hours of delivery confirmation</div>
-                </div>
-            </div>
-        </div>
-        
-        <?php if ($successMsg): ?>
-            <div class="success-message">
-                <i class="fas fa-check-circle" style="margin-right:0.5rem;"></i>
-                <?php echo $successMsg; ?>
-            </div>
-        <?php endif; ?>
-        
-        <form method="POST" enctype="multipart/form-data">
-            <!-- Collection Overview -->
-            <div class="form-section">
-                <h3><i class="fas fa-books"></i> Collection Overview</h3>
-                
-                <div class="form-group">
-                    <label>Approximate Number of Complete Sets</label>
-                    <input type="number" name="num_items" required min="1" placeholder="e.g., 5 complete sets">
-                </div>
-                
-                <div class="form-group">
-                    <label>Overall Condition of Sets</label>
-                    <select name="overall_condition" required>
-                        <option value="">Select overall condition</option>
-                        <option value="New">New/Sealed</option>
-                        <option value="Like New">Like New (minimal wear)</option>
-                        <option value="Very Good">Very Good (light wear)</option>
-                        <option value="Good">Good (moderate wear)</option>
-                        <option value="Acceptable">Acceptable (heavy wear)</option>
-                    </select>
-                </div>
+    <main>
+        <div class="sell-container">
+            <div class="sell-header">
+                <h1><i class="fas fa-books"></i> Sell Your Manga Sets</h1>
+                <p>Turn your manga collection into cash! We buy complete sets in good condition.</p>
             </div>
 
-            <!-- Set Details -->
-            <div class="form-section">
-                <h3><i class="fas fa-list"></i> Manga Set Details <span class="optional-note">(Optional but helps with pricing)</span></h3>
-                
-                <div class="helper-text">
-                    <strong>Complete sets get the best prices!</strong> List any complete manga series you have. Don't worry about listing every volume - just the main sets you want to sell.
+            <div class="info-box">
+                <h3><i class="fas fa-info-circle"></i> What We're Looking For</h3>
+                <ul>
+                    <li><strong>Complete manga sets</strong> - We prefer full series or substantial partial sets</li>
+                    <li><strong>Good condition</strong> - Books should be readable with minimal wear</li>
+                    <li><strong>Popular series</strong> - Mainstream and sought-after titles get better prices</li>
+                    <li><strong>English language</strong> - We currently only accept English manga</li>
+                </ul>
+            </div>
+
+            <div class="success-message" id="successMessage">
+                <i class="fas fa-check-circle"></i> Your manga sets have been submitted successfully! We'll review your submission and get back to you within 24-48 hours.
+            </div>
+
+            <div class="error-message" id="errorMessage">
+                <i class="fas fa-exclamation-triangle"></i> There was an error submitting your form. Please try again.
+            </div>
+
+            <form id="sellForm" method="POST" action="/pages/process-sell.php">
+                <!-- Contact Information -->
+                <div class="form-section">
+                    <h3><i class="fas fa-user"></i> Contact Information</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">Full Name *</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" name="phone">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="zip">ZIP Code *</label>
+                            <input type="text" id="zip" name="zip" required placeholder="For shipping estimate">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Additional Notes</label>
+                        <textarea id="notes" name="notes" placeholder="Any additional information about your collection, preferred contact method, or special circumstances..."></textarea>
+                    </div>
                 </div>
+
+                <!-- Manga Sets -->
+                <div class="form-section">
+                    <h3><i class="fas fa-layer-group"></i> Your Manga Sets</h3>
+                    
+                    <div id="mangaSets">
+                        <!-- Initial set -->
+                        <div class="manga-set" data-set="1">
+                            <h4>
+                                <span><i class="fas fa-book"></i> Set #1</span>
+                                <button type="button" class="remove-set-btn" onclick="removeSet(1)" style="display: none;">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </h4>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="title_1">Series Title *</label>
+                                    <input type="text" id="title_1" name="sets[1][title]" required placeholder="e.g., Naruto, One Piece, Attack on Titan">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="volumes_1">Volumes *</label>
+                                    <input type="text" id="volumes_1" name="sets[1][volumes]" required placeholder="e.g., 1-72, 1-15, 5-20">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="condition_1">Condition *</label>
+                                    <select id="condition_1" name="sets[1][condition]" required>
+                                        <option value="">Select condition...</option>
+                                        <option value="like_new">Like New - Minimal wear, looks almost new</option>
+                                        <option value="very_good">Very Good - Light wear, all pages intact</option>
+                                        <option value="good">Good - Moderate wear, readable condition</option>
+                                        <option value="fair">Fair - Heavy wear but complete</option>
+                                        <option value="ex_library">Ex-Library - Former library books</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="asking_price_1">Asking Price</label>
+                                    <input type="number" id="asking_price_1" name="sets[1][asking_price]" step="0.01" placeholder="Optional - your asking price">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="button" id="addSetBtn" class="btn btn-secondary">
+                            <i class="fas fa-plus"></i>
+                            <span class="btn-text">Add Another Set</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="button-group">
+                    <button type="submit" id="submitBtn" class="btn btn-primary">
+                        <i class="fas fa-paper-plane loading" style="display: none;"></i>
+                        <i class="fas fa-paper-plane btn-icon"></i>
+                        <span class="btn-text">Submit for Review</span>
+                        <span class="loading">Submitting...</span>
+                    </button>
+                </div>
+
+                <!-- Photo Upload Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-camera"></i> Photos of Your Collection *</h3>
+                    
+                    <div class="upload-info">
+                        <p><i class="fas fa-info-circle"></i> <strong>Required:</strong> Please upload clear photos showing your manga sets. Include spines with volume numbers and any special editions.</p>
+                        <p><strong>Tips:</strong> Good lighting, multiple angles, and close-ups of condition help us give better offers!</p>
+                    </div>
+
+                    <div class="photo-upload-container">
+                        <label for="photoInput" class="upload-area">
+                            <div class="upload-content">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <h4>Click to Upload Photos</h4>
+                                <p>Or drag and drop images here</p>
+                                <span class="upload-note">JPG, PNG, HEIC (Max 10MB each)</span>
+                            </div>
+                        </label>
+                        <input type="file" id="photoInput" name="collection_photos[]" multiple accept="image/*" style="display: none;">
+                        
+                        <div id="photoPreviewContainer" class="photo-preview-container"></div>
+                        
+                        <div class="upload-actions">
+                            <button type="button" id="addMorePhotos" class="btn btn-secondary" style="display: none;">
+                                <i class="fas fa-plus"></i>
+                                <span class="btn-text">Add More Photos</span>
+                            </button>
+                            <span id="photoCount" class="photo-count">0 photos selected</span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/track-order.php">Track Order</a></li>
+                    <li><a href="/pages/sell.php">Sell Manga</a></li>
+                    <li><a href="/pages/about.php">About</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Help</h3>
+                <ul>
+                    <li><a href="/pages/faq.php">FAQ</a></li>
+                    <li><a href="/pages/returns.php">Returns</a></li>
+                    <li><a href="/pages/contact.php">Contact Us</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Connect</h3>
+                <ul>
+                    <li><a href="#"><i class="fab fa-facebook"></i> Facebook</a></li>
+                    <li><a href="#"><i class="fab fa-twitter"></i> Twitter</a></li>
+                    <li><a href="#"><i class="fab fa-instagram"></i> Instagram</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <div class="container">
+                <p>&copy; 2024 Bort's Books. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let setCounter = 1;
+
+        // Add new manga set
+        document.getElementById('addSetBtn').addEventListener('click', function() {
+            setCounter++;
+            const mangaSetsContainer = document.getElementById('mangaSets');
+            
+            const newSet = document.createElement('div');
+            newSet.className = 'manga-set';
+            newSet.setAttribute('data-set', setCounter);
+            
+            newSet.innerHTML = `
+                <h4>
+                    <span><i class="fas fa-book"></i> Set #${setCounter}</span>
+                    <button type="button" class="remove-set-btn" onclick="removeSet(${setCounter})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </h4>
                 
-                <div id="sets-container">
-                    <div class="set-row">
-                        <input type="text" name="set_title[]" placeholder="Manga Series Title (e.g., Naruto, One Piece)">
-                        <input type="text" name="set_volumes[]" placeholder="Volumes (e.g., 1-72, Complete)">
-                        <select name="set_condition[]">
-                            <option value="New">New</option>
-                            <option value="Like New">Like New</option>
-                            <option value="Very Good">Very Good</option>
-                            <option value="Good">Good</option>
-                            <option value="Acceptable">Acceptable</option>
-                        </select>
-                        <input type="number" name="set_expected_price[]" placeholder="Expected $" min="0" step="0.01">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="title_${setCounter}">Series Title *</label>
+                        <input type="text" id="title_${setCounter}" name="sets[${setCounter}][title]" required placeholder="e.g., Naruto, One Piece, Attack on Titan">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="volumes_${setCounter}">Volumes *</label>
+                        <input type="text" id="volumes_${setCounter}" name="sets[${setCounter}][volumes]" required placeholder="e.g., 1-72, 1-15, 5-20">
                     </div>
                 </div>
                 
-                <button type="button" onclick="addSetRow()" class="btn btn-secondary">
-                    <i class="fas fa-plus"></i>
-                    Add Another Set
-                </button>
-            </div>
-
-            <!-- Contact Information -->
-            <div class="form-section">
-                <h3><i class="fas fa-user"></i> Contact Information</h3>
-                
-                <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" name="full_name" required placeholder="Your full name">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="condition_${setCounter}">Condition *</label>
+                        <select id="condition_${setCounter}" name="sets[${setCounter}][condition]" required>
+                            <option value="">Select condition...</option>
+                            <option value="like_new">Like New - Minimal wear, looks almost new</option>
+                            <option value="very_good">Very Good - Light wear, all pages intact</option>
+                            <option value="good">Good - Moderate wear, readable condition</option>
+                            <option value="fair">Fair - Heavy wear but complete</option>
+                            <option value="ex_library">Ex-Library - Former library books</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="asking_price_${setCounter}">Asking Price</label>
+                        <input type="number" id="asking_price_${setCounter}" name="sets[${setCounter}][asking_price]" step="0.01" placeholder="Optional - your asking price">
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" name="email" required placeholder="your.email@example.com">
-                </div>
-                
-                <div class="form-group">
-                    <label>Phone Number</label>
-                    <input type="tel" name="phone" required placeholder="(555) 123-4567">
-                </div>
-            </div>
-
-            <!-- Photo Upload -->
-            <div class="form-section">
-                <h3><i class="fas fa-camera"></i> Photos of Your Collection <span style="color:#dc3545;">*Required</span></h3>
-                
-                <div class="helper-text">
-                    Please upload clear photos showing your complete sets. Include spines showing volume numbers and any special editions or box sets.
-                </div>
-                
-                <div class="form-group">
-                    <input type="file" name="collection_photos[]" multiple accept="image/*" required onchange="updatePhotoList()">
-                    <ul id="photo-list" class="photo-list"></ul>
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-submit">
-                <i class="fas fa-paper-plane"></i>
-                Submit My Collection for Review
-            </button>
-        </form>
-    </section>
-
-    <?php include '../includes/footer.php'; ?>
-
-    <script>
-        function addSetRow() {
-            const container = document.getElementById('sets-container');
-            const newRow = document.createElement('div');
-            newRow.className = 'set-row';
-            newRow.innerHTML = `
-                <input type="text" name="set_title[]" placeholder="Manga Series Title (e.g., Attack on Titan)">
-                <input type="text" name="set_volumes[]" placeholder="Volumes (e.g., 1-34, Complete)">
-                <select name="set_condition[]">
-                    <option value="New">New</option>
-                    <option value="Like New">Like New</option>
-                    <option value="Very Good">Very Good</option>
-                    <option value="Good">Good</option>
-                    <option value="Acceptable">Acceptable</option>
-                </select>
-                <input type="number" name="set_expected_price[]" placeholder="Expected $" min="0" step="0.01">
             `;
-            container.appendChild(newRow);
-        }
-
-        function updatePhotoList() {
-            const input = document.querySelector('input[name="collection_photos[]"]');
-            const list = document.getElementById('photo-list');
-            list.innerHTML = '';
             
-            Array.from(input.files).forEach((file, idx) => {
-                const li = document.createElement('li');
-                li.className = 'photo-item';
-                li.innerHTML = `
-                    <span><i class="fas fa-image" style="margin-right:0.5rem;color:#666;"></i>${file.name}</span>
-                    <button type="button" onclick="removePhoto(${idx})" class="photo-remove">Remove</button>
+            mangaSetsContainer.appendChild(newSet);
+            
+            // Show remove button on first set if there are now multiple sets
+            if (setCounter > 1) {
+                const firstSetRemoveBtn = document.querySelector('[data-set="1"] .remove-set-btn');
+                if (firstSetRemoveBtn) {
+                    firstSetRemoveBtn.style.display = 'flex';
+                }
+            }
+            
+            // Scroll to new set
+            newSet.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        // Remove manga set
+        function removeSet(setId) {
+            const setElement = document.querySelector(`[data-set="${setId}"]`);
+            if (setElement) {
+                setElement.remove();
+                
+                // Hide remove button on first set if it's the only one left
+                const remainingSets = document.querySelectorAll('.manga-set');
+                if (remainingSets.length === 1) {
+                    const firstSetRemoveBtn = document.querySelector('.manga-set .remove-set-btn');
+                    if (firstSetRemoveBtn) {
+                        firstSetRemoveBtn.style.display = 'none';
+                    }
+                }
+                
+                // Renumber remaining sets
+                renumberSets();
+            }
+        }
+
+        // Renumber sets after removal
+        function renumberSets() {
+            const sets = document.querySelectorAll('.manga-set');
+            sets.forEach((set, index) => {
+                const setNumber = index + 1;
+                set.setAttribute('data-set', setNumber);
+                
+                // Update header
+                const header = set.querySelector('h4 span');
+                if (header) {
+                    header.innerHTML = `<i class="fas fa-book"></i> Set #${setNumber}`;
+                }
+                
+                // Update remove button onclick
+                const removeBtn = set.querySelector('.remove-set-btn');
+                if (removeBtn) {
+                    removeBtn.setAttribute('onclick', `removeSet(${setNumber})`);
+                }
+                
+                // Update form field names and IDs
+                const inputs = set.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    const id = input.getAttribute('id');
+                    
+                    if (name) {
+                        const newName = name.replace(/\[\d+\]/, `[${setNumber}]`);
+                        input.setAttribute('name', newName);
+                    }
+                    
+                    if (id) {
+                        const newId = id.replace(/_\d+$/, `_${setNumber}`);
+                        input.setAttribute('id', newId);
+                        
+                        // Update corresponding label
+                        const label = set.querySelector(`label[for="${id}"]`);
+                        if (label) {
+                            label.setAttribute('for', newId);
+                        }
+                    }
+                });
+            });
+            
+            setCounter = sets.length;
+        }
+
+        // Mobile-friendly touch interactions
+        document.addEventListener('touchstart', function() {}, {passive: true});
+        
+        // Prevent zoom on input focus for iOS
+        document.addEventListener('touchend', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+                e.target.style.fontSize = '16px';
+            }
+        });
+
+        // Photo Upload Functionality
+        let uploadedPhotos = [];
+        let photoIdCounter = 0;
+
+        const photoInput = document.getElementById('photoInput');
+        const uploadArea = document.querySelector('.upload-area');
+        const previewContainer = document.getElementById('photoPreviewContainer');
+        const addMoreBtn = document.getElementById('addMorePhotos');
+        const photoCount = document.getElementById('photoCount');
+
+        // Handle file input change
+        photoInput.addEventListener('change', function(e) {
+            handleFileSelection(e.target.files);
+        });
+
+        // Handle add more photos button
+        addMoreBtn.addEventListener('click', function() {
+            photoInput.click();
+        });
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            handleFileSelection(files);
+        });
+
+        // Handle file selection (cumulative)
+        function handleFileSelection(files) {
+            Array.from(files).forEach(file => {
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    alert(`"${file.name}" is not an image file. Only images are allowed.`);
+                    return;
+                }
+
+                // Validate file size (10MB max)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert(`"${file.name}" is too large. Maximum file size is 10MB.`);
+                    return;
+                }
+
+                // Check for duplicates
+                const isDuplicate = uploadedPhotos.some(photo => 
+                    photo.name === file.name && photo.size === file.size
+                );
+
+                if (isDuplicate) {
+                    alert(`"${file.name}" is already uploaded.`);
+                    return;
+                }
+
+                // Add to uploaded photos array
+                const photoId = ++photoIdCounter;
+                uploadedPhotos.push({
+                    id: photoId,
+                    file: file,
+                    name: file.name,
+                    size: file.size
+                });
+
+                // Create preview
+                createPhotoPreview(file, photoId);
+            });
+
+            updatePhotoCount();
+            updateFileInput();
+            
+            // Show "Add More" button if photos exist
+            if (uploadedPhotos.length > 0) {
+                addMoreBtn.style.display = 'flex';
+            }
+        }
+
+        // Create photo preview with thumbnail
+        function createPhotoPreview(file, photoId) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'photo-preview';
+                previewDiv.setAttribute('data-photo-id', photoId);
+                
+                previewDiv.innerHTML = `
+                    <img src="${e.target.result}" alt="${file.name}" loading="lazy">
+                    <button type="button" class="photo-remove" onclick="removePhoto(${photoId})" title="Remove photo">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="photo-name">${file.name}</div>
                 `;
-                list.appendChild(li);
-            });
+                
+                previewContainer.appendChild(previewDiv);
+            };
+            
+            reader.readAsDataURL(file);
         }
 
-        function removePhoto(idx) {
-            const input = document.querySelector('input[name="collection_photos[]"]');
-            const dt = new DataTransfer();
-            Array.from(input.files).forEach((file, i) => {
-                if (i !== idx) dt.items.add(file);
-            });
-            input.files = dt.files;
-            updatePhotoList();
+        // Remove photo function
+        function removePhoto(photoId) {
+            // Remove from array
+            uploadedPhotos = uploadedPhotos.filter(photo => photo.id !== photoId);
+            
+            // Remove preview element
+            const previewElement = document.querySelector(`[data-photo-id="${photoId}"]`);
+            if (previewElement) {
+                previewElement.remove();
+            }
+            
+            updatePhotoCount();
+            updateFileInput();
+            
+            // Hide "Add More" button if no photos
+            if (uploadedPhotos.length === 0) {
+                addMoreBtn.style.display = 'none';
+            }
         }
 
-        // Initialize photo list on page load
-        document.addEventListener('DOMContentLoaded', updatePhotoList);
+        // Update photo count display
+        function updatePhotoCount() {
+            const count = uploadedPhotos.length;
+            photoCount.textContent = `${count} photo${count !== 1 ? 's' : ''} selected`;
+        }
+
+        // Update file input with current photos (for form submission)
+        function updateFileInput() {
+            const dataTransfer = new DataTransfer();
+            uploadedPhotos.forEach(photo => {
+                dataTransfer.items.add(photo.file);
+            });
+            photoInput.files = dataTransfer.files;
+        }
+
+        // Enhanced form submission with photo validation
+        document.getElementById('sellForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Validate photos are uploaded
+            if (uploadedPhotos.length === 0) {
+                document.getElementById('errorMessage').textContent = 'Please upload at least one photo of your manga collection.';
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('errorMessage').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Hide previous messages
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.classList.add('loading');
+            
+            // Create FormData for actual submission (replace simulation)
+            const formData = new FormData(this);
+            
+            // Add photos to form data
+            uploadedPhotos.forEach((photo, index) => {
+                formData.append(`collection_photos[${index}]`, photo.file);
+            });
+            
+            // Simulate form submission (replace with actual AJAX call)
+            setTimeout(() => {
+                // Reset button
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('loading');
+                
+                // Show success message
+                successMessage.style.display = 'block';
+                successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Reset form
+                this.reset();
+                
+                // Reset photos
+                uploadedPhotos = [];
+                photoIdCounter = 0;
+                previewContainer.innerHTML = '';
+                updatePhotoCount();
+                addMoreBtn.style.display = 'none';
+                
+                // Reset to single set
+                const mangaSetsContainer = document.getElementById('mangaSets');
+                const sets = mangaSetsContainer.querySelectorAll('.manga-set');
+                for (let i = 1; i < sets.length; i++) {
+                    sets[i].remove();
+                }
+                
+                // Hide remove button on first set
+                const firstSetRemoveBtn = document.querySelector('[data-set="1"] .remove-set-btn');
+                if (firstSetRemoveBtn) {
+                    firstSetRemoveBtn.style.display = 'none';
+                }
+                
+                setCounter = 1;
+                
+            }, 2000);
+        });
+
+        // Make removePhoto function global
+        window.removePhoto = removePhoto;
     </script>
 </body>
 </html> 
