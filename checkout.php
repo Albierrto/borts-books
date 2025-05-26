@@ -1,9 +1,4 @@
 <?php
-// Enable error reporting for debugging
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 session_start();
 
 $db_error = false;
@@ -32,17 +27,11 @@ try {
     $error_messages[] = 'Stripe configuration error: ' . $e->getMessage();
 }
 
-try {
-    require_once 'includes/cart.php';
-} catch (Exception $e) {
-    $error_messages[] = 'Cart utilities error: ' . $e->getMessage();
-}
-
 // Only try to clean up cart if database is working
 if (!$db_error) {
     try {
         require_once 'includes/cart-display.php';
-        // cleanupCart(); // Temporarily commented out for debugging
+        cleanupCart();
     } catch (Exception $e) {
         error_log('Cart cleanup error in checkout: ' . $e->getMessage());
         // Don't let cleanup errors break checkout
@@ -95,11 +84,11 @@ if ($db_error || $config_error) {
     exit;
 }
 
-// Redirect if cart is empty - temporarily commented out for debugging
-// if (empty($_SESSION['cart'])) {
-//     header('Location: cart.php');
-//     exit;
-// }
+// Redirect if cart is empty
+if (empty($_SESSION['cart'])) {
+    header('Location: cart.php');
+    exit;
+}
 
 // Fetch products in cart
 $cart = $_SESSION['cart'];

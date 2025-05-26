@@ -19,9 +19,12 @@ $cart_count = count($_SESSION['cart']);
 
 /**
  * Get cart count for display
+ * Only declare if not already declared in cart.php
  */
-function getCartCount() {
-    return isset($_SESSION['cart']) ? count($_SESSION['cart']) : 0;
+if (!function_exists('getCartCount')) {
+    function getCartCount() {
+        return isset($_SESSION['cart']) ? count($_SESSION['cart']) : 0;
+    }
 }
 
 /**
