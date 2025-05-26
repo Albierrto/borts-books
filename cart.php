@@ -10,7 +10,25 @@ $success_message = '';
 $db_error = false;
 $db = null;
 
-// Try to connect to database with error handlingtry {    require_once 'includes/db.php';    require_once 'includes/cart-display.php';        // Clean up cart to remove any deleted items    cleanupCart();} catch (Exception $e) {    $db_error = true;    error_log('Database connection error in cart.php: ' . $e->getMessage());    // Continue without database - cart will still work for display}
+// Try to connect to database with error handling
+try {
+    require_once 'includes/db.php';
+} catch (Exception $e) {
+    $db_error = true;
+    error_log('Database connection error in cart.php: ' . $e->getMessage());
+    // Continue without database - cart will still work for display
+}
+
+// Only try to clean up cart if database is working
+if (!$db_error) {
+    try {
+        require_once 'includes/cart-display.php';
+        cleanupCart();
+    } catch (Exception $e) {
+        error_log('Cart cleanup error: ' . $e->getMessage());
+        // Don't let cleanup errors break the cart
+    }
+}
 
 // Handle add/update/remove actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$db_error) {

@@ -29,12 +29,19 @@ try {
 
 try {
     require_once 'includes/cart.php';
-    require_once 'includes/cart-display.php';
-    
-    // Clean up cart to remove any deleted items
-    cleanupCart();
 } catch (Exception $e) {
     $error_messages[] = 'Cart utilities error: ' . $e->getMessage();
+}
+
+// Only try to clean up cart if database is working
+if (!$db_error) {
+    try {
+        require_once 'includes/cart-display.php';
+        cleanupCart();
+    } catch (Exception $e) {
+        error_log('Cart cleanup error in checkout: ' . $e->getMessage());
+        // Don't let cleanup errors break checkout
+    }
 }
 
 // If there are critical errors, display them

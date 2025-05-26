@@ -46,17 +46,36 @@ function getCartCountJson() {
 
 /**
  * Clean up cart by removing deleted products
+ * Made safe to prevent breaking cart functionality
  */
 function cleanupCart() {
+    // Early return if no cart items or database issues
     if (empty($_SESSION['cart'])) {
+        return;
+    }
+    
+    // Don't clean up if there are too many items (could be performance issue)
+    if (count($_SESSION['cart']) > 50) {
+        error_log('Skipping cart cleanup - too many items');
         return;
     }
     
     try {
         global $db;
         
+        // Check if database connection exists
+        if (!isset($db) || !$db) {
+            return; // Silently skip if no database
+        }
+        
         // Get all product IDs from cart
         $cart_ids = array_keys($_SESSION['cart']);
+        
+        // Don't proceed if no IDs
+        if (empty($cart_ids)) {
+            return;
+        }
+        
         $placeholders = implode(',', array_fill(0, count($cart_ids), '?'));
         
         // Check which products still exist in database
@@ -64,17 +83,21 @@ function cleanupCart() {
         $stmt->execute($cart_ids);
         $existing_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
         
-        // Remove non-existent products from cart
-        $original_count = count($_SESSION['cart']);
-        $_SESSION['cart'] = array_intersect_key($_SESSION['cart'], array_flip($existing_ids));
-        
-        $removed_count = $original_count - count($_SESSION['cart']);
-        if ($removed_count > 0) {
-            error_log("Cleaned up $removed_count deleted items from cart");
+        // Only clean up if we got a valid response
+        if (is_array($existing_ids)) {
+            // Remove non-existent products from cart
+            $original_count = count($_SESSION['cart']);
+            $_SESSION['cart'] = array_intersect_key($_SESSION['cart'], array_flip($existing_ids));
+            
+            $removed_count = $original_count - count($_SESSION['cart']);
+            if ($removed_count > 0) {
+                error_log("Cart cleanup: removed $removed_count deleted items");
+            }
         }
         
     } catch (Exception $e) {
-        error_log('Cart cleanup error: ' . $e->getMessage());
+        // Log error but don't let it break the cart
+        error_log('Cart cleanup error (non-fatal): ' . $e->getMessage());
     }
 }
-?> 
+?>
