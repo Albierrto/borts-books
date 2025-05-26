@@ -122,7 +122,7 @@ $pageTitle = "Admin Dashboard";
                 <h3>Email Marketing</h3>
                 <p>Manage newsletter subscribers and email campaigns.</p>
             </a>
-            <a href="../admin/import-ebay-reviews.php" class="dashboard-card">
+            <a href="import-ebay-reviews.php" class="dashboard-card">
                 <i class="fas fa-star"></i>
                 <h3>Import eBay Reviews</h3>
                 <p>Import your eBay feedback to build website credibility.</p>
