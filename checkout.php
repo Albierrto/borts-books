@@ -121,71 +121,66 @@ if (!empty($cart) && !$db_error) {
 
 // Handle AJAX shipping calculation FIRST
 if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip'])) {
-    // Immediate output to check if we reach this point
-    error_log("AJAX shipping request received");
-    
-    // Enable error display for this AJAX request
+    // Display errors directly instead of JSON for debugging
     ini_set('display_errors', 1);
     error_reporting(E_ALL);
     
+    echo "<h2>Shipping Calculation Debug</h2>";
+    echo "<p><strong>ZIP:</strong> " . htmlspecialchars($_POST['zip']) . "</p>";
+    echo "<p><strong>Service:</strong> " . htmlspecialchars($_POST['shipping_service'] ?? 'Ground') . "</p>";
+    
     // Check if we have products
     if (empty($products)) {
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => false,
-            'error' => 'No products in cart for shipping calculation'
-        ]);
+        echo "<p style='color: red;'><strong>Error:</strong> No products in cart for shipping calculation</p>";
+        echo "<p>Products array: " . print_r($products, true) . "</p>";
+        echo "<p>Cart contents: " . print_r($_SESSION['cart'] ?? [], true) . "</p>";
         exit;
     }
     
+    echo "<p><strong>Products found:</strong> " . count($products) . "</p>";
+    foreach ($products as $prod) {
+        echo "<p>- {$prod['title']} (${$prod['price']})</p>";
+    }
+    
     try {
-        error_log("AJAX shipping calculation started - ZIP: " . $_POST['zip'] . ", Service: " . ($_POST['shipping_service'] ?? 'Ground'));
-        
+        echo "<p>Loading USPS shipping class...</p>";
         require_once 'includes/usps-shipping.php';
+        echo "<p>✓ USPS shipping class loaded</p>";
+        
         $service = $_POST['shipping_service'] ?? 'Ground';
         $calculated_shipping = 0;
         
+        echo "<p>Calculating shipping for each product:</p>";
         foreach ($products as $product) {
-            error_log("Calculating shipping for product: " . $product['title']);
+            echo "<p>Calculating for: {$product['title']}</p>";
+            
             $usps = new USPSShipping();
+            echo "<p>✓ USPS object created</p>";
+            
             $shipping_result = $usps->calculateShipping($product, $_POST['zip'], $service);
+            echo "<p>✓ Calculation result: " . print_r($shipping_result, true) . "</p>";
+            
             $calculated_shipping += $shipping_result['rate'];
-            error_log("Product shipping result: " . json_encode($shipping_result));
+            echo "<p>Running total: $" . number_format($calculated_shipping, 2) . "</p>";
         }
         
-        $response = [
-            'success' => true,
-            'shipping_cost' => $calculated_shipping,
-            'subtotal' => $subtotal,
-            'total' => $subtotal + $calculated_shipping,
-            'service' => $service
-        ];
+        echo "<h3 style='color: green;'>SUCCESS!</h3>";
+        echo "<p><strong>Total Shipping Cost:</strong> $" . number_format($calculated_shipping, 2) . "</p>";
+        echo "<p><strong>Subtotal:</strong> $" . number_format($subtotal, 2) . "</p>";
+        echo "<p><strong>Total:</strong> $" . number_format($subtotal + $calculated_shipping, 2) . "</p>";
         
-        error_log("AJAX shipping calculation successful: " . json_encode($response));
-        
-        header('Content-Type: application/json');
-        echo json_encode($response);
-        exit;
     } catch (Exception $e) {
-        error_log("AJAX shipping calculation error: " . $e->getMessage());
-        
-        $error_response = [
-            'success' => false,
-            'error' => 'Unable to calculate shipping: ' . $e->getMessage(),
-            'shipping_cost' => 5.00,
-            'subtotal' => $subtotal,
-            'total' => $subtotal + 5.00,
-            'debug_info' => [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]
-        ];
-        
-        header('Content-Type: application/json');
-        echo json_encode($error_response);
-        exit;
+        echo "<h3 style='color: red;'>ERROR OCCURRED!</h3>";
+        echo "<p><strong>Error Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
+        echo "<p><strong>File:</strong> " . htmlspecialchars($e->getFile()) . "</p>";
+        echo "<p><strong>Line:</strong> " . $e->getLine() . "</p>";
+        echo "<p><strong>Stack Trace:</strong></p>";
+        echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
     }
+    
+    echo "<hr>";
+    echo "<p><a href='checkout.php'>← Back to Checkout</a></p>";
+    exit;
 }
 
 // Handle order submission and shipping calculation
@@ -459,27 +454,28 @@ if (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shippi
                 formData.append('shipping_service', service || 'Ground');
                 formData.append('calculate_shipping_only', '1');
                 
-                                 fetch('ajax-test.php', {
+                fetch('checkout.php', {
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
+                .then(response => response.text())  // Changed from .json() to .text()
                 .then(data => {
-                    console.log('Shipping calculation response:', data); // Debug log
+                    // Open debug output in new window or redirect to see full error
+                    const newWindow = window.open('', '_blank');
+                    newWindow.document.write(data);
+                    newWindow.document.close();
+                    
+                    // Update shipping display to show debug was triggered
                     const shippingElements = document.querySelectorAll('.order-summary-total');
-                    if (data.success && shippingElements.length >= 3) {
-                        shippingElements[1].innerHTML = 'Shipping (' + data.service + '): $' + data.shipping_cost.toFixed(2);
-                        shippingElements[2].innerHTML = 'Total: $' + data.total.toFixed(2);
-                    } else {
-                        shippingElements[1].innerHTML = 'Shipping: Error - ' + (data.error || 'Unknown error');
-                        console.error('Shipping calculation failed:', data);
+                    if (shippingElements.length >= 2) {
+                        shippingElements[1].innerHTML = 'Shipping: Debug window opened - check for errors';
                     }
                 })
                 .catch(error => {
                     console.error('Error calculating shipping:', error);
                     const shippingElements = document.querySelectorAll('.order-summary-total');
                     if (shippingElements.length >= 2) {
-                        shippingElements[1].innerHTML = 'Shipping: Network error';
+                        shippingElements[1].innerHTML = 'Shipping: Network error - ' + error.message;
                     }
                 });
             }
