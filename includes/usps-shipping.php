@@ -238,21 +238,37 @@ class USPSShipping {
         
         $baseRate = $baseRates[$service] ?? $baseRates['Priority'];
         
-        // Weight multiplier (USPS charges by weight zones)
-        $weightCost = max(0, ($weight - 4) * 0.75); // First 4oz usually included
+        // Ensure weight is in pounds (convert from ounces if needed)
+        if ($weight > 50) {
+            // Likely in ounces, convert to pounds
+            $weightInPounds = $weight / 16;
+        } else {
+            // Already in pounds
+            $weightInPounds = $weight;
+        }
+        
+        // Weight multiplier - USPS charges more for heavier packages
+        // Most manga books are 0.5-1 lb, so charge extra for anything over 2 lbs
+        $weightCost = max(0, ($weightInPounds - 2) * 1.50);
         
         // Distance multiplier (zones 1-8)
         $zone = min(8, max(1, ceil($distance / 600))); // Rough zone calculation
         $zoneCost = ($zone - 1) * 1.25;
         
-        // Size adjustment for large items
+        // Size adjustment for large items (more reasonable calculation)
         $volume = $dimensions['length'] * $dimensions['width'] * $dimensions['height'];
-        $sizeCost = $volume > 50 ? ($volume - 50) * 0.05 : 0;
+        // Only add size cost for packages larger than a typical book box
+        $sizeCost = 0;
+        if ($volume > 200) { // About 8x8x3 inches
+            $sizeCost = min(($volume - 200) * 0.01, 15.00); // Cap at $15 size surcharge
+        }
         
         $totalCost = $baseRate + $weightCost + $zoneCost + $sizeCost;
         
-        // Ensure minimum shipping cost
-        $totalCost = max($totalCost, $baseRate);
+        // Reasonable shipping limits
+        $minShipping = $baseRate;
+        $maxShipping = $service === 'Express' ? 50.00 : 30.00; // Cap shipping costs
+        $totalCost = max($minShipping, min($maxShipping, $totalCost));
         
         // Service delivery times
         $deliveryTimes = [
@@ -267,10 +283,18 @@ class USPSShipping {
             'service' => "USPS $service Mail",
             'days' => $deliveryTimes[$service] ?? '1-3 business days',
             'zone' => $zone,
-            'estimated' => true
+            'estimated' => true,
+            'debug' => [
+                'weight_pounds' => $weightInPounds,
+                'volume' => $volume,
+                'base' => $baseRate,
+                'weight_cost' => $weightCost,
+                'zone_cost' => $zoneCost,
+                'size_cost' => $sizeCost
+            ]
         ];
         
-        error_log("Estimate shipping calculation: base=$baseRate, weight=$weightCost, zone=$zoneCost, size=$sizeCost, total=$totalCost");
+        error_log("Fixed shipping calculation: weight_lbs={$weightInPounds}, base=$baseRate, weight_cost=$weightCost, zone_cost=$zoneCost, size_cost=$sizeCost, total=$totalCost");
         return $result;
     }
     

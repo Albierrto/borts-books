@@ -241,6 +241,7 @@ $cart_count = count($_SESSION['cart']);
                 <ul>
                     <li><a href="/index.php">Home</a></li>
                     <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/track-order.php" class="active">Track Order</a></li>
                     <li><a href="/pages/sell.php">Sell Manga</a></li>
                     <li><a href="/pages/about.php">About</a></li>
                 </ul>
@@ -257,13 +258,6 @@ $cart_count = count($_SESSION['cart']);
 
     <main>
         <div class="track-container">
-            <?php if ($isAdmin): ?>
-                <a href="admin-dashboard.php" class="back-link">
-                    <i class="fas fa-arrow-left"></i>
-                    Back to Dashboard
-                </a>
-            <?php endif; ?>
-            
             <h1 class="track-title">Track Your Order</h1>
             <p class="track-subtitle">Enter your email address and order number to view your order details</p>
             

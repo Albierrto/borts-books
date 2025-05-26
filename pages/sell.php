@@ -84,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <ul>
                     <li><a href="/index.php">Home</a></li>
                     <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/track-order.php">Track Order</a></li>
                     <li><a href="/pages/sell.php">Sell Manga</a></li>
                     <li><a href="/pages/about.php">About</a></li>
                 </ul>
@@ -206,6 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <ul>
                     <li><a href="/index.php">Home</a></li>
                     <li><a href="/pages/shop.php">Shop</a></li>
+                    <li><a href="/pages/track-order.php">Track Order</a></li>
                     <li><a href="/pages/sell.php">Sell Manga</a></li>
                     <li><a href="/pages/about.php">About</a></li>
                 </ul>

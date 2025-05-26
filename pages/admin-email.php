@@ -3,10 +3,22 @@ session_start();
 require_once '../includes/db.php';
 require_once '../includes/email-system.php';
 
-// Check if user is logged in as admin
+// Enhanced admin security check
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     header('Location: admin-login.php');
     exit;
+}
+
+// Session timeout after 2 hours
+if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time']) > 7200) {
+    session_destroy();
+    header('Location: admin-login.php?timeout=1');
+    exit;
+}
+
+// CSRF token for forms
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 $pageTitle = "Email Marketing";
@@ -19,40 +31,49 @@ $message = '';
 $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action'])) {
-        switch ($_POST['action']) {
-            case 'export_subscribers':
-                // Export active subscribers to CSV
-                $subscribers = $emailSystem->getActiveSubscribers();
-                
-                header('Content-Type: text/csv');
-                header('Content-Disposition: attachment; filename="newsletter_subscribers_' . date('Y-m-d') . '.csv"');
-                
-                $output = fopen('php://output', 'w');
-                fputcsv($output, ['Email', 'Name', 'Subscribed Date', 'Source']);
-                
-                foreach ($subscribers as $sub) {
-                    fputcsv($output, [
-                        $sub['email'],
-                        $sub['name'] ?: 'Not provided',
-                        $sub['subscribed_at'],
-                        $sub['source']
-                    ]);
-                }
-                
-                fclose($output);
-                exit;
-                
-            case 'add_subscriber':
-                $email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
-                $name = trim($_POST['name']);
-                
-                if ($email) {
-                    $result = $emailSystem->addSubscriber($email, $name, 'admin');
-                    $message = $result['message'];
-                    $messageType = $result['success'] ? 'success' : 'error';
-                }
-                break;
+    // CSRF protection
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $message = 'Security token mismatch. Please try again.';
+        $messageType = 'error';
+    } else {
+        if (isset($_POST['action'])) {
+            switch ($_POST['action']) {
+                case 'export_subscribers':
+                    // Export active subscribers to CSV
+                    $subscribers = $emailSystem->getActiveSubscribers();
+                    
+                    header('Content-Type: text/csv');
+                    header('Content-Disposition: attachment; filename="newsletter_subscribers_' . date('Y-m-d') . '.csv"');
+                    
+                    $output = fopen('php://output', 'w');
+                    fputcsv($output, ['Email', 'Name', 'Subscribed Date', 'Source']);
+                    
+                    foreach ($subscribers as $sub) {
+                        fputcsv($output, [
+                            $sub['email'],
+                            $sub['name'] ?: 'Not provided',
+                            $sub['subscribed_at'],
+                            $sub['source']
+                        ]);
+                    }
+                    
+                    fclose($output);
+                    exit;
+                    
+                case 'add_subscriber':
+                    $email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
+                    $name = trim($_POST['name']);
+                    
+                    if ($email) {
+                        $result = $emailSystem->addSubscriber($email, $name, 'admin');
+                        $message = $result['message'];
+                        $messageType = $result['success'] ? 'success' : 'error';
+                    } else {
+                        $message = 'Please enter a valid email address';
+                        $messageType = 'error';
+                    }
+                    break;
+            }
         }
     }
 }
@@ -391,6 +412,7 @@ try {
                         <div style="margin-top: 1.5rem; text-align: center;">
                             <form method="POST" style="display: inline;">
                                 <input type="hidden" name="action" value="export_subscribers">
+                                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                                 <button type="submit" class="btn btn-secondary">
                                     <i class="fas fa-download"></i>
                                     Export CSV
@@ -408,6 +430,7 @@ try {
                     <div class="panel-content">
                         <form method="POST">
                             <input type="hidden" name="action" value="add_subscriber">
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                             
                             <div class="form-group">
                                 <label for="email">Email Address</label>
