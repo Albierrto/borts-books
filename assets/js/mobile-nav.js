@@ -1,12 +1,14 @@
 /**
  * Mobile Navigation JavaScript
  * Provides consistent mobile navigation across all pages
+ * Only initializes on mobile devices (768px and below)
  */
 
 class MobileNavigation {
     constructor() {
         this.isOpen = false;
         this.isInitialized = false;
+        this.isMobile = false;
         this.init();
     }
 
@@ -25,10 +27,22 @@ class MobileNavigation {
             return;
         }
         
-        this.createMobileNavigation();
-        this.bindEvents();
+        // Check if we're on mobile
+        this.checkMobile();
+        
+        // Only initialize on mobile
+        if (this.isMobile) {
+            this.createMobileNavigation();
+            this.bindEvents();
+        }
+        
+        // Always bind resize event to handle screen size changes
         this.handleResize();
         this.isInitialized = true;
+    }
+
+    checkMobile() {
+        this.isMobile = window.innerWidth <= 768;
     }
 
     createMobileNavigation() {
@@ -57,7 +71,7 @@ class MobileNavigation {
                 <!-- Mobile Navigation Menu -->
                 <nav class="mobile-nav-menu" role="navigation" aria-label="Mobile navigation">
                     <div class="mobile-nav-header">
-                        <h3>Menu</h3>
+                        <h3>Navigation</h3>
                         <button class="mobile-nav-close" aria-label="Close navigation menu">
                             <i class="fas fa-times"></i>
                         </button>
@@ -93,8 +107,7 @@ class MobileNavigation {
                     <div class="mobile-nav-footer">
                         <a href="/pages/cart.php" class="mobile-cart-link">
                             <i class="fas fa-shopping-cart"></i>
-                            <span>Shopping Cart</span>
-                            <span class="mobile-cart-count">${cartCount}</span>
+                            <span>Cart (${cartCount})</span>
                         </a>
                     </div>
                 </nav>
@@ -128,6 +141,9 @@ class MobileNavigation {
     }
 
     handleClick(e) {
+        // Only handle clicks if we're on mobile
+        if (!this.isMobile) return;
+
         // Mobile menu toggle button
         if (e.target.closest('.mobile-menu-toggle')) {
             e.preventDefault();
@@ -160,13 +176,15 @@ class MobileNavigation {
     }
 
     handleKeydown(e) {
-        if (e.key === 'Escape' && this.isOpen) {
+        if (e.key === 'Escape' && this.isOpen && this.isMobile) {
             e.preventDefault();
             this.closeMenu();
         }
     }
 
     toggleMenu() {
+        if (!this.isMobile) return;
+        
         if (this.isOpen) {
             this.closeMenu();
         } else {
@@ -175,6 +193,8 @@ class MobileNavigation {
     }
 
     openMenu() {
+        if (!this.isMobile) return;
+
         const overlay = document.querySelector('.mobile-nav-overlay');
         const menu = document.querySelector('.mobile-nav-menu');
         const toggle = document.querySelector('.mobile-menu-toggle');
@@ -231,9 +251,29 @@ class MobileNavigation {
     }
 
     handleResize() {
-        // Close mobile menu if window is resized to desktop size
-        if (window.innerWidth > 768 && this.isOpen) {
+        const wasMobile = this.isMobile;
+        this.checkMobile();
+        
+        // If we switched from mobile to desktop, close menu and remove mobile nav
+        if (wasMobile && !this.isMobile) {
             this.closeMenu();
+            this.removeMobileNavigation();
+        }
+        // If we switched from desktop to mobile, create mobile nav
+        else if (!wasMobile && this.isMobile && this.isInitialized) {
+            this.createMobileNavigation();
+            this.bindEvents();
+        }
+        // If we're on mobile and menu is open but window got bigger, close it
+        else if (this.isMobile && this.isOpen && window.innerWidth > 768) {
+            this.closeMenu();
+        }
+    }
+
+    removeMobileNavigation() {
+        const mobileNavContainer = document.querySelector('.mobile-nav-container');
+        if (mobileNavContainer) {
+            mobileNavContainer.remove();
         }
     }
 
@@ -286,17 +326,17 @@ class MobileNavigation {
 
     updateMobileCartCount() {
         const cartCount = this.getCartCount();
-        const mobileCartCount = document.querySelector('.mobile-cart-count');
-        if (mobileCartCount) {
-            mobileCartCount.textContent = cartCount;
+        const mobileCartLink = document.querySelector('.mobile-cart-link span');
+        if (mobileCartLink) {
+            mobileCartLink.textContent = `Cart (${cartCount})`;
         }
     }
 
     // Public method to update cart count externally
     static updateCartCount(count) {
-        const mobileCartCount = document.querySelector('.mobile-cart-count');
-        if (mobileCartCount) {
-            mobileCartCount.textContent = count;
+        const mobileCartLink = document.querySelector('.mobile-cart-link span');
+        if (mobileCartLink) {
+            mobileCartLink.textContent = `Cart (${count})`;
         }
     }
 
