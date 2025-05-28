@@ -446,6 +446,12 @@ footer {
         padding: 1rem 0;
     }
     
+    /* Make logo smaller on mobile to prevent overlapping */
+    .logo {
+        font-size: 1.5rem;
+        letter-spacing: -0.3px;
+    }
+    
     .main-nav {
         display: none; /* Hide desktop navigation on mobile */
     }
