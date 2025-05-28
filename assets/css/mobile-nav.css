@@ -259,9 +259,12 @@ body.mobile-nav-open {
         z-index: 998;
     }
     
-    /* Logo positioning */
+    /* Logo positioning and size for mobile */
     .logo {
         flex: 1;
+        font-size: 1.2rem !important;
+        letter-spacing: -0.1px !important;
+        line-height: 1.1 !important;
     }
     
     /* Adjust mobile toggle position for smaller screens */
