@@ -18,7 +18,7 @@
     border-radius: 4px;
     transition: all 0.3s ease;
     position: absolute;
-    right: 20px;
+    right: 60px; /* Move left to avoid cart icon */
     top: 50%;
     transform: translateY(-50%);
     z-index: 1001;
@@ -228,12 +228,19 @@ body.mobile-nav-open {
     
     /* Ensure cart icon has proper spacing */
     .search-cart {
-        margin-right: 3rem;
+        margin-right: 0; /* Remove extra margin */
+        position: relative;
+        z-index: 999; /* Ensure cart is below mobile nav toggle */
     }
     
     /* Logo positioning */
     .logo {
         flex: 1;
+    }
+    
+    /* Adjust mobile toggle position for smaller screens */
+    .mobile-menu-toggle {
+        right: 50px; /* Give more space from cart */
     }
 }
 

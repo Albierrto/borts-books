@@ -43,7 +43,7 @@ header {
     box-shadow: var(--shadow);
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 900;
     backdrop-filter: blur(8px);
     background-color: rgba(255, 255, 255, 0.98);
 }
@@ -446,8 +446,8 @@ footer {
         padding: 1rem 0;
     }
     
-    nav {
-        display: none; /* We'll need to add a mobile menu later */
+    .main-nav {
+        display: none; /* Hide desktop navigation on mobile */
     }
     
     .hero {

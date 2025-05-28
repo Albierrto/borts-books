@@ -6,6 +6,7 @@
 class MobileNavigation {
     constructor() {
         this.isOpen = false;
+        this.isInitialized = false;
         this.init();
     }
 
@@ -19,9 +20,15 @@ class MobileNavigation {
     }
 
     setup() {
+        // Prevent multiple initializations
+        if (this.isInitialized) {
+            return;
+        }
+        
         this.createMobileNavigation();
         this.bindEvents();
         this.handleResize();
+        this.isInitialized = true;
     }
 
     createMobileNavigation() {
@@ -102,48 +109,61 @@ class MobileNavigation {
     }
 
     bindEvents() {
-        // Mobile menu toggle button
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('.mobile-menu-toggle')) {
-                e.preventDefault();
-                this.toggleMenu();
-            }
-        });
-
-        // Mobile menu close button
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('.mobile-nav-close')) {
-                e.preventDefault();
-                this.closeMenu();
-            }
-        });
-
-        // Overlay click to close
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('mobile-nav-overlay')) {
-                this.closeMenu();
-            }
-        });
-
-        // Close menu when clicking on navigation links
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('.mobile-nav-items a')) {
-                this.closeMenu();
-            }
-        });
-
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isOpen) {
-                this.closeMenu();
-            }
-        });
+        // Use event delegation to avoid multiple listeners
+        document.removeEventListener('click', this.handleClick);
+        document.removeEventListener('keydown', this.handleKeydown);
+        
+        // Bind events with proper context
+        this.handleClick = this.handleClick.bind(this);
+        this.handleKeydown = this.handleKeydown.bind(this);
+        
+        document.addEventListener('click', this.handleClick);
+        document.addEventListener('keydown', this.handleKeydown);
 
         // Handle window resize
         window.addEventListener('resize', () => this.handleResize());
 
         // Update cart count when it changes
         this.observeCartChanges();
+    }
+
+    handleClick(e) {
+        // Mobile menu toggle button
+        if (e.target.closest('.mobile-menu-toggle')) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleMenu();
+            return;
+        }
+
+        // Mobile menu close button
+        if (e.target.closest('.mobile-nav-close')) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.closeMenu();
+            return;
+        }
+
+        // Overlay click to close
+        if (e.target.classList.contains('mobile-nav-overlay')) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.closeMenu();
+            return;
+        }
+
+        // Close menu when clicking on navigation links
+        if (e.target.closest('.mobile-nav-items a')) {
+            this.closeMenu();
+            return;
+        }
+    }
+
+    handleKeydown(e) {
+        if (e.key === 'Escape' && this.isOpen) {
+            e.preventDefault();
+            this.closeMenu();
+        }
     }
 
     toggleMenu() {
@@ -220,7 +240,7 @@ class MobileNavigation {
     getCurrentPage() {
         const path = window.location.pathname;
         
-        if (path === '/' || path === '/index.php') return 'home';
+        if (path === '/' || path === '/index.php' || path.endsWith('/')) return 'home';
         if (path.includes('/shop')) return 'shop';
         if (path.includes('/track-order')) return 'track';
         if (path.includes('/sell')) return 'sell';
@@ -289,7 +309,10 @@ class MobileNavigation {
 }
 
 // Initialize mobile navigation when script loads
-window.mobileNav = new MobileNavigation();
+// Prevent multiple initializations
+if (!window.mobileNav) {
+    window.mobileNav = new MobileNavigation();
+}
 
 // Export for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
