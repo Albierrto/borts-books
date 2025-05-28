@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Sanitize all user inputs
     $full_name = trim(strip_tags($_POST['full_name'] ?? ''));
     $email = trim(strip_tags($_POST['email'] ?? ''));
-    $phone = trim(strip_tags($_POST['phone'] ?? ''));
+
     $num_items = intval($_POST['num_items'] ?? 0);
     $overall_condition = trim(strip_tags($_POST['overall_condition'] ?? ''));
     
@@ -59,8 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // SQL injection protection: using prepared statements
     if (count($photo_paths) > 0) {
-        $stmt = $db->prepare('INSERT INTO sell_submissions (full_name, email, phone, num_items, overall_condition, item_details, photo_paths) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$full_name, $email, $phone, $num_items, $overall_condition, $set_details_json, $photo_paths_json]);
+        $stmt = $db->prepare('INSERT INTO sell_submissions (full_name, email, num_items, overall_condition, item_details, photo_paths) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$full_name, $email, $num_items, $overall_condition, $set_details_json, $photo_paths_json]);
         $successMsg = 'Thank you for your submission! We will review your manga sets and contact you soon.';
     } else {
         $successMsg = '<span style="color:#b71c1c;">You must upload at least one photo of your collection.</span>';
@@ -887,8 +887,7 @@ $cart_count = count($_SESSION['cart']);
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="phone">Phone Number</label>
-                            <input type="tel" id="phone" name="phone">
+                            
                         </div>
                         
                         <div class="form-group">

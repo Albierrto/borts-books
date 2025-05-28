@@ -388,10 +388,7 @@ class InputValidator {
         return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
     }
     
-    public static function validatePhone($phone) {
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-        return strlen($phone) >= 10 && strlen($phone) <= 15;
-    }
+
     
     public static function validateCreditCard($number) {
         $number = preg_replace('/[^0-9]/', '', $number);

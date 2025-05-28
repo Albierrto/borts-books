@@ -428,8 +428,7 @@ $cart_count = count($_SESSION['cart']);
             <div class="help-section">
                 <div class="help-title">Need Help?</div>
                 <p>If you can't find your order or need assistance, please contact us at 
-                   <a href="mailto:info@bortsbooks.com" style="color: #1976d2; font-weight: 600;">info@bortsbooks.com</a> 
-                   or call <strong>(123) 456-7890</strong>. Have your order number ready!</p>
+                                   <a href="mailto:bort@bortsbooks.com" style="color: #1976d2; font-weight: 600;">bort@bortsbooks.com</a>. Have your order number ready!</p>
             </div>
         </div>
     </main>

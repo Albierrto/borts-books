@@ -441,7 +441,7 @@ $currentPage = "returns";
                 <div class="process-step">
                     <div class="step-number">1</div>
                     <h4>Contact Us</h4>
-                    <p>Email us at info@bortsbooks.com with your order number and reason for return</p>
+                    <p>Email us at bort@bortsbooks.com with your order number and reason for return</p>
                 </div>
                 
                 <div class="process-step">
@@ -605,10 +605,7 @@ $currentPage = "returns";
                     <i class="fas fa-envelope"></i>
                     Email Support
                 </a>
-                <a href="tel:+11234567890" class="contact-btn">
-                    <i class="fas fa-phone"></i>
-                    Call Us
-                </a>
+
             </div>
         </div>
     </main>
@@ -643,8 +640,7 @@ $currentPage = "returns";
             <div class="footer-section">
                 <h3>Contact</h3>
                 <ul>
-                    <li><i class="fas fa-envelope"></i> info@bortsbooks.com</li>
-                    <li><i class="fas fa-phone"></i> (123) 456-7890</li>
+                    <li><i class="fas fa-envelope"></i> bort@bortsbooks.com</li>
                 </ul>
             </div>
         </div>

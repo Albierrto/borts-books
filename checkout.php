@@ -198,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $customerInfo = [
             'name' => $_POST['name'] ?? '',
             'email' => $_POST['email'] ?? '',
-            'phone' => $_POST['phone'] ?? '',
+
             'address' => $_POST['address'] ?? '',
             'city' => $_POST['city'] ?? '',
             'state' => $_POST['state'] ?? '',
@@ -212,9 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($customerInfo['email']) || !filter_var($customerInfo['email'], FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Valid email is required';
         }
-        if (empty($customerInfo['phone'])) {
-            $errors[] = 'Phone number is required';
-        }
+
         if (empty($customerInfo['address'])) {
             $errors[] = 'Address is required';
         }
@@ -392,8 +390,7 @@ if (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shippi
                 <label for="email">Email Address *</label>
                 <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
                 
-                <label for="phone">Phone Number *</label>
-                <input type="tel" id="phone" name="phone" required value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
+
                 
                 <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #232946;">Shipping Address</h3>
                 

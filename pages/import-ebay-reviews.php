@@ -170,51 +170,53 @@ require_once '../includes/reviews-system.php';
 // Initialize reviews system
 $reviewsSystem = new ReviewsSystem($db);
 
-// Sample eBay reviews - Replace these with your actual eBay reviews
-$ebayReviews = [
-    [
-        'customer_name' => 'manga_collector_2023',
-        'rating' => 5,
-        'review_title' => 'Perfect condition and fast shipping!',
-        'review_text' => 'Ordered a complete Naruto set and it arrived exactly as described. Books were in perfect condition and shipping was incredibly fast. Will definitely order again!',
-        'ebay_feedback_id' => 'fb_001'
-    ],
-    [
-        'customer_name' => 'anime_fan_87',
-        'rating' => 5,
-        'review_title' => 'Great prices and excellent service',
-        'review_text' => 'Found the best prices for Attack on Titan volumes here. Customer service was responsive and helpful. Highly recommend!',
-        'ebay_feedback_id' => 'fb_002'
-    ],
-    [
-        'customer_name' => 'bookworm_jane',
-        'rating' => 5,
-        'review_title' => 'Authentic manga, great condition',
-        'review_text' => 'Was worried about buying manga online but these were 100% authentic and in excellent condition. Packaging was secure too.',
-        'ebay_feedback_id' => 'fb_003'
-    ],
-    [
-        'customer_name' => 'otaku_mike',
-        'rating' => 4,
-        'review_title' => 'Good selection and fair prices',
-        'review_text' => 'Nice variety of manga titles. Prices are very competitive compared to other sellers. One book had minor shelf wear but overall satisfied.',
-        'ebay_feedback_id' => 'fb_004'
-    ],
-    [
-        'customer_name' => 'manga_master',
-        'rating' => 5,
-        'review_title' => 'Best manga seller on eBay!',
-        'review_text' => 'I\'ve bought from many manga sellers and this is by far the best. Accurate descriptions, fair prices, and lightning-fast shipping. A++',
-        'ebay_feedback_id' => 'fb_005'
-    ],
-    [
-        'customer_name' => 'collector_sarah',
-        'rating' => 5,
-        'review_title' => 'Rare finds at great prices',
-        'review_text' => 'Found some rare manga volumes I couldn\'t find anywhere else. Prices were much better than Amazon or other retailers. Very happy!',
-        'ebay_feedback_id' => 'fb_006'
-    ]
-];
+// Initialize reviews array from session or default
+if (!isset($_SESSION['ebay_reviews'])) {
+    $_SESSION['ebay_reviews'] = [
+        [
+            'customer_name' => 'manga_collector_2023',
+            'rating' => 5,
+            'review_title' => 'Perfect condition and fast shipping!',
+            'review_text' => 'Ordered a complete Naruto set and it arrived exactly as described. Books were in perfect condition and shipping was incredibly fast. Will definitely order again!',
+            'ebay_feedback_id' => 'fb_001'
+        ]
+    ];
+}
+
+$ebayReviews = $_SESSION['ebay_reviews'];
+
+// Handle adding new review
+if (isset($_POST['add_review'])) {
+    $newReview = [
+        'customer_name' => trim($_POST['customer_name']),
+        'rating' => (int)$_POST['rating'],
+        'review_title' => trim($_POST['review_title']),
+        'review_text' => trim($_POST['review_text']),
+        'ebay_feedback_id' => 'fb_' . time() . '_' . rand(100, 999)
+    ];
+    
+    $_SESSION['ebay_reviews'][] = $newReview;
+    $ebayReviews = $_SESSION['ebay_reviews'];
+    $add_message = "Review added successfully!";
+}
+
+// Handle deleting review
+if (isset($_POST['delete_review'])) {
+    $index = (int)$_POST['delete_index'];
+    if (isset($_SESSION['ebay_reviews'][$index])) {
+        unset($_SESSION['ebay_reviews'][$index]);
+        $_SESSION['ebay_reviews'] = array_values($_SESSION['ebay_reviews']); // Re-index array
+        $ebayReviews = $_SESSION['ebay_reviews'];
+        $delete_message = "Review deleted successfully!";
+    }
+}
+
+// Handle clearing all reviews
+if (isset($_POST['clear_all'])) {
+    $_SESSION['ebay_reviews'] = [];
+    $ebayReviews = [];
+    $clear_message = "All reviews cleared!";
+}
 
 // Check if form was submitted
 if ($_POST['action'] === 'import' && $_POST['confirm'] === 'yes') {
@@ -364,6 +366,102 @@ if ($_POST['action'] === 'import' && $_POST['confirm'] === 'yes') {
             border-radius: 8px;
             margin: 1rem 0;
         }
+        
+        .add-review-form {
+            background: #f8f9fa;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .add-review-form h3 {
+            margin: 0 0 1rem 0;
+            color: #28a745;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #28a745;
+        }
+        
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.3s ease;
+        }
+        
+        .btn-delete:hover {
+            background: #c82333;
+        }
+        
+        .no-reviews {
+            text-align: center;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #666;
+            margin: 1rem 0;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .review-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .btn-delete {
+                margin-top: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -379,31 +477,105 @@ if ($_POST['action'] === 'import' && $_POST['confirm'] === 'yes') {
             </div>
         <?php endif; ?>
         
+        <?php if (isset($add_message)): ?>
+            <div class="message">
+                <i class="fas fa-check-circle"></i> <?php echo $add_message; ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if (isset($delete_message)): ?>
+            <div class="message">
+                <i class="fas fa-check-circle"></i> <?php echo $delete_message; ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if (isset($clear_message)): ?>
+            <div class="message">
+                <i class="fas fa-check-circle"></i> <?php echo $clear_message; ?>
+            </div>
+        <?php endif; ?>
+        
+        <!-- Add New Review Form -->
+        <div class="add-review-form">
+            <h3><i class="fas fa-plus-circle"></i> Add New eBay Review</h3>
+            <form method="POST">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customer_name">Customer Name (anonymize if needed):</label>
+                        <input type="text" id="customer_name" name="customer_name" required placeholder="e.g., manga_fan_123">
+                    </div>
+                    <div class="form-group">
+                        <label for="rating">Rating:</label>
+                        <select id="rating" name="rating" required>
+                            <option value="5">5 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="2">2 Stars</option>
+                            <option value="1">1 Star</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="review_title">Review Title:</label>
+                    <input type="text" id="review_title" name="review_title" required placeholder="Brief summary of the review">
+                </div>
+                <div class="form-group">
+                    <label for="review_text">Review Text:</label>
+                    <textarea id="review_text" name="review_text" required rows="4" placeholder="Full review text from eBay feedback"></textarea>
+                </div>
+                <button type="submit" name="add_review" class="btn">
+                    <i class="fas fa-plus"></i> Add Review
+                </button>
+            </form>
+        </div>
+        
         <div class="warning">
             <strong><i class="fas fa-exclamation-triangle"></i> Instructions:</strong>
             <ol>
-                <li>Replace the sample reviews below with your actual eBay feedback</li>
+                <li>Add your real eBay reviews using the form above</li>
                 <li>Make sure to anonymize customer names if needed</li>
-                <li>Only import genuine reviews to maintain credibility</li>
-                <li>This script should only be run once to avoid duplicates</li>
+                <li>Only add genuine reviews to maintain credibility</li>
+                <li>You can edit the list below before importing</li>
             </ol>
         </div>
         
         <h3>Reviews to Import (<?php echo count($ebayReviews); ?> total):</h3>
         
-        <?php foreach ($ebayReviews as $index => $review): ?>
-            <div class="review-preview">
-                <h4><?php echo htmlspecialchars($review['review_title']); ?></h4>
-                <div class="stars">
-                    <?php for ($i = 1; $i <= 5; $i++): ?>
-                        <i class="fas fa-star<?php echo $i <= $review['rating'] ? '' : ' far'; ?>"></i>
-                    <?php endfor; ?>
-                    (<?php echo $review['rating']; ?>/5)
-                </div>
-                <p><strong>By:</strong> <?php echo htmlspecialchars($review['customer_name']); ?></p>
-                <p><?php echo htmlspecialchars($review['review_text']); ?></p>
+        <?php if (empty($ebayReviews)): ?>
+            <div class="no-reviews">
+                <p><i class="fas fa-info-circle"></i> No reviews added yet. Use the form above to add your eBay reviews.</p>
             </div>
-        <?php endforeach; ?>
+        <?php else: ?>
+            <?php foreach ($ebayReviews as $index => $review): ?>
+                <div class="review-preview">
+                    <div class="review-header">
+                        <h4><?php echo htmlspecialchars($review['review_title']); ?></h4>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="delete_index" value="<?php echo $index; ?>">
+                            <button type="submit" name="delete_review" class="btn-delete" onclick="return confirm('Are you sure you want to delete this review?')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="stars">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                            <i class="fas fa-star<?php echo $i <= $review['rating'] ? '' : ' far'; ?>"></i>
+                        <?php endfor; ?>
+                        (<?php echo $review['rating']; ?>/5)
+                    </div>
+                    <p><strong>By:</strong> <?php echo htmlspecialchars($review['customer_name']); ?></p>
+                    <p><?php echo htmlspecialchars($review['review_text']); ?></p>
+                </div>
+            <?php endforeach; ?>
+            
+            <div class="clear-all-section">
+                <form method="POST" style="text-align: center; margin: 2rem 0;">
+                    <button type="submit" name="clear_all" class="btn btn-danger" onclick="return confirm('Are you sure you want to clear ALL reviews? This cannot be undone.')">
+                        <i class="fas fa-trash-alt"></i> Clear All Reviews
+                    </button>
+                </form>
+            </div>
+        <?php endif; ?>
         
         <div class="import-form">
             <h3><i class="fas fa-database"></i> Import These Reviews</h3>

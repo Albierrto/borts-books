@@ -296,7 +296,7 @@ function statusBorder($status) {
                         </form>
                         <div class="submission-info"><span class="submission-label">Name:</span> <?php echo htmlspecialchars($sub['full_name']); ?></div>
                         <div class="submission-info"><span class="submission-label">Email:</span> <?php echo htmlspecialchars($sub['email']); ?></div>
-                        <div class="submission-info"><span class="submission-label">Phone:</span> <?php echo htmlspecialchars($sub['phone']); ?></div>
+        
                         <div class="submission-info"><span class="submission-label"># Items:</span> <?php echo htmlspecialchars($sub['num_items']); ?></div>
                         <div class="submission-info"><span class="submission-label">Overall Condition:</span> <?php echo htmlspecialchars($sub['overall_condition']); ?></div>
                         <?php $items = json_decode($sub['item_details'], true); if ($items && count($items)): ?>

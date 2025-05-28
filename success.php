@@ -42,7 +42,7 @@ if (empty($session_id)) {
                 'amount_total' => $session->amount_total / 100, // Convert from cents
                 'customer_email' => $session->customer_details->email ?? $session->customer_email,
                 'customer_name' => $session->metadata->customer_name ?? '',
-                'customer_phone' => $session->metadata->customer_phone ?? '',
+        
                 'payment_intent' => $session->payment_intent ?? '',
             ];
             
@@ -54,12 +54,11 @@ if (empty($session_id)) {
             if (!$db_error) {
                 try {
                     // Save order to database if possible
-                    $stmt = $db->prepare('INSERT INTO orders (stripe_session_id, customer_name, customer_email, customer_phone, total_amount, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+                    $stmt = $db->prepare('INSERT INTO orders (stripe_session_id, customer_name, customer_email, total_amount, payment_status, created_at) VALUES (?, ?, ?, ?, ?, NOW())');
                     $stmt->execute([
                         $session_id,
                         $order_details['customer_name'],
                         $order_details['customer_email'],
-                        $order_details['customer_phone'],
                         $order_details['amount_total'],
                         'paid'
                     ]);
@@ -235,12 +234,7 @@ if (empty($session_id)) {
                         <span class="detail-label">Email:</span>
                         <span><?php echo htmlspecialchars($order_details['customer_email']); ?></span>
                     </div>
-                    <?php if ($order_details['customer_phone']): ?>
-                    <div class="detail-row">
-                        <span class="detail-label">Phone:</span>
-                        <span><?php echo htmlspecialchars($order_details['customer_phone']); ?></span>
-                    </div>
-                    <?php endif; ?>
+
                     <div class="detail-row">
                         <span class="detail-label">Order ID:</span>
                         <span><?php echo htmlspecialchars(substr($order_details['session_id'], -12)); ?></span>

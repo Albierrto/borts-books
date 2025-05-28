@@ -40,11 +40,10 @@ try {
             stripe_session_id,
             customer_name,
             customer_email,
-            customer_phone,
             shipping_address,
             total_amount,
             payment_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
     ');
 
     $shippingAddress = json_encode($session->shipping);
@@ -52,7 +51,6 @@ try {
         $sessionId,
         $customerInfo['name'],
         $customerInfo['email'],
-        $customerInfo['phone'],
         $shippingAddress,
         $session->amount_total / 100, // Convert from cents
         'paid'
@@ -122,7 +120,7 @@ try {
                     <h3>Shipping Information</h3>
                     <p>Name: <?php echo htmlspecialchars($customerInfo['name']); ?></p>
                     <p>Email: <?php echo htmlspecialchars($customerInfo['email']); ?></p>
-                    <p>Phone: <?php echo htmlspecialchars($customerInfo['phone']); ?></p>
+
                     <p>Address: <?php echo htmlspecialchars($session->shipping->address->line1); ?></p>
                     <?php if ($session->shipping->address->line2): ?>
                         <p>Address 2: <?php echo htmlspecialchars($session->shipping->address->line2); ?></p>

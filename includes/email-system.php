@@ -74,7 +74,7 @@ class EmailSystem {
     /**
      * Track customer purchase and update records
      */
-    public function trackCustomerPurchase($email, $name, $phone, $orderTotal, $shippingAddress = null) {
+    public function trackCustomerPurchase($email, $name, $orderTotal, $shippingAddress = null) {
         try {
             // Check if customer exists
             $stmt = $this->db->prepare("SELECT * FROM customer_emails WHERE email = ?");
@@ -89,19 +89,18 @@ class EmailSystem {
                         total_orders = total_orders + 1,
                         total_spent = total_spent + ?,
                         name = COALESCE(?, name),
-                        phone = COALESCE(?, phone),
                         preferred_shipping_address = COALESCE(?, preferred_shipping_address)
                     WHERE email = ?
                 ");
-                $stmt->execute([$orderTotal, $name, $phone, $shippingAddress, $email]);
+                $stmt->execute([$orderTotal, $name, $shippingAddress, $email]);
             } else {
                 // Create new customer record
                 $stmt = $this->db->prepare("
                     INSERT INTO customer_emails 
-                    (email, name, phone, total_spent, preferred_shipping_address) 
-                    VALUES (?, ?, ?, ?, ?)
+                    (email, name, total_spent, preferred_shipping_address) 
+                    VALUES (?, ?, ?, ?)
                 ");
-                $stmt->execute([$email, $name, $phone, $orderTotal, $shippingAddress]);
+                $stmt->execute([$email, $name, $orderTotal, $shippingAddress]);
             }
             
             return true;

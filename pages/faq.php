@@ -321,7 +321,7 @@ $currentPage = "faq";
                     <i class="fas fa-plus faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    <p>Orders can be modified or cancelled within 2 hours of placement. After this time, the order enters our fulfillment process. Contact us immediately at info@bortsbooks.com if you need to make changes.</p>
+                    <p>Orders can be modified or cancelled within 2 hours of placement. After this time, the order enters our fulfillment process. Contact us immediately at bort@bortsbooks.com if you need to make changes.</p>
                 </div>
             </div>
 
@@ -463,7 +463,7 @@ $currentPage = "faq";
                     <i class="fas fa-plus faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    <p>Contact us at info@bortsbooks.com with your order number and reason for return. We'll provide return instructions and, if applicable, a return authorization number.</p>
+                    <p>Contact us at bort@bortsbooks.com with your order number and reason for return. We'll provide return instructions and, if applicable, a return authorization number.</p>
                 </div>
             </div>
         </div>
@@ -508,8 +508,7 @@ $currentPage = "faq";
             <div class="footer-section">
                 <h3>Contact</h3>
                 <ul>
-                    <li><i class="fas fa-envelope"></i> info@bortsbooks.com</li>
-                    <li><i class="fas fa-phone"></i> (123) 456-7890</li>
+                    <li><i class="fas fa-envelope"></i> bort@bortsbooks.com</li>
                 </ul>
             </div>
         </div>

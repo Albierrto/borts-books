@@ -96,7 +96,7 @@ class SEOOptimizer {
             "logo" => SITE_URL . "/assets/img/logo.png",
             "contactPoint" => [
                 "@type" => "ContactPoint",
-                "telephone" => "+1-555-MANGA-01",
+                "email" => "bort@bortsbooks.com",
                 "contactType" => "customer service",
                 "availableLanguage" => "English"
             ],

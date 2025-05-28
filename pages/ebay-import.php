@@ -342,8 +342,7 @@ if (isset($_POST['import_images'])) {
             <div class="footer-section">
                 <h3>Contact</h3>
                 <ul>
-                    <li><i class="fas fa-envelope"></i> info@bortsbooks.com</li>
-                    <li><i class="fas fa-phone"></i> (123) 456-7890</li>
+                    <li><i class="fas fa-envelope"></i> bort@bortsbooks.com</li>
                     <li><i class="fas fa-map-marker-alt"></i> 123 Manga St, Anime City, AC 12345</li>
                 </ul>
             </div>

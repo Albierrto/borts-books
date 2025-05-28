@@ -459,7 +459,7 @@ class CustomerRetentionSystem {
         // This could use PHPMailer, SendGrid, or another email service
         
         $headers = [
-            'From: Bort\'s Books <noreply@bortsbooks.com>',
+                            'From: Bort\'s Books <bort@bortsbooks.com>',
             'Content-Type: text/html; charset=UTF-8',
             'X-Mailer: PHP/' . phpversion()
         ];

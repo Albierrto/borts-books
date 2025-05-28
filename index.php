@@ -36,6 +36,7 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/mobile-nav.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -701,128 +702,19 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             }
         }
 
-        /* Responsive Mobile Navigation */
-        .topnav {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-        }
 
-        .topnav a {
-            color: #333;
-            text-decoration: none;
-            font-weight: 600;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .topnav a:hover,
-        .topnav a.active {
-            color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
-        }
-
-        /* Hide the hamburger icon by default */
-        .topnav .icon {
-            display: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-        }
-
-        .topnav .icon:hover {
-            background: rgba(102, 126, 234, 0.1);
-            color: #667eea;
-        }
-
-        /* Mobile Navigation Styles */
-        @media screen and (max-width: 768px) {
-            .header-container {
-                flex-wrap: wrap;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .topnav {
-                order: 3;
-                width: 100%;
-                flex-direction: column;
-                gap: 0;
-                background: #fff;
-                border-top: 1px solid #e1e5e9;
-                margin-top: 1rem;
-                padding-top: 1rem;
-                display: none;
-            }
-
-            .topnav.responsive {
-                display: flex;
-            }
-
-            .topnav a:not(.icon) {
-                display: block;
-                width: 100%;
-                text-align: left;
-                padding: 1rem;
-                border-bottom: 1px solid #f0f0f0;
-                margin: 0;
-                border-radius: 0;
-            }
-
-            .topnav a:not(.icon):last-of-type {
-                border-bottom: none;
-            }
-
-            .topnav .icon {
-                display: block;
-                position: absolute;
-                right: 20px;
-                top: 1rem;
-                order: 4;
-            }
-
-            .search-cart {
-                order: 2;
-            }
-
-            .logo {
-                order: 1;
-            }
-        }
-
-        /* Enhanced header container for mobile */
-        @media screen and (max-width: 768px) {
-            .header-container {
-                position: relative;
-                padding: 1rem 20px;
-            }
-        }
-
-        /* Ensure cart icon doesn't interfere with hamburger */
-        @media screen and (max-width: 768px) {
-            .search-cart {
-                margin-right: 3rem;
-            }
-        }
     </style>
 </head>
 <body>
     <header>
         <div class="container header-container">
             <a href="index.php" class="logo">Bort's <span>Books</span></a>
-            <nav class="topnav" id="myTopnav">
+            <nav class="main-nav">
                 <a href="/index.php" <?php echo $currentPage === 'home' ? 'class="active"' : ''; ?>>Home</a>
                 <a href="/pages/shop.php" <?php echo $currentPage === 'shop' ? 'class="active"' : ''; ?>>Shop</a>
                 <a href="/pages/track-order.php" <?php echo $currentPage === 'track' ? 'class="active"' : ''; ?>>Track Order</a>
                 <a href="/pages/sell.php" <?php echo $currentPage === 'sell' ? 'class="active"' : ''; ?>>Sell Manga</a>
                 <a href="/pages/about.php" <?php echo $currentPage === 'about' ? 'class="active"' : ''; ?>>About</a>
-                <a href="javascript:void(0);" class="icon" onclick="toggleMobileNav()">
-                    <i class="fa fa-bars"></i>
-                </a>
             </nav>
             <div class="search-cart">
                 <!-- REMOVED SEARCH BUTTON -->
@@ -993,8 +885,7 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             <div class="footer-section">
                 <h3>Contact</h3>
                 <ul>
-                    <li><i class="fas fa-envelope"></i> info@bortsbooks.com</li>
-                    <li><i class="fas fa-phone"></i> (123) 456-7890</li>
+                    <li><i class="fas fa-envelope"></i> bort@bortsbooks.com</li>
                 </ul>
             </div>
         </div>
@@ -1197,33 +1088,7 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             statusDiv.style.display = 'none';
         }
 
-        // Mobile Navigation Toggle Function
-        function toggleMobileNav() {
-            var x = document.getElementById("myTopnav");
-            if (x.className === "topnav") {
-                x.className += " responsive";
-            } else {
-                x.className = "topnav";
-            }
-        }
-
-        // Close mobile nav when clicking outside
-        document.addEventListener('click', function(e) {
-            const nav = document.getElementById("myTopnav");
-            const hamburger = nav.querySelector('.icon');
-            
-            if (!nav.contains(e.target) && nav.classList.contains('responsive')) {
-                nav.className = "topnav";
-            }
-        });
-
-        // Close mobile nav when clicking on a link
-        document.querySelectorAll('.topnav a:not(.icon)').forEach(link => {
-            link.addEventListener('click', function() {
-                const nav = document.getElementById("myTopnav");
-                nav.className = "topnav";
-            });
-        });
     </script>
+    <script src="assets/js/mobile-nav.js"></script>
 </body>
 </html>

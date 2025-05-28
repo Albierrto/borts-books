@@ -81,7 +81,7 @@ function createStripeCheckoutSession($cart, $customerInfo, $shipping_cost = null
             'customer_email' => $customerInfo['email'],
             'metadata' => [
                 'customer_name' => $customerInfo['name'],
-                'customer_phone' => $customerInfo['phone'],
+    
                 'shipping_address' => ($customerInfo['address'] ?? '') . ', ' . ($customerInfo['city'] ?? '') . ', ' . ($customerInfo['state'] ?? '') . ' ' . ($customerInfo['zip'] ?? ''),
             ],
         ]);
