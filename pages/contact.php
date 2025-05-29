@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../includes/cart-display.php';
+require_once '../includes/db.php';
 
 $pageTitle = "Contact Us";
 $currentPage = "contact";
@@ -22,12 +23,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_message = 'Please enter a valid email address.';
     } else {
-        // In a real application, you would send an email here
-        // For now, we'll just show a success message
-        $success_message = 'Thank you for contacting us! We\'ll get back to you within 24 hours.';
-        
-        // Log the contact form submission (in real app, save to database or send email)
-        error_log("Contact form submitted: Name: $name, Email: $email, Subject: $subject, Type: $inquiry_type");
+        try {
+            // Save customer request to database
+            $stmt = $db->prepare("
+                INSERT INTO customer_requests (name, email, subject, message, inquiry_type, created_at) 
+                VALUES (?, ?, ?, ?, ?, NOW())
+            ");
+            
+            $result = $stmt->execute([$name, $email, $subject, $message, $inquiry_type]);
+            
+            if ($result) {
+                $success_message = 'Thank you for contacting us! We\'ll get back to you within 24 hours.';
+                // Clear form data on success
+                $_POST = [];
+            } else {
+                $error_message = 'There was an error submitting your request. Please try again.';
+            }
+        } catch (Exception $e) {
+            error_log("Contact form error: " . $e->getMessage());
+            $error_message = 'There was an error submitting your request. Please try again.';
+        }
     }
 }
 ?>
@@ -294,8 +309,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 grid-template-columns: 1fr;
             }
         }
-
-
     </style>
 </head>
 <body>
@@ -394,17 +407,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <h4>Email Support</h4>
                         <p><a href="mailto:bort@bortsbooks.com">bort@bortsbooks.com</a></p>
                         <p>We respond within 24 hours</p>
-                    </div>
-                </div>
-                
-
-                
-                <div class="contact-method">
-                    <div class="icon"><i class="fas fa-comments"></i></div>
-                    <div class="details">
-                        <h4>Live Chat</h4>
-                        <p>Available on our website</p>
-                        <p>Mon-Fri: 10 AM - 5 PM PST</p>
                     </div>
                 </div>
             </div>

@@ -117,6 +117,11 @@ $pageTitle = "Admin Dashboard";
                 <h3>View Sell Submissions</h3>
                 <p>Review and manage manga sell requests from users.</p>
             </a>
+            <a href="admin-customer-requests.php" class="dashboard-card">
+                <i class="fas fa-headset"></i>
+                <h3>Customer Requests</h3>
+                <p>View and manage customer support requests from contact form.</p>
+            </a>
             <a href="admin-email.php" class="dashboard-card">
                 <i class="fas fa-envelope"></i>
                 <h3>Email Marketing</h3>
