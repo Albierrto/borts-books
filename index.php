@@ -855,7 +855,19 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
 
         // Handle window resize
         window.addEventListener('resize', () => {
-            location.reload(); // Simple solution for responsive carousel
+            // Use debounced resize instead of immediate reload to prevent flicker
+            clearTimeout(window.carouselResizeTimeout);
+            window.carouselResizeTimeout = setTimeout(() => {
+                const newVisibleCards = window.innerWidth <= 480 ? 1 : window.innerWidth <= 768 ? 2 : window.innerWidth <= 1024 ? 3 : 4;
+                const newCardWidth = window.innerWidth <= 480 ? 232 : 272;
+                
+                // Only update if values actually changed
+                if (newVisibleCards !== visibleCards || newCardWidth !== cardWidth) {
+                    // Smoothly update without page reload
+                    currentIndex = 0;
+                    updateCarousel();
+                }
+            }, 250);
         });
 
         // Add to cart functionality

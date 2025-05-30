@@ -128,12 +128,13 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         .product-image {
             width: 160px;
-            height: 230px;
+            height: 160px;
             object-fit: cover;
             border-radius: 4px;
             background: #f4f4f4;
             margin-bottom: 1rem;
             cursor: pointer;
+            aspect-ratio: 1;
         }
         .product-title {
             font-size: 1.2rem;
@@ -153,13 +154,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             font-size: 1.1rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
-        }
-        .product-description {
-            font-size: 0.98rem;
-            color: #444;
-            margin-bottom: 1.5rem;
-            text-align: center;
-            flex-grow: 1;
         }
         .product-actions {
             display: flex;
@@ -377,12 +371,12 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         src="<?php echo $product['main_image'] ? htmlspecialchars($product['main_image']) : '../assets/img/placeholder.png'; ?>" 
                         alt="<?php echo htmlspecialchars($product['title']); ?> cover"
                         onclick="window.location.href='product.php?id=<?php echo $product['id']; ?>'"
-                        data-title="<?php echo htmlspecialchars($product['title']); ?>">
+                        data-title="<?php echo htmlspecialchars($product['title']); ?>"
+                        loading="lazy">
                     <div class="product-title">
                         <a href="product.php?id=<?php echo $product['id']; ?>"><?php echo htmlspecialchars($product['title']); ?></a>
                     </div>
                     <div class="product-price"><?php echo ($product['price'] > 0) ? '$' . number_format($product['price'], 2) : '<span style="color:#888">Price unavailable</span>'; ?></div>
-                    <div class="product-description"><?php echo $product['description'] ? htmlspecialchars($product['description']) : '<span style="color:#aaa">No description</span>'; ?></div>
                     
                     <div class="product-actions">
                         <a href="product.php?id=<?php echo $product['id']; ?>" class="view-details-btn">View Details</a>

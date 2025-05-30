@@ -88,13 +88,17 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
             border-radius: 8px;
             overflow: hidden;
             background: #f4f4f4;
+            aspect-ratio: 1;
+            max-width: 400px;
+            margin: 0 auto;
         }
         
         .product-detail-image {
             width: 100%;
-            height: 500px;
+            height: 100%;
             object-fit: cover;
             display: block;
+            cursor: zoom-in;
         }
         
         .image-gallery-container {
@@ -102,28 +106,32 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
             gap: 0.5rem;
             flex-wrap: wrap;
             justify-content: center;
+            max-width: 400px;
+            margin: 0 auto;
         }
         
         .thumbnail-image {
-            width: 60px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             object-fit: cover;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             border: 2px solid transparent;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
+            aspect-ratio: 1;
         }
         
         .thumbnail-image:hover,
         .thumbnail-image.active {
             border-color: #e63946;
+            transform: scale(1.05);
         }
         
         .more-images-indicator {
             position: relative;
-            width: 60px;
-            height: 80px;
-            border-radius: 4px;
+            width: 70px;
+            height: 70px;
+            border-radius: 6px;
             background: rgba(0,0,0,0.7);
             display: flex;
             align-items: center;
@@ -132,6 +140,107 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
             font-weight: 600;
             font-size: 0.9rem;
             cursor: pointer;
+            transition: all 0.2s;
+            aspect-ratio: 1;
+        }
+        
+        .more-images-indicator:hover {
+            background: rgba(0,0,0,0.8);
+            transform: scale(1.05);
+        }
+        
+        /* Image Modal for Gallery */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            backdrop-filter: blur(5px);
+        }
+        
+        .image-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            margin: auto;
+        }
+        
+        .modal-image {
+            width: 100%;
+            height: auto;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .modal-nav:hover {
+            background: rgba(0,0,0,0.7);
+        }
+        
+        .modal-prev {
+            left: -60px;
+        }
+        
+        .modal-next {
+            right: -60px;
+        }
+        
+        .modal-counter {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
         }
         
         .product-info-section {
@@ -298,7 +407,7 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
             <div class="product-images-section">
                 <div class="main-image-container">
                     <?php if ($images && count($images) > 0): ?>
-                        <img id="mainImage" class="product-detail-image" src="<?php echo htmlspecialchars($images[0]['image_url']); ?>" alt="<?php echo htmlspecialchars($product['title']); ?> cover">
+                        <img id="mainImage" class="product-detail-image" src="<?php echo htmlspecialchars($images[0]['image_url']); ?>" alt="<?php echo htmlspecialchars($product['title']); ?> cover" onclick="openImageModal(0)">
                     <?php else: ?>
                         <img id="mainImage" class="product-detail-image" src="../assets/img/placeholder.png" alt="<?php echo htmlspecialchars($product['title']); ?> cover">
                     <?php endif; ?>
@@ -316,7 +425,8 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
                         <img class="thumbnail-image <?php echo $index === 0 ? 'active' : ''; ?>" 
                              src="<?php echo htmlspecialchars($img['image_url']); ?>" 
                              alt="<?php echo htmlspecialchars($product['title']); ?> view <?php echo $index + 1; ?>"
-                             onclick="changeMainImage('<?php echo htmlspecialchars($img['image_url']); ?>', this)">
+                             onclick="changeMainImage('<?php echo htmlspecialchars($img['image_url']); ?>', this)"
+                             loading="lazy">
                     <?php endforeach; ?>
                     
                     <?php if ($remainingCount > 0): ?>
@@ -373,5 +483,24 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
         </div>
         <?php endif; ?>
         </main>        <script src="../assets/js/product.js"></script>
+        
+    <!-- Image Modal -->
+    <div id="imageModal" class="image-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeImageModal()">&times;</button>
+            <button class="modal-nav modal-prev" onclick="prevImage()">&lt;</button>
+            <img id="modalImage" class="modal-image" src="" alt="">
+            <button class="modal-nav modal-next" onclick="nextImage()">&gt;</button>
+            <div class="modal-counter">
+                <span id="modalCounter">1 / 1</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Pass PHP images array to JavaScript
+        const productImages = <?php echo json_encode($images); ?>;
+        let currentModalIndex = 0;
+    </script>
 </body>
 </html> 

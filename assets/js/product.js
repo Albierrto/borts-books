@@ -1,5 +1,40 @@
 // Product page functionality
 
+// Image caching and preloading for better performance
+const imageCache = new Map();
+let preloadedImages = new Set();
+
+function preloadImage(src) {
+    if (preloadedImages.has(src)) return Promise.resolve();
+    
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            imageCache.set(src, img);
+            preloadedImages.add(src);
+            resolve(img);
+        };
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+function preloadAllImages() {
+    if (typeof productImages !== 'undefined' && productImages.length > 0) {
+        // Preload first 3 images immediately for instant viewing
+        const priorityImages = productImages.slice(0, 3);
+        priorityImages.forEach(img => preloadImage(img.image_url));
+        
+        // Preload remaining images with staggered delay to avoid blocking
+        setTimeout(() => {
+            const remainingImages = productImages.slice(3);
+            remainingImages.forEach((img, index) => {
+                setTimeout(() => preloadImage(img.image_url), index * 100);
+            });
+        }, 1000);
+    }
+}
+
 // Image gallery functionality
 function changeMainImage(src, thumbnail) {
     document.getElementById('mainImage').src = src;
@@ -7,15 +42,68 @@ function changeMainImage(src, thumbnail) {
     // Update active thumbnail
     document.querySelectorAll('.thumbnail-image').forEach(img => img.classList.remove('active'));
     thumbnail.classList.add('active');
+    
+    // Update current modal index for main image clicks
+    if (typeof productImages !== 'undefined') {
+        currentModalIndex = productImages.findIndex(img => img.image_url === src);
+        if (currentModalIndex === -1) currentModalIndex = 0;
+    }
+}
+
+function openImageModal(index = 0) {
+    if (typeof productImages === 'undefined' || productImages.length === 0) return;
+    
+    currentModalIndex = index;
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const modalCounter = document.getElementById('modalCounter');
+    
+    modalImage.src = productImages[currentModalIndex].image_url;
+    modalImage.alt = productImages[currentModalIndex].alt || 'Product image';
+    modalCounter.textContent = `${currentModalIndex + 1} / ${productImages.length}`;
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = ''; // Restore scrolling
+}
+
+function nextImage() {
+    if (typeof productImages === 'undefined' || productImages.length === 0) return;
+    
+    currentModalIndex = (currentModalIndex + 1) % productImages.length;
+    const modalImage = document.getElementById('modalImage');
+    const modalCounter = document.getElementById('modalCounter');
+    
+    modalImage.src = productImages[currentModalIndex].image_url;
+    modalCounter.textContent = `${currentModalIndex + 1} / ${productImages.length}`;
+}
+
+function prevImage() {
+    if (typeof productImages === 'undefined' || productImages.length === 0) return;
+    
+    currentModalIndex = (currentModalIndex - 1 + productImages.length) % productImages.length;
+    const modalImage = document.getElementById('modalImage');
+    const modalCounter = document.getElementById('modalCounter');
+    
+    modalImage.src = productImages[currentModalIndex].image_url;
+    modalCounter.textContent = `${currentModalIndex + 1} / ${productImages.length}`;
 }
 
 function showAllImages() {
-    // In a real implementation, this could open a modal or lightbox with all images
-    alert('Feature coming soon: View all images in gallery mode');
+    // Open modal with first image
+    openImageModal(0);
 }
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    // Start preloading images for better performance
+    preloadAllImages();
+    
     // Carousel functionality
     const carousel = document.getElementById('carousel');
     if (carousel) {
@@ -55,6 +143,34 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Initialize carousel
         updateCarousel();
+    }
+    
+    // Image modal keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('imageModal');
+        if (modal && modal.classList.contains('active')) {
+            switch(e.key) {
+                case 'Escape':
+                    closeImageModal();
+                    break;
+                case 'ArrowLeft':
+                    prevImage();
+                    break;
+                case 'ArrowRight':
+                    nextImage();
+                    break;
+            }
+        }
+    });
+    
+    // Click outside modal to close
+    const modal = document.getElementById('imageModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeImageModal();
+            }
+        });
     }
     
     // Add to cart with AJAX functionality

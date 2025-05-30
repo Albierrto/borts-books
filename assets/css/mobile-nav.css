@@ -65,6 +65,8 @@
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
 }
 
 .mobile-nav-overlay.active {
@@ -81,11 +83,12 @@
     height: 100vh;
     background: #fff;
     z-index: 1000;
-    transition: right 0.3s ease;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: -2px 0 15px rgba(0, 0, 0, 0.2);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    -webkit-overflow-scrolling: touch;
 }
 
 .mobile-nav-menu.active {
@@ -221,9 +224,10 @@
     margin-left: auto;
 }
 
-/* Prevent body scroll when menu is open */
+/* Improved scroll prevention - no more overflow hidden on body */
 body.mobile-nav-open {
-    overflow: hidden;
+    /* Scroll prevention is now handled via JavaScript with position: fixed */
+    /* This prevents the flicker issue while still preventing scroll */
 }
 
 /* Mobile-specific styles - ONLY show on mobile */
@@ -270,6 +274,16 @@ body.mobile-nav-open {
     /* Adjust mobile toggle position for smaller screens */
     .mobile-menu-toggle {
         right: 50px;
+    }
+    
+    /* Improve mobile scrolling performance */
+    html {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Prevent horizontal scroll on mobile */
+    body {
+        overflow-x: hidden;
     }
 }
 

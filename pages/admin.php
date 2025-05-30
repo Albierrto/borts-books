@@ -34,9 +34,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mass_edit_submit'])) 
             $params[] = $_POST['mass_category'];
         }
         
-        if (!empty($_POST['mass_description'])) {
-            $updates[] = "description = ?";
-            $params[] = $_POST['mass_description'];
+        // Handle description actions
+        if (!empty($_POST['mass_description_action'])) {
+            $action = $_POST['mass_description_action'];
+            $text = $_POST['mass_description_text'] ?? '';
+            
+            switch ($action) {
+                case 'replace':
+                    $updates[] = "description = ?";
+                    $params[] = $text;
+                    break;
+                case 'append':
+                    if (!empty($text)) {
+                        $updates[] = "description = CONCAT(COALESCE(description, ''), ?)";
+                        $params[] = $text;
+                    }
+                    break;
+                case 'prepend':
+                    if (!empty($text)) {
+                        $updates[] = "description = CONCAT(?, COALESCE(description, ''))";
+                        $params[] = $text;
+                    }
+                    break;
+                case 'clear':
+                    $updates[] = "description = ''";
+                    break;
+            }
         }
         
         if (isset($_POST['mass_price_adjustment']) && !empty($_POST['mass_price_adjustment'])) {
@@ -582,8 +605,18 @@ $categories = $cat_stmt->fetchAll(PDO::FETCH_COLUMN);
                 </div>
                 
                 <div class="mass-edit-group" style="margin-bottom: 1rem;">
-                    <label for="mass_description">Append to Description</label>
-                    <textarea id="mass_description" name="mass_description" placeholder="Text to append to existing descriptions..."></textarea>
+                    <label for="mass_description_action">Description Action</label>
+                    <select id="mass_description_action" name="mass_description_action" style="margin-bottom: 0.5rem;">
+                        <option value="">Don't Change Descriptions</option>
+                        <option value="replace">Replace All Descriptions</option>
+                        <option value="append">Append to Descriptions</option>
+                        <option value="prepend">Prepend to Descriptions</option>
+                        <option value="clear">Clear All Descriptions</option>
+                    </select>
+                    <textarea id="mass_description_text" name="mass_description_text" placeholder="Enter description text..." rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; resize: vertical;"></textarea>
+                    <small style="color: #666; font-size: 0.9rem;">
+                        Replace: Overwrites existing descriptions | Append: Adds to end | Prepend: Adds to beginning | Clear: Removes all descriptions
+                    </small>
                 </div>
                 
                 <div class="mass-actions-buttons">
@@ -734,7 +767,7 @@ $categories = $cat_stmt->fetchAll(PDO::FETCH_COLUMN);
             const price = document.getElementById('mass_price').value;
             const condition = document.getElementById('mass_condition').value;
             const category = document.getElementById('mass_category').value;
-            const description = document.getElementById('mass_description').value;
+            const description = document.getElementById('mass_description_text').value;
             const priceAdjustment = document.querySelector('input[name="mass_price_adjustment"]').value;
 
             if (!price && !condition && !category && !description && !priceAdjustment) {

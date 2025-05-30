@@ -9,6 +9,7 @@ class MobileNavigation {
         this.isOpen = false;
         this.isInitialized = false;
         this.isMobile = false;
+        this.scrollPosition = 0;
         this.init();
     }
 
@@ -133,8 +134,12 @@ class MobileNavigation {
         document.addEventListener('click', this.handleClick);
         document.addEventListener('keydown', this.handleKeydown);
 
-        // Handle window resize
-        window.addEventListener('resize', () => this.handleResize());
+        // Handle window resize with debouncing
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => this.handleResize(), 100);
+        });
 
         // Update cart count when it changes
         this.observeCartChanges();
@@ -200,7 +205,13 @@ class MobileNavigation {
         const toggle = document.querySelector('.mobile-menu-toggle');
 
         if (overlay && menu && toggle) {
-            // Prevent body scroll
+            // Store current scroll position before preventing scroll
+            this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            
+            // Prevent body scroll with improved method
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${this.scrollPosition}px`;
+            document.body.style.width = '100%';
             document.body.classList.add('mobile-nav-open');
             
             // Show overlay and menu
@@ -231,8 +242,14 @@ class MobileNavigation {
         const toggle = document.querySelector('.mobile-menu-toggle');
 
         if (overlay && menu && toggle) {
-            // Allow body scroll
+            // Restore body scroll with improved method
             document.body.classList.remove('mobile-nav-open');
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            
+            // Restore scroll position
+            window.scrollTo(0, this.scrollPosition);
             
             // Hide overlay and menu
             overlay.classList.remove('active');
