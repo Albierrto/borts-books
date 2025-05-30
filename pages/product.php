@@ -482,7 +482,7 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
             <button id="nextBtn" class="carousel-nav-btn carousel-next">&gt;</button>
         </div>
         <?php endif; ?>
-        </main>        <script src="../assets/js/product.js"></script>
+        </main>        <script src="../assets/js/product.js?v=2.1"></script>
         
     <!-- Image Modal -->
     <div id="imageModal" class="image-modal">
@@ -501,6 +501,29 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
         // Pass PHP images array to JavaScript
         const productImages = <?php echo json_encode($images); ?>;
         let currentModalIndex = 0;
+        
+        // Test function to verify modal works
+        function testModal() {
+            console.log('Test modal function called');
+            const modal = document.getElementById('imageModal');
+            if (modal) {
+                modal.classList.add('active');
+                console.log('Modal should be visible now');
+            } else {
+                console.error('Modal element not found');
+            }
+        }
+        
+        // Add test button for debugging (remove after fixing)
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.location.search.includes('debug=modal')) {
+                const testBtn = document.createElement('button');
+                testBtn.textContent = 'Test Modal';
+                testBtn.onclick = testModal;
+                testBtn.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;background:red;color:white;padding:10px;';
+                document.body.appendChild(testBtn);
+            }
+        });
     </script>
 </body>
 </html> 

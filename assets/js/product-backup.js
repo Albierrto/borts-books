@@ -95,17 +95,6 @@ function prevImage() {
 }
 
 function showAllImages() {
-    console.log('showAllImages function called - opening gallery modal');
-    
-    // Check if productImages is available
-    if (typeof productImages === 'undefined' || productImages.length === 0) {
-        console.error('No product images available');
-        alert('No additional images to display');
-        return;
-    }
-    
-    console.log('Opening modal with', productImages.length, 'images');
-    
     // Open modal with first image
     openImageModal(0);
 }
