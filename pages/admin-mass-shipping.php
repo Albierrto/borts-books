@@ -22,19 +22,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $updates = [];
                         $params = [];
                         
-                        // Build dynamic update query
-                        if (!empty($_POST['weight'])) {
+                        // Handle weight - convert pounds and ounces to total ounces
+                        if (!empty($_POST['weight_lbs']) || !empty($_POST['weight_oz'])) {
+                            $weight_lbs = floatval($_POST['weight_lbs'] ?? 0);
+                            $weight_oz = floatval($_POST['weight_oz'] ?? 0);
+                            $total_weight_oz = ($weight_lbs * 16) + $weight_oz;
                             $updates[] = "weight = ?";
-                            $params[] = (float)$_POST['weight'];
+                            $params[] = $total_weight_oz;
                         }
+                        
+                        // Handle dimensions
                         if (!empty($_POST['dimensions'])) {
                             $updates[] = "dimensions = ?";
                             $params[] = $_POST['dimensions'];
                         }
+                        
+                        // Handle shipping option
                         if (!empty($_POST['shipping_option'])) {
                             $updates[] = "shipping_option = ?";
                             $params[] = $_POST['shipping_option'];
                         }
+                        
+                        // Handle flat rate
                         if (!empty($_POST['flat_rate'])) {
                             $updates[] = "flat_rate = ?";
                             $params[] = (float)$_POST['flat_rate'];
@@ -63,10 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 ELSE 6
                             END,
                             dimensions = CASE 
-                                WHEN title LIKE '%box set%' OR title LIKE '%complete%' THEN '8.0x6.0x4.0'
+                                WHEN title LIKE '%box set%' OR title LIKE '%complete%' THEN '10.0x8.0x6.0'
                                 WHEN title LIKE '%omnibus%' OR title LIKE '%deluxe%' THEN '8.5x6.0x1.5'
                                 WHEN title LIKE '%light novel%' THEN '7.0x4.2x0.8'
-                                ELSE '7.5x5.0x0.8'
+                                ELSE '10.0x8.0x6.0'
                             END
                             WHERE weight IS NULL OR weight = 0 OR dimensions IS NULL OR dimensions = ''";
                     
@@ -355,6 +364,12 @@ $stats = [
 </head>
 <body>
     <div class="admin-container">
+        <div style="margin-bottom: 1rem;">
+            <a href="admin.php" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #666; text-decoration: none; font-weight: 600;">
+                <i class="fas fa-arrow-left"></i> Back to Admin Dashboard
+            </a>
+        </div>
+        
         <div class="admin-header">
             <h1><i class="fas fa-shipping-fast"></i> Mass Shipping Editor</h1>
             <p>Bulk edit weights, dimensions, and shipping options for accurate USPS rates</p>
@@ -423,15 +438,21 @@ $stats = [
             
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="weight">Weight (ounces)</label>
-                    <input type="number" id="weight" name="weight" step="0.1" placeholder="e.g., 6.0">
+                    <label for="weight_lbs">Weight - Pounds</label>
+                    <input type="number" id="weight_lbs" name="weight_lbs" step="0.1" placeholder="0" min="0">
+                    <small>Enter pounds (will be converted to ounces)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="weight_oz">Weight - Ounces</label>
+                    <input type="number" id="weight_oz" name="weight_oz" step="0.1" placeholder="6.0" min="0" max="15.9">
                     <small>Typical manga: 6 oz, Light novel: 4 oz, Omnibus: 16 oz</small>
                 </div>
                 
                 <div class="form-group">
-                    <label for="dimensions">Dimensions (L x W x H inches)</label>
-                    <input type="text" id="dimensions" name="dimensions" placeholder="e.g., 7.5x5.0x0.8">
-                    <small>Typical manga: 7.5x5.0x0.8, Light novel: 7.0x4.2x0.8</small>
+                    <label for="dimensions">Dimensions (LxWxH inches)</label>
+                    <input type="text" id="dimensions" name="dimensions" placeholder="e.g., 10.0x8.0x6.0">
+                    <small>Default: 10x8x6, Light novel: 7.0x4.2x0.8, Omnibus: 8.5x6.0x1.5</small>
                 </div>
                 
                 <div class="form-group">
@@ -474,7 +495,7 @@ $stats = [
                         <tr>
                             <th>Select</th>
                             <th>Product</th>
-                            <th>Weight (oz)</th>
+                            <th>Weight</th>
                             <th>Dimensions</th>
                             <th>Shipping Option</th>
                             <th>Flat Rate</th>
@@ -491,18 +512,33 @@ $stats = [
                                     <?php echo htmlspecialchars($product['title']); ?>
                                 </td>
                                 <td>
+                                    <?php 
+                                    $weight_oz = $product['weight'] ?: 0;
+                                    $lbs = floor($weight_oz / 16);
+                                    $oz = $weight_oz % 16;
+                                    $weight_display = '';
+                                    if ($lbs > 0) {
+                                        $weight_display .= $lbs . 'lb ';
+                                    }
+                                    if ($oz > 0 || $lbs == 0) {
+                                        $weight_display .= number_format($oz, 1) . 'oz';
+                                    }
+                                    echo $weight_display ?: 'Not set';
+                                    ?>
                                     <input type="number" class="weight-input" 
                                            value="<?php echo $product['weight'] ?: ''; ?>" 
                                            step="0.1" 
                                            data-product-id="<?php echo $product['id']; ?>"
-                                           data-field="weight">
+                                           data-field="weight"
+                                           placeholder="oz"
+                                           style="display: block; margin-top: 0.25rem; font-size: 0.8rem;">
                                 </td>
                                 <td>
                                     <input type="text" class="dimension-input" 
                                            value="<?php echo htmlspecialchars($product['dimensions'] ?: ''); ?>" 
                                            data-product-id="<?php echo $product['id']; ?>"
                                            data-field="dimensions"
-                                           placeholder="7.5x5.0x0.8">
+                                           placeholder="10.0x8.0x6.0">
                                 </td>
                                 <td>
                                     <select class="shipping-select" 
@@ -581,7 +617,31 @@ $stats = [
             if (e.target.dataset.productId && e.target.dataset.field) {
                 const productId = e.target.dataset.productId;
                 const field = e.target.dataset.field;
-                const value = e.target.value;
+                let value = e.target.value;
+                
+                // Validate dimensions format
+                if (field === 'dimensions' && value) {
+                    const dimensionPattern = /^\d+(\.\d+)?\s*x\s*\d+(\.\d+)?\s*x\s*\d+(\.\d+)?$/i;
+                    if (!dimensionPattern.test(value)) {
+                        e.target.style.background = '#f8d7da';
+                        e.target.title = 'Invalid format. Use: LengthxWidthxHeight (e.g., 10.0x8.0x6.0)';
+                        return;
+                    } else {
+                        e.target.title = '';
+                    }
+                }
+                
+                // Validate weight
+                if (field === 'weight' && value) {
+                    const weight = parseFloat(value);
+                    if (isNaN(weight) || weight < 0) {
+                        e.target.style.background = '#f8d7da';
+                        e.target.title = 'Weight must be a positive number';
+                        return;
+                    } else {
+                        e.target.title = '';
+                    }
+                }
                 
                 // Auto-save via AJAX
                 fetch('admin-mass-shipping.php', {
@@ -593,17 +653,60 @@ $stats = [
                 })
                 .then(response => response.text())
                 .then(data => {
-                    // Visual feedback
-                    e.target.style.background = '#d4edda';
-                    setTimeout(() => {
-                        e.target.style.background = '';
-                    }, 1000);
+                    if (data === 'OK') {
+                        // Visual feedback for success
+                        e.target.style.background = '#d4edda';
+                        setTimeout(() => {
+                            e.target.style.background = '';
+                        }, 1000);
+                        
+                        // Update weight display if it's a weight field
+                        if (field === 'weight' && value) {
+                            updateWeightDisplay(e.target, parseFloat(value));
+                        }
+                    } else {
+                        throw new Error(data);
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     e.target.style.background = '#f8d7da';
+                    e.target.title = 'Error saving: ' + error.message;
                 });
             }
+        });
+        
+        // Function to update weight display
+        function updateWeightDisplay(input, weightOz) {
+            const lbs = Math.floor(weightOz / 16);
+            const oz = weightOz % 16;
+            let display = '';
+            if (lbs > 0) {
+                display += lbs + 'lb ';
+            }
+            if (oz > 0 || lbs === 0) {
+                display += oz.toFixed(1) + 'oz';
+            }
+            
+            // Find the weight display element (previous sibling text)
+            const cell = input.parentElement;
+            const textNode = cell.firstChild;
+            if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+                textNode.textContent = display || 'Not set';
+            }
+        }
+        
+        // Add helpful tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add tooltips to dimension inputs
+            document.querySelectorAll('.dimension-input').forEach(input => {
+                input.title = 'Format: LengthxWidthxHeight (e.g., 10.0x8.0x6.0)';
+            });
+            
+            // Add tooltips to weight inputs
+            document.querySelectorAll('.weight-input').forEach(input => {
+                input.title = 'Weight in ounces (16 oz = 1 lb)';
+            });
         });
         
         // Initialize
@@ -622,10 +725,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     // Validate field name for security
     $allowedFields = ['weight', 'dimensions', 'shipping_option', 'flat_rate'];
     if (in_array($field, $allowedFields)) {
-        $sql = "UPDATE products SET $field = ? WHERE id = ?";
+        // Special handling for weight - ensure it's a valid number
+        if ($field === 'weight') {
+            $value = floatval($value);
+        }
+        // Special handling for flat_rate - ensure it's a valid number
+        elseif ($field === 'flat_rate') {
+            $value = floatval($value);
+        }
+        // For dimensions, trim whitespace
+        elseif ($field === 'dimensions') {
+            $value = trim($value);
+        }
+        
+        $sql = "UPDATE products SET `$field` = ? WHERE id = ?";
         $stmt = $db->prepare($sql);
         $stmt->execute([$value, $productId]);
         echo "OK";
+    } else {
+        echo "Invalid field";
     }
     exit;
 }
