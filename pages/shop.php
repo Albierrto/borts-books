@@ -447,5 +447,25 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
     </script>
     <script src="../assets/js/mobile-nav.js"></script>
+    <script>
+        // Debug mobile navigation
+        console.log('Shop page loaded');
+        console.log('Window width:', window.innerWidth);
+        console.log('Mobile nav exists:', !!document.querySelector('.mobile-nav'));
+        console.log('Mobile nav toggle exists:', !!document.querySelector('.mobile-nav-toggle'));
+        
+        // Test mobile nav toggle after a short delay
+        setTimeout(function() {
+            const toggle = document.querySelector('.mobile-nav-toggle');
+            const nav = document.querySelector('.mobile-nav');
+            console.log('After timeout - Toggle:', !!toggle, 'Nav:', !!nav);
+            if (toggle) {
+                console.log('Toggle button found, adding test click listener');
+                toggle.addEventListener('click', function() {
+                    console.log('Mobile nav toggle clicked!');
+                });
+            }
+        }, 1000);
+    </script>
 </body>
 </html> 

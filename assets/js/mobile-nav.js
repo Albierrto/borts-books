@@ -376,27 +376,44 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = MobileNavigation;
 }
 
-// Mobile Navigation Functionality
+// Simple Mobile Navigation System
 document.addEventListener('DOMContentLoaded', function() {
-    // Create mobile navigation if it doesn't exist
-    if (!document.querySelector('.mobile-nav')) {
-        createMobileNav();
-    }
-    
-    // Initialize mobile navigation
-    initMobileNav();
+    initMobileNavigation();
 });
 
-function createMobileNav() {
-    // Get the current page links from desktop nav
+function initMobileNavigation() {
+    // Always create mobile navigation, but only show on mobile
+    if (!document.querySelector('.mobile-nav')) {
+        createMobileNavigation();
+    }
+    
+    // Bind events
+    bindMobileNavEvents();
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            // Close mobile nav if screen gets bigger
+            closeMobileNav();
+        }
+    });
+}
+
+function createMobileNavigation() {
+    // Get navigation links from desktop nav
     const desktopNav = document.querySelector('nav ul');
-    if (!desktopNav) return;
+    if (!desktopNav) {
+        console.log('No desktop navigation found');
+        return;
+    }
     
     const links = Array.from(desktopNav.querySelectorAll('a')).map(link => ({
         href: link.href,
-        text: link.textContent,
-        icon: getIconForPage(link.textContent)
+        text: link.textContent.trim(),
+        icon: getIconForPage(link.textContent.trim())
     }));
+    
+    console.log('Found navigation links:', links);
     
     // Create mobile nav HTML
     const mobileNavHTML = `
@@ -415,6 +432,10 @@ function createMobileNav() {
                             ${link.text}
                         </a>
                     `).join('')}
+                    <a href="/cart.php" class="mobile-cart-link">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Cart (${getCartCount()})</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -424,15 +445,101 @@ function createMobileNav() {
     document.body.insertAdjacentHTML('beforeend', mobileNavHTML);
     
     // Add mobile nav toggle button to header
-    const searchCart = document.querySelector('.search-cart');
-    if (searchCart) {
+    const headerContainer = document.querySelector('.header-container');
+    if (headerContainer && !document.querySelector('.mobile-nav-toggle')) {
         const toggleButton = document.createElement('button');
         toggleButton.className = 'mobile-nav-toggle';
         toggleButton.id = 'mobileNavToggle';
         toggleButton.innerHTML = '<i class="fas fa-bars"></i>';
+        toggleButton.setAttribute('aria-label', 'Open mobile menu');
         
-        // Insert before the search-cart div
-        searchCart.parentNode.insertBefore(toggleButton, searchCart);
+        // Insert the toggle button before the search-cart div
+        const searchCart = document.querySelector('.search-cart');
+        if (searchCart) {
+            headerContainer.insertBefore(toggleButton, searchCart);
+        } else {
+            headerContainer.appendChild(toggleButton);
+        }
+        
+        console.log('Mobile nav toggle button added');
+    }
+}
+
+function getCartCount() {
+    const cartCountElement = document.querySelector('.cart-count');
+    return cartCountElement ? cartCountElement.textContent : '0';
+}
+
+function bindMobileNavEvents() {
+    const mobileNavToggle = document.getElementById('mobileNavToggle');
+    const mobileNavClose = document.getElementById('mobileNavClose');
+    const mobileNav = document.getElementById('mobileNav');
+    
+    if (!mobileNavToggle || !mobileNav) {
+        console.log('Mobile nav elements not found');
+        return;
+    }
+    
+    // Remove existing event listeners to prevent duplicates
+    mobileNavToggle.removeEventListener('click', openMobileNav);
+    
+    // Toggle mobile nav
+    mobileNavToggle.addEventListener('click', openMobileNav);
+    
+    // Close mobile nav
+    if (mobileNavClose) {
+        mobileNavClose.removeEventListener('click', closeMobileNav);
+        mobileNavClose.addEventListener('click', closeMobileNav);
+    }
+    
+    // Close on overlay click
+    mobileNav.removeEventListener('click', handleOverlayClick);
+    mobileNav.addEventListener('click', handleOverlayClick);
+    
+    // Close on escape key
+    document.removeEventListener('keydown', handleEscapeKey);
+    document.addEventListener('keydown', handleEscapeKey);
+    
+    // Close mobile nav when clicking on a link
+    const mobileNavLinks = mobileNav.querySelectorAll('.mobile-nav-links a');
+    mobileNavLinks.forEach(link => {
+        link.removeEventListener('click', closeMobileNav);
+        link.addEventListener('click', closeMobileNav);
+    });
+    
+    console.log('Mobile nav events bound');
+}
+
+function openMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    if (mobileNav) {
+        mobileNav.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        console.log('Mobile nav opened');
+    }
+}
+
+function closeMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    if (mobileNav) {
+        mobileNav.classList.remove('active');
+        document.body.style.overflow = '';
+        console.log('Mobile nav closed');
+    }
+}
+
+function handleOverlayClick(e) {
+    if (e.target === e.currentTarget) {
+        closeMobileNav();
+    }
+}
+
+function handleEscapeKey(e) {
+    if (e.key === 'Escape') {
+        const mobileNav = document.getElementById('mobileNav');
+        if (mobileNav && mobileNav.classList.contains('active')) {
+            closeMobileNav();
+        }
     }
 }
 
@@ -451,50 +558,6 @@ function getIconForPage(pageText) {
     };
     
     return iconMap[pageText] || 'fas fa-link';
-}
-
-function initMobileNav() {
-    const mobileNav = document.getElementById('mobileNav');
-    const mobileNavToggle = document.getElementById('mobileNavToggle');
-    const mobileNavClose = document.getElementById('mobileNavClose');
-    
-    if (!mobileNav || !mobileNavToggle) return;
-    
-    // Toggle mobile nav
-    mobileNavToggle.addEventListener('click', function() {
-        mobileNav.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    });
-    
-    // Close mobile nav
-    function closeMobileNav() {
-        mobileNav.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-    
-    if (mobileNavClose) {
-        mobileNavClose.addEventListener('click', closeMobileNav);
-    }
-    
-    // Close on overlay click
-    mobileNav.addEventListener('click', function(e) {
-        if (e.target === mobileNav) {
-            closeMobileNav();
-        }
-    });
-    
-    // Close on escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && mobileNav.classList.contains('active')) {
-            closeMobileNav();
-        }
-    });
-    
-    // Close mobile nav when clicking on a link
-    const mobileNavLinks = mobileNav.querySelectorAll('.mobile-nav-links a');
-    mobileNavLinks.forEach(link => {
-        link.addEventListener('click', closeMobileNav);
-    });
 }
 
 // Handle payment method switching on checkout page
@@ -519,4 +582,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
+
+// Re-initialize on window resize
+window.addEventListener('resize', function() {
+    // Debounce resize events
+    clearTimeout(window.mobileNavResizeTimeout);
+    window.mobileNavResizeTimeout = setTimeout(function() {
+        if (window.innerWidth > 768) {
+            closeMobileNav();
+        }
+    }, 250);
 }); 

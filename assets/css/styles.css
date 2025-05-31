@@ -52,7 +52,8 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 0;
+    padding: 1.5rem 0;
+    position: relative;
 }
 
 .logo {
@@ -535,6 +536,18 @@ footer {
     text-align: center;
 }
 
+.mobile-cart-link {
+    border-top: 2px solid var(--primary) !important;
+    background: var(--gray-50) !important;
+    font-weight: 600 !important;
+    color: var(--primary) !important;
+}
+
+.mobile-cart-link:hover {
+    background: var(--primary) !important;
+    color: white !important;
+}
+
 /* Payment Methods Styles */
 .payment-methods {
     display: flex;
@@ -643,10 +656,14 @@ footer {
 @media (max-width: 768px) {
     .header-container {
         padding: 1rem 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
     .logo {
         font-size: 1.5rem;
+        flex: 1;
     }
     
     /* Hide desktop nav on mobile */
@@ -657,6 +674,8 @@ footer {
     /* Show mobile nav toggle */
     .mobile-nav-toggle {
         display: block;
+        order: 2;
+        margin-right: 1rem;
     }
     
     /* Show mobile nav */
@@ -667,6 +686,7 @@ footer {
     /* Keep cart visible on mobile */
     .search-cart {
         gap: 1rem;
+        order: 3;
     }
     
     .hero {
