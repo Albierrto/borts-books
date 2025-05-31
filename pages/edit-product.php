@@ -25,7 +25,7 @@ if (!$product) {
 }
 
 // Fetch product images
-$stmt = $db->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC");
+$stmt = $db->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC");
 $stmt->execute([$product_id]);
 $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -727,7 +727,20 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <div class="image-grid">
                                 <?php foreach ($images as $image): ?>
                                     <div class="image-item">
-                                        <img src="<?php echo htmlspecialchars($image['image_url']); ?>" alt="Product Image">
+                                        <?php 
+                                        // Handle both old and new schema
+                                        if (!empty($image['filename'])) {
+                                            $image_path = "../assets/img/products/" . htmlspecialchars($image['filename']);
+                                        } elseif (!empty($image['image_url'])) {
+                                            $image_path = htmlspecialchars($image['image_url']);
+                                        } else {
+                                            $image_path = "../assets/img/placeholder.png";
+                                        }
+                                        ?>
+                                        <img src="<?php echo $image_path; ?>" alt="Product Image" class="thumbnail-image" onclick="openImageModal('<?php echo $image_path; ?>')">
+                                        <?php if (!empty($image['is_main']) && $image['is_main'] == 1): ?>
+                                            <div class="main-image-badge">Main</div>
+                                        <?php endif; ?>
                                         <div class="image-actions">
                                             <button type="button" onclick="deleteImage(<?php echo $image['id']; ?>)" title="Delete Image">
                                                 <i class="fas fa-trash"></i>
