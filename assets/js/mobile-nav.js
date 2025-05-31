@@ -48,7 +48,7 @@ class MobileNavigation {
 
     createMobileNavigation() {
         // Check if mobile nav already exists
-        if (document.querySelector('.mobile-nav-container')) {
+        if (document.querySelector('.mobile-nav')) {
             return;
         }
 
@@ -58,19 +58,17 @@ class MobileNavigation {
         // Get cart count
         const cartCount = this.getCartCount();
 
-        // Create mobile navigation HTML
+        // Create mobile navigation toggle button
+        const toggleButton = `
+            <button class="mobile-nav-toggle" aria-label="Open navigation menu" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+            </button>
+        `;
+
+        // Create mobile navigation HTML using existing CSS classes
         const mobileNavHTML = `
-            <div class="mobile-nav-container">
-                <!-- Mobile Menu Toggle Button -->
-                <button class="mobile-menu-toggle" aria-label="Open navigation menu" aria-expanded="false">
-                    <i class="fas fa-bars"></i>
-                </button>
-
-                <!-- Mobile Navigation Overlay -->
-                <div class="mobile-nav-overlay"></div>
-
-                <!-- Mobile Navigation Menu -->
-                <nav class="mobile-nav-menu" role="navigation" aria-label="Mobile navigation">
+            <div class="mobile-nav">
+                <div class="mobile-nav-content">
                     <div class="mobile-nav-header">
                         <h3>Navigation</h3>
                         <button class="mobile-nav-close" aria-label="Close navigation menu">
@@ -78,47 +76,49 @@ class MobileNavigation {
                         </button>
                     </div>
 
-                    <ul class="mobile-nav-items">
-                        <li><a href="/index.php" class="${currentPage === 'home' ? 'active' : ''}">
+                    <div class="mobile-nav-links">
+                        <a href="/index.php" class="${currentPage === 'home' ? 'active' : ''}">
                             <i class="fas fa-home"></i> Home
-                        </a></li>
-                        <li><a href="/pages/shop.php" class="${currentPage === 'shop' ? 'active' : ''}">
+                        </a>
+                        <a href="/pages/shop.php" class="${currentPage === 'shop' ? 'active' : ''}">
                             <i class="fas fa-store"></i> Shop
-                        </a></li>
-                        <li><a href="/pages/track-order.php" class="${currentPage === 'track' ? 'active' : ''}">
+                        </a>
+                        <a href="/pages/track-order.php" class="${currentPage === 'track' ? 'active' : ''}">
                             <i class="fas fa-shipping-fast"></i> Track Order
-                        </a></li>
-                        <li><a href="/pages/sell.php" class="${currentPage === 'sell' ? 'active' : ''}">
+                        </a>
+                        <a href="/pages/sell.php" class="${currentPage === 'sell' ? 'active' : ''}">
                             <i class="fas fa-dollar-sign"></i> Sell Manga
-                        </a></li>
-                        <li><a href="/pages/about.php" class="${currentPage === 'about' ? 'active' : ''}">
+                        </a>
+                        <a href="/pages/about.php" class="${currentPage === 'about' ? 'active' : ''}">
                             <i class="fas fa-info-circle"></i> About
-                        </a></li>
-                        <li><a href="/pages/contact.php" class="${currentPage === 'contact' ? 'active' : ''}">
+                        </a>
+                        <a href="/pages/contact.php" class="${currentPage === 'contact' ? 'active' : ''}">
                             <i class="fas fa-envelope"></i> Contact
-                        </a></li>
-                        <li><a href="/pages/faq.php" class="${currentPage === 'faq' ? 'active' : ''}">
+                        </a>
+                        <a href="/pages/faq.php" class="${currentPage === 'faq' ? 'active' : ''}">
                             <i class="fas fa-question-circle"></i> FAQ
-                        </a></li>
-                        <li><a href="/pages/returns.php" class="${currentPage === 'returns' ? 'active' : ''}">
+                        </a>
+                        <a href="/pages/returns.php" class="${currentPage === 'returns' ? 'active' : ''}">
                             <i class="fas fa-undo"></i> Returns
-                        </a></li>
-                    </ul>
-
-                    <div class="mobile-nav-footer">
+                        </a>
+                        
                         <a href="/pages/cart.php" class="mobile-cart-link">
                             <i class="fas fa-shopping-cart"></i>
                             <span>Cart (${cartCount})</span>
                         </a>
                     </div>
-                </nav>
+                </div>
             </div>
         `;
 
-        // Insert mobile navigation into header
+        // Insert mobile navigation toggle into header
         const header = document.querySelector('header .header-container');
         if (header) {
-            header.insertAdjacentHTML('beforeend', mobileNavHTML);
+            // Add toggle button to header
+            header.insertAdjacentHTML('beforeend', toggleButton);
+            
+            // Add mobile navigation to body
+            document.body.insertAdjacentHTML('beforeend', mobileNavHTML);
         }
     }
 
@@ -150,7 +150,7 @@ class MobileNavigation {
         if (!this.isMobile) return;
 
         // Mobile menu toggle button
-        if (e.target.closest('.mobile-menu-toggle')) {
+        if (e.target.closest('.mobile-nav-toggle')) {
             e.preventDefault();
             e.stopPropagation();
             this.toggleMenu();
@@ -165,8 +165,8 @@ class MobileNavigation {
             return;
         }
 
-        // Overlay click to close
-        if (e.target.classList.contains('mobile-nav-overlay')) {
+        // Close menu when clicking outside (on the mobile nav overlay)
+        if (e.target.classList.contains('mobile-nav') && this.isOpen) {
             e.preventDefault();
             e.stopPropagation();
             this.closeMenu();
@@ -174,7 +174,7 @@ class MobileNavigation {
         }
 
         // Close menu when clicking on navigation links
-        if (e.target.closest('.mobile-nav-items a')) {
+        if (e.target.closest('.mobile-nav-links a')) {
             this.closeMenu();
             return;
         }
@@ -198,52 +198,48 @@ class MobileNavigation {
     }
 
     openMenu() {
-        if (!this.isMobile) return;
+        if (!this.isMobile || this.isOpen) return;
 
-        const overlay = document.querySelector('.mobile-nav-overlay');
-        const menu = document.querySelector('.mobile-nav-menu');
-        const toggle = document.querySelector('.mobile-menu-toggle');
-
-        if (overlay && menu && toggle) {
-            // Store current scroll position before preventing scroll
-            this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+        const mobileNav = document.querySelector('.mobile-nav');
+        const toggleButton = document.querySelector('.mobile-nav-toggle');
+        
+        if (mobileNav && toggleButton) {
+            // Store current scroll position
+            this.scrollPosition = window.pageYOffset;
             
-            // Prevent body scroll with improved method
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
             document.body.style.position = 'fixed';
             document.body.style.top = `-${this.scrollPosition}px`;
             document.body.style.width = '100%';
-            document.body.classList.add('mobile-nav-open');
             
-            // Show overlay and menu
-            overlay.classList.add('active');
-            menu.classList.add('active');
-            
-            // Update toggle button
-            const icon = toggle.querySelector('i');
-            if (icon) {
-                icon.classList.remove('fa-bars');
-                icon.classList.add('fa-times');
-            }
-            toggle.setAttribute('aria-expanded', 'true');
+            // Show mobile navigation
+            mobileNav.classList.add('active');
+            toggleButton.setAttribute('aria-expanded', 'true');
             
             // Focus management
-            const firstLink = menu.querySelector('.mobile-nav-items a');
+            const firstLink = mobileNav.querySelector('.mobile-nav-links a');
             if (firstLink) {
                 setTimeout(() => firstLink.focus(), 100);
             }
-
+            
             this.isOpen = true;
         }
     }
 
     closeMenu() {
-        const overlay = document.querySelector('.mobile-nav-overlay');
-        const menu = document.querySelector('.mobile-nav-menu');
-        const toggle = document.querySelector('.mobile-menu-toggle');
+        if (!this.isMobile || !this.isOpen) return;
 
-        if (overlay && menu && toggle) {
-            // Restore body scroll with improved method
-            document.body.classList.remove('mobile-nav-open');
+        const mobileNav = document.querySelector('.mobile-nav');
+        const toggleButton = document.querySelector('.mobile-nav-toggle');
+        
+        if (mobileNav && toggleButton) {
+            // Hide mobile navigation
+            mobileNav.classList.remove('active');
+            toggleButton.setAttribute('aria-expanded', 'false');
+            
+            // Restore body scroll
+            document.body.style.overflow = '';
             document.body.style.position = '';
             document.body.style.top = '';
             document.body.style.width = '';
@@ -251,18 +247,9 @@ class MobileNavigation {
             // Restore scroll position
             window.scrollTo(0, this.scrollPosition);
             
-            // Hide overlay and menu
-            overlay.classList.remove('active');
-            menu.classList.remove('active');
+            // Return focus to toggle button
+            toggleButton.focus();
             
-            // Update toggle button
-            const icon = toggle.querySelector('i');
-            if (icon) {
-                icon.classList.remove('fa-times');
-                icon.classList.add('fa-bars');
-            }
-            toggle.setAttribute('aria-expanded', 'false');
-
             this.isOpen = false;
         }
     }
@@ -288,25 +275,26 @@ class MobileNavigation {
     }
 
     removeMobileNavigation() {
-        const mobileNavContainer = document.querySelector('.mobile-nav-container');
-        if (mobileNavContainer) {
-            mobileNavContainer.remove();
-        }
+        const mobileNav = document.querySelector('.mobile-nav');
+        const toggleButton = document.querySelector('.mobile-nav-toggle');
+        
+        if (mobileNav) mobileNav.remove();
+        if (toggleButton) toggleButton.remove();
+        
+        // Reset state
+        this.isOpen = false;
     }
 
     getCurrentPage() {
         const path = window.location.pathname;
-        
-        if (path === '/' || path === '/index.php' || path.endsWith('/')) return 'home';
-        if (path.includes('/shop')) return 'shop';
-        if (path.includes('/track-order')) return 'track';
-        if (path.includes('/sell')) return 'sell';
-        if (path.includes('/about')) return 'about';
-        if (path.includes('/contact')) return 'contact';
-        if (path.includes('/faq')) return 'faq';
-        if (path.includes('/returns')) return 'returns';
-        if (path.includes('/cart')) return 'cart';
-        
+        if (path === '/' || path === '/index.php') return 'home';
+        if (path.includes('/shop.php')) return 'shop';
+        if (path.includes('/track-order.php')) return 'track';
+        if (path.includes('/sell.php')) return 'sell';
+        if (path.includes('/about.php')) return 'about';
+        if (path.includes('/contact.php')) return 'contact';
+        if (path.includes('/faq.php')) return 'faq';
+        if (path.includes('/returns.php')) return 'returns';
         return '';
     }
 
@@ -342,10 +330,10 @@ class MobileNavigation {
     }
 
     updateMobileCartCount() {
-        const cartCount = this.getCartCount();
-        const mobileCartLink = document.querySelector('.mobile-cart-link span');
-        if (mobileCartLink) {
-            mobileCartLink.textContent = `Cart (${cartCount})`;
+        const cartLink = document.querySelector('.mobile-cart-link span');
+        if (cartLink) {
+            const count = this.getCartCount();
+            cartLink.textContent = `Cart (${count})`;
         }
     }
 
@@ -363,6 +351,20 @@ class MobileNavigation {
             window.mobileNav.closeMenu();
         }
     }
+
+    getIconForPage(page) {
+        const iconMap = {
+            'home': 'fas fa-home',
+            'shop': 'fas fa-store',
+            'track': 'fas fa-shipping-fast',
+            'sell': 'fas fa-dollar-sign',
+            'about': 'fas fa-info-circle',
+            'contact': 'fas fa-envelope',
+            'faq': 'fas fa-question-circle',
+            'returns': 'fas fa-undo'
+        };
+        return iconMap[page] || 'fas fa-link';
+    }
 }
 
 // Initialize mobile navigation when script loads
@@ -374,190 +376,6 @@ if (!window.mobileNav) {
 // Export for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MobileNavigation;
-}
-
-// Simple Mobile Navigation System
-document.addEventListener('DOMContentLoaded', function() {
-    initMobileNavigation();
-});
-
-function initMobileNavigation() {
-    // Always create mobile navigation, but only show on mobile
-    if (!document.querySelector('.mobile-nav')) {
-        createMobileNavigation();
-    }
-    
-    // Bind events
-    bindMobileNavEvents();
-    
-    // Handle window resize
-    window.addEventListener('resize', function() {
-        if (window.innerWidth > 768) {
-            // Close mobile nav if screen gets bigger
-            closeMobileNav();
-        }
-    });
-}
-
-function createMobileNavigation() {
-    // Get navigation links from desktop nav
-    const desktopNav = document.querySelector('nav ul');
-    if (!desktopNav) {
-        console.log('No desktop navigation found');
-        return;
-    }
-    
-    const links = Array.from(desktopNav.querySelectorAll('a')).map(link => ({
-        href: link.href,
-        text: link.textContent.trim(),
-        icon: getIconForPage(link.textContent.trim())
-    }));
-    
-    console.log('Found navigation links:', links);
-    
-    // Create mobile nav HTML
-    const mobileNavHTML = `
-        <div class="mobile-nav" id="mobileNav">
-            <div class="mobile-nav-content">
-                <div class="mobile-nav-header">
-                    <a href="/index.php" class="logo">Bort's <span>Books</span></a>
-                    <button class="mobile-nav-close" id="mobileNavClose">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="mobile-nav-links">
-                    ${links.map(link => `
-                        <a href="${link.href}">
-                            <i class="${link.icon}"></i>
-                            ${link.text}
-                        </a>
-                    `).join('')}
-                    <a href="/cart.php" class="mobile-cart-link">
-                        <i class="fas fa-shopping-cart"></i>
-                        <span>Cart (${getCartCount()})</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Add mobile nav to body
-    document.body.insertAdjacentHTML('beforeend', mobileNavHTML);
-    
-    // Add mobile nav toggle button to header
-    const headerContainer = document.querySelector('.header-container');
-    if (headerContainer && !document.querySelector('.mobile-nav-toggle')) {
-        const toggleButton = document.createElement('button');
-        toggleButton.className = 'mobile-nav-toggle';
-        toggleButton.id = 'mobileNavToggle';
-        toggleButton.innerHTML = '<i class="fas fa-bars"></i>';
-        toggleButton.setAttribute('aria-label', 'Open mobile menu');
-        
-        // Insert the toggle button before the search-cart div
-        const searchCart = document.querySelector('.search-cart');
-        if (searchCart) {
-            headerContainer.insertBefore(toggleButton, searchCart);
-        } else {
-            headerContainer.appendChild(toggleButton);
-        }
-        
-        console.log('Mobile nav toggle button added');
-    }
-}
-
-function getCartCount() {
-    const cartCountElement = document.querySelector('.cart-count');
-    return cartCountElement ? cartCountElement.textContent : '0';
-}
-
-function bindMobileNavEvents() {
-    const mobileNavToggle = document.getElementById('mobileNavToggle');
-    const mobileNavClose = document.getElementById('mobileNavClose');
-    const mobileNav = document.getElementById('mobileNav');
-    
-    if (!mobileNavToggle || !mobileNav) {
-        console.log('Mobile nav elements not found');
-        return;
-    }
-    
-    // Remove existing event listeners to prevent duplicates
-    mobileNavToggle.removeEventListener('click', openMobileNav);
-    
-    // Toggle mobile nav
-    mobileNavToggle.addEventListener('click', openMobileNav);
-    
-    // Close mobile nav
-    if (mobileNavClose) {
-        mobileNavClose.removeEventListener('click', closeMobileNav);
-        mobileNavClose.addEventListener('click', closeMobileNav);
-    }
-    
-    // Close on overlay click
-    mobileNav.removeEventListener('click', handleOverlayClick);
-    mobileNav.addEventListener('click', handleOverlayClick);
-    
-    // Close on escape key
-    document.removeEventListener('keydown', handleEscapeKey);
-    document.addEventListener('keydown', handleEscapeKey);
-    
-    // Close mobile nav when clicking on a link
-    const mobileNavLinks = mobileNav.querySelectorAll('.mobile-nav-links a');
-    mobileNavLinks.forEach(link => {
-        link.removeEventListener('click', closeMobileNav);
-        link.addEventListener('click', closeMobileNav);
-    });
-    
-    console.log('Mobile nav events bound');
-}
-
-function openMobileNav() {
-    const mobileNav = document.getElementById('mobileNav');
-    if (mobileNav) {
-        mobileNav.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        console.log('Mobile nav opened');
-    }
-}
-
-function closeMobileNav() {
-    const mobileNav = document.getElementById('mobileNav');
-    if (mobileNav) {
-        mobileNav.classList.remove('active');
-        document.body.style.overflow = '';
-        console.log('Mobile nav closed');
-    }
-}
-
-function handleOverlayClick(e) {
-    if (e.target === e.currentTarget) {
-        closeMobileNav();
-    }
-}
-
-function handleEscapeKey(e) {
-    if (e.key === 'Escape') {
-        const mobileNav = document.getElementById('mobileNav');
-        if (mobileNav && mobileNav.classList.contains('active')) {
-            closeMobileNav();
-        }
-    }
-}
-
-function getIconForPage(pageText) {
-    const iconMap = {
-        'Home': 'fas fa-home',
-        'Shop': 'fas fa-store',
-        'Track Order': 'fas fa-shipping-fast',
-        'Sell Manga': 'fas fa-dollar-sign',
-        'Sell': 'fas fa-dollar-sign',
-        'About': 'fas fa-info-circle',
-        'Contact': 'fas fa-envelope',
-        'FAQ': 'fas fa-question-circle',
-        'Returns': 'fas fa-undo',
-        'Collections': 'fas fa-layer-group'
-    };
-    
-    return iconMap[pageText] || 'fas fa-link';
 }
 
 // Handle payment method switching on checkout page
@@ -584,13 +402,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Initialize mobile navigation
+let mobileNav;
+document.addEventListener('DOMContentLoaded', function() {
+    mobileNav = new MobileNavigation();
+});
+
 // Re-initialize on window resize
 window.addEventListener('resize', function() {
     // Debounce resize events
     clearTimeout(window.mobileNavResizeTimeout);
     window.mobileNavResizeTimeout = setTimeout(function() {
-        if (window.innerWidth > 768) {
-            closeMobileNav();
+        if (mobileNav && window.innerWidth > 768) {
+            mobileNav.closeMenu();
         }
     }, 250);
 }); 
