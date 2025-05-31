@@ -14,7 +14,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
     $product_id = $_POST['product_id'];
-    $upload_dir = '../uploads/';
+    $upload_dir = '../assets/img/products/';
     
     // Create uploads directory if it doesn't exist
     if (!file_exists($upload_dir)) {
@@ -29,34 +29,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
     if (isset($_FILES['images']) && is_array($_FILES['images']['tmp_name'])) {
         foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
             if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
-                $filename = basename($_FILES['images']['name'][$key]);
-                $target = $upload_dir . uniqid() . '_' . $filename;
+                $original_filename = basename($_FILES['images']['name'][$key]);
+                $file_extension = strtolower(pathinfo($original_filename, PATHINFO_EXTENSION));
+                $unique_filename = uniqid() . '_' . time() . '.' . $file_extension;
+                $target = $upload_dir . $unique_filename;
                 
                 // Validate file type
                 $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                 if (!in_array($_FILES['images']['type'][$key], $allowed_types)) {
-                    $errors[] = "Invalid file type for $filename. Only JPG, PNG, GIF and WebP are allowed.";
+                    $errors[] = "Invalid file type for $original_filename. Only JPG, PNG, GIF and WebP are allowed.";
                     continue;
                 }
                 
                 // Validate file size (max 10MB)
                 if ($_FILES['images']['size'][$key] > 10 * 1024 * 1024) {
-                    $errors[] = "File $filename is too large. Maximum size is 10MB.";
+                    $errors[] = "File $original_filename is too large. Maximum size is 10MB.";
                     continue;
                 }
                 
                 // Move uploaded file
                 if (move_uploaded_file($tmp_name, $target)) {
-                    // Insert into database
-                    $stmt = $db->prepare("INSERT INTO product_images (product_id, image_url) VALUES (?, ?)");
-                    if ($stmt->execute([$product_id, $target])) {
+                    // Check if this is the first image for this product (make it main)
+                    $stmt = $db->prepare("SELECT COUNT(*) FROM product_images WHERE product_id = ?");
+                    $stmt->execute([$product_id]);
+                    $existing_count = $stmt->fetchColumn();
+                    $is_main = ($existing_count == 0) ? 1 : 0;
+                    
+                    // Insert into database with correct schema
+                    $stmt = $db->prepare("INSERT INTO product_images (product_id, filename, is_main) VALUES (?, ?, ?)");
+                    if ($stmt->execute([$product_id, $unique_filename, $is_main])) {
                         $uploaded_count++;
                     } else {
-                        $errors[] = "Failed to save image $filename to database.";
+                        $errors[] = "Failed to save image $original_filename to database.";
                         unlink($target); // Delete the file if database insert fails
                     }
                 } else {
-                    $errors[] = "Failed to upload $filename.";
+                    $errors[] = "Failed to upload $original_filename.";
                 }
             } else {
                 $errors[] = "Error uploading file: " . $_FILES['images']['name'][$key];

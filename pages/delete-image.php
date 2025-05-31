@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['image_id'])) {
     $image_id = (int)$_POST['image_id'];
     
     // Get image info before deleting
-    $stmt = $db->prepare("SELECT product_id, image_url FROM product_images WHERE id = ?");
+    $stmt = $db->prepare("SELECT product_id, filename FROM product_images WHERE id = ?");
     $stmt->execute([$image_id]);
     $image = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -25,8 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['image_id'])) {
     if ($image) {
         try {
             // Delete the file
-            if (file_exists($image['image_url'])) {
-                unlink($image['image_url']);
+            $file_path = '../assets/img/products/' . $image['filename'];
+            if (file_exists($file_path)) {
+                unlink($file_path);
             }
             
             // Delete from database
