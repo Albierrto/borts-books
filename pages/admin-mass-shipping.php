@@ -485,93 +485,93 @@ $stats = [
             <button type="submit" class="action-btn primary" id="updateSelectedBtn" disabled>
                 <i class="fas fa-save"></i> Update Selected Products
             </button>
-        </form>
-        
-        <!-- Products Table -->
-        <div class="products-table">
-            <div class="table-header">
-                <h3><i class="fas fa-table"></i> Products Shipping Data</h3>
-                <div class="table-controls">
-                    <input type="text" id="searchBox" class="search-box" placeholder="Search products...">
-                    <label>
-                        <input type="checkbox" id="selectAll" class="select-all-checkbox"> Select All
-                    </label>
+            
+            <!-- Products Table -->
+            <div class="products-table" style="margin-top: 2rem;">
+                <div class="table-header">
+                    <h3><i class="fas fa-table"></i> Products Shipping Data</h3>
+                    <div class="table-controls">
+                        <input type="text" id="searchBox" class="search-box" placeholder="Search products...">
+                        <label>
+                            <input type="checkbox" id="selectAll" class="select-all-checkbox"> Select All
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="products-grid">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Select</th>
+                                <th>Product</th>
+                                <th>Weight</th>
+                                <th>Dimensions</th>
+                                <th>Shipping Option</th>
+                                <th>Flat Rate</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody">
+                            <?php foreach ($products as $product): ?>
+                                <tr class="<?php echo (empty($product['weight']) || empty($product['dimensions']) || empty($product['shipping_option'])) ? 'missing-data' : ''; ?>">
+                                    <td>
+                                        <input type="checkbox" name="selected_products[]" value="<?php echo $product['id']; ?>" class="product-checkbox">
+                                    </td>
+                                    <td class="product-title" title="<?php echo htmlspecialchars($product['title']); ?>">
+                                        <?php echo htmlspecialchars($product['title']); ?>
+                                    </td>
+                                    <td>
+                                        <?php 
+                                        $weight_oz = $product['weight'] ?: 0;
+                                        $lbs = floor($weight_oz / 16);
+                                        $oz = $weight_oz % 16;
+                                        $weight_display = '';
+                                        if ($lbs > 0) {
+                                            $weight_display .= $lbs . 'lb ';
+                                        }
+                                        if ($oz > 0 || $lbs == 0) {
+                                            $weight_display .= number_format($oz, 1) . 'oz';
+                                        }
+                                        echo $weight_display ?: 'Not set';
+                                        ?>
+                                        <input type="number" class="weight-input" 
+                                               value="<?php echo $product['weight'] ?: ''; ?>" 
+                                               step="0.1" 
+                                               data-product-id="<?php echo $product['id']; ?>"
+                                               data-field="weight"
+                                               placeholder="oz"
+                                               style="display: block; margin-top: 0.25rem; font-size: 0.8rem;">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="dimension-input" 
+                                               value="<?php echo htmlspecialchars($product['dimensions'] ?: ''); ?>" 
+                                               data-product-id="<?php echo $product['id']; ?>"
+                                               data-field="dimensions"
+                                               placeholder="10.0x8.0x6.0">
+                                    </td>
+                                    <td>
+                                        <select class="shipping-select" 
+                                                data-product-id="<?php echo $product['id']; ?>"
+                                                data-field="shipping_option">
+                                            <option value="">Not set</option>
+                                            <option value="calculated" <?php echo $product['shipping_option'] === 'calculated' ? 'selected' : ''; ?>>Calculated</option>
+                                            <option value="flat" <?php echo $product['shipping_option'] === 'flat' ? 'selected' : ''; ?>>Flat Rate</option>
+                                            <option value="free" <?php echo $product['shipping_option'] === 'free' ? 'selected' : ''; ?>>Free</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        $<?php echo number_format($product['flat_rate'] ?: 0, 2); ?>
+                                    </td>
+                                    <td>
+                                        $<?php echo number_format($product['price'], 2); ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            
-            <div class="products-grid">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Select</th>
-                            <th>Product</th>
-                            <th>Weight</th>
-                            <th>Dimensions</th>
-                            <th>Shipping Option</th>
-                            <th>Flat Rate</th>
-                            <th>Price</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productsTableBody">
-                        <?php foreach ($products as $product): ?>
-                            <tr class="<?php echo (empty($product['weight']) || empty($product['dimensions']) || empty($product['shipping_option'])) ? 'missing-data' : ''; ?>">
-                                <td>
-                                    <input type="checkbox" name="selected_products[]" value="<?php echo $product['id']; ?>" class="product-checkbox">
-                                </td>
-                                <td class="product-title" title="<?php echo htmlspecialchars($product['title']); ?>">
-                                    <?php echo htmlspecialchars($product['title']); ?>
-                                </td>
-                                <td>
-                                    <?php 
-                                    $weight_oz = $product['weight'] ?: 0;
-                                    $lbs = floor($weight_oz / 16);
-                                    $oz = $weight_oz % 16;
-                                    $weight_display = '';
-                                    if ($lbs > 0) {
-                                        $weight_display .= $lbs . 'lb ';
-                                    }
-                                    if ($oz > 0 || $lbs == 0) {
-                                        $weight_display .= number_format($oz, 1) . 'oz';
-                                    }
-                                    echo $weight_display ?: 'Not set';
-                                    ?>
-                                    <input type="number" class="weight-input" 
-                                           value="<?php echo $product['weight'] ?: ''; ?>" 
-                                           step="0.1" 
-                                           data-product-id="<?php echo $product['id']; ?>"
-                                           data-field="weight"
-                                           placeholder="oz"
-                                           style="display: block; margin-top: 0.25rem; font-size: 0.8rem;">
-                                </td>
-                                <td>
-                                    <input type="text" class="dimension-input" 
-                                           value="<?php echo htmlspecialchars($product['dimensions'] ?: ''); ?>" 
-                                           data-product-id="<?php echo $product['id']; ?>"
-                                           data-field="dimensions"
-                                           placeholder="10.0x8.0x6.0">
-                                </td>
-                                <td>
-                                    <select class="shipping-select" 
-                                            data-product-id="<?php echo $product['id']; ?>"
-                                            data-field="shipping_option">
-                                        <option value="">Not set</option>
-                                        <option value="calculated" <?php echo $product['shipping_option'] === 'calculated' ? 'selected' : ''; ?>>Calculated</option>
-                                        <option value="flat" <?php echo $product['shipping_option'] === 'flat' ? 'selected' : ''; ?>>Flat Rate</option>
-                                        <option value="free" <?php echo $product['shipping_option'] === 'free' ? 'selected' : ''; ?>>Free</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    $<?php echo number_format($product['flat_rate'] ?: 0, 2); ?>
-                                </td>
-                                <td>
-                                    $<?php echo number_format($product['price'], 2); ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        </form>
     </div>
     
     <script>
