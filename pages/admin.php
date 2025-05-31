@@ -474,6 +474,10 @@ $categories = $cat_stmt->fetchAll(PDO::FETCH_COLUMN);
         <div class="admin-header">
             <h1 class="admin-title"><i class="fas fa-cogs"></i> Product Management</h1>
             <div class="admin-actions">
+                <a href="admin-mass-shipping.php" class="btn btn-success">
+                    <i class="fas fa-shipping-fast"></i>
+                    Mass Shipping Editor
+                </a>
                 <a href="ebay-import.php" class="btn btn-secondary">
                     <i class="fas fa-file-import"></i>
                     Import from eBay
