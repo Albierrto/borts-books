@@ -721,7 +721,7 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div id="images-tab" class="tab-content">
                     <div class="form-group">
                         <label>Product Images</label>
-                        <p style="color: #666; margin-bottom: 1rem;">Manage product images. The first image will be used as the main product image.</p>
+                        <p style="color: #666; margin-bottom: 1rem;">Manage product images. Click thumbnails to view full size. The first image will be used as the main product image.</p>
                         
                         <?php if (!empty($images)): ?>
                             <div class="image-grid">
@@ -757,6 +757,14 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <div class="modal-content" onclick="event.stopPropagation();">
+            <button class="modal-close" onclick="closeImageModal()">&times;</button>
+            <img id="modalImage" class="modal-image" src="" alt="Full Size Image">
         </div>
     </div>
 
@@ -880,6 +888,68 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 });
             }
         }
+        
+        // Image Modal Functions
+        function openImageModal(imageUrl) {
+            const modalImage = document.getElementById('modalImage');
+            modalImage.src = imageUrl;
+            document.getElementById('imageModal').classList.add('show');
+        }
+        
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.remove('show');
+        }
+        
+        // Enhanced modal functionality
+        function openImageModal(imageSrc) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            
+            // Show loading state
+            modalImage.style.opacity = '0.5';
+            modalImage.src = imageSrc;
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            
+            // Handle image load
+            modalImage.onload = function() {
+                modalImage.style.opacity = '1';
+            };
+            
+            // Handle image error
+            modalImage.onerror = function() {
+                modalImage.style.opacity = '1';
+                modalImage.alt = 'Image failed to load';
+            };
+        }
+        
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
+        
+        // Add error handling for thumbnail images
+        document.addEventListener('DOMContentLoaded', function() {
+            const thumbnails = document.querySelectorAll('.image-thumbnail');
+            thumbnails.forEach(function(img) {
+                img.onerror = function() {
+                    this.style.background = '#f8f9fa';
+                    this.style.display = 'flex';
+                    this.style.alignItems = 'center';
+                    this.style.justifyContent = 'center';
+                    this.alt = 'Image not found';
+                    this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik0yMCAzMkMxNi42ODYzIDMyIDEzLjUwNTQgMzAuNjgzOSAxMS4xNzE2IDI4LjM1MDNDOC44Mzc4NCAyNi4wMTY3IDcuNTIxNzMgMjIuODM1OCA3LjUyMTczIDE5LjUyMTdDNy41MjE3MyAxNi4yMDc2IDguODM3ODQgMTMuMDI2NyAxMS4xNzE2IDEwLjY5MzFDMTMuNTA1NCA4LjM1OTQ4IDE2LjY4NjMgNy4wNDM0OCAyMCA3LjA0MzQ4QzIzLjMxMzcgNy4wNDM0OCAyNi40OTQ2IDguMzU5NDggMjguODI4NCAxMC42OTMxQzMxLjE2MjIgMTMuMDI2NyAzMi40NzgzIDE2LjIwNzYgMzIuNDc4MyAxOS41MjE3QzMyLjQ3ODMgMjIuODM1OCAzMS4xNjIyIDI2LjAxNjcgMjguODI4NCAyOC4zNTAzQzI2LjQ5NDYgMzAuNjgzOSAyMy4zMTM3IDMyIDIwIDMyWk0yMCAyOS4zOTEzQzIyLjYyMzIgMjkuMzkxMyAyNS4xMzg5IDI4LjM0ODcgMjcuMDE5NCAyNi40NjgyQzI4Ljg5OTkgMjQuNTg3NyAyOS45NDI1IDIyLjA3MiAyOS45NDI1IDE5LjQ0ODdDMjkuOTQyNSAxNi44MjU0IDI4Ljg5OTkgMTQuMzA5NyAyNy4wMTk0IDEyLjQyOTJDMjUuMTM4OSAxMC41NDg3IDIyLjYyMzIgOS41MDYxIDIwIDkuNTA2MUMxNy4zNzY4IDkuNTA2MSAxNC44NjExIDEwLjU0ODcgMTIuOTgwNiAxMi40MjkyQzExLjEwMDEgMTQuMzA5NyAxMC4wNTc1IDE2LjgyNTQgMTAuMDU3NSAxOS40NDg3QzEwLjA1NzUgMjIuMDcyIDExLjEwMDEgMjQuNTg3NyAxMi45ODA2IDI2LjQ2ODJDMTQuODYxMSAyOC4zNDg3IDE3LjM3NjggMjkuMzkxMyAyMCAyOS4zOTEzWiIgZmlsbD0iIzZDNzU3RCIvPgo8cGF0aCBkPSJNMTUuNjUyMiAyMy40NzgzTDIwIDIwLjg2OTZMMjQuMzQ3OCAyMy40NzgzTDI2LjA4NyAxNy4zOTEzSDEzLjkxM0wxNS42NTIyIDIzLjQ3ODNaIiBmaWxsPSIjNkM3NTdEIi8+CjxjaXJjbGUgY3g9IjE3LjM5MTMiIGN5PSIxNS42NTIyIiByPSIyLjYwODciIGZpbGw9IiM2Qzc1N0QiLz4KPC9zdmc+';
+                };
+            });
+        });
     </script>
 </body>
 </html> 

@@ -807,7 +807,7 @@ $cart_count = count($_SESSION['cart']);
                         <i class="fas fa-question-circle"></i>
                         How It Works
                     </a>
-                </div>
+        </div>
             </div>
 
             <!-- Quote Guarantee Banner -->
@@ -819,7 +819,7 @@ $cart_count = count($_SESSION['cart']);
                 <p style="margin: 0; font-size: 1.1rem; opacity: 0.95;">
                     Submit your collection today and receive a detailed quote within 24 hours!
                 </p>
-            </div>
+        </div>
 
             <div class="info-box">
                 <h3><i class="fas fa-info-circle"></i> What We're Looking For</h3>
@@ -830,7 +830,7 @@ $cart_count = count($_SESSION['cart']);
                     <li><strong>English language</strong> - We currently only accept English manga</li>
                     <li><strong>Competitive prices</strong> - We pay up to 80% of current eBay market prices</li>
                 </ul>
-            </div>
+                </div>
 
             <!-- Payment Methods Section -->
             <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin-bottom: 30px; border: 2px solid #e1e5e9;">
@@ -845,20 +845,20 @@ $cart_count = count($_SESSION['cart']);
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 100px;">
                         <i class="fab fa-paypal" style="font-size: 2rem; color: #0070ba;"></i>
                         <span style="font-weight: 600; color: #333;">PayPal</span>
-                    </div>
+                </div>
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 100px;">
                         <i class="fas fa-mobile-alt" style="font-size: 2rem; color: #6c5ce7;"></i>
                         <span style="font-weight: 600; color: #333;">Zelle</span>
-                    </div>
+                </div>
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 100px;">
                         <i class="fas fa-dollar-sign" style="font-size: 2rem; color: #00d632;"></i>
                         <span style="font-weight: 600; color: #333;">CashApp</span>
-                    </div>
                 </div>
+            </div>
                 <p style="margin: 15px 0 0 0; color: #666; font-size: 0.95rem; text-align: center; font-style: italic;">
                     Fast, secure payments sent within 24-48 hours after receiving your shipment
                 </p>
-            </div>
+        </div>
 
             <div class="success-message" id="successMessage">
                 <i class="fas fa-check-circle"></i> Your manga sets have been submitted successfully! We'll review your submission and get back to you within 24-48 hours.
@@ -938,16 +938,16 @@ $cart_count = count($_SESSION['cart']);
                                         <option value="good">Good - Moderate wear, readable condition</option>
                                         <option value="fair">Fair - Heavy wear but complete</option>
                                         <option value="ex_library">Ex-Library - Former library books</option>
-                                    </select>
-                                </div>
+                </select>
+            </div>
                                 
                                 <div class="form-group">
                                     <label for="asking_price_1">Asking Price</label>
                                     <input type="number" id="asking_price_1" name="sets[1][asking_price]" step="0.01" placeholder="Optional - your asking price">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            </div>
+            </div>
+            </div>
+            </div>
 
                     <div class="button-group">
                         <button type="button" id="addSetBtn" class="btn btn-secondary">
@@ -998,7 +998,7 @@ $cart_count = count($_SESSION['cart']);
                         <span class="loading">Submitting...</span>
                     </button>
                 </div>
-            </form>
+        </form>
         </div>
     </main>
 
@@ -1083,7 +1083,7 @@ $cart_count = count($_SESSION['cart']);
                             <option value="good">Good - Moderate wear, readable condition</option>
                             <option value="fair">Fair - Heavy wear but complete</option>
                             <option value="ex_library">Ex-Library - Former library books</option>
-                        </select>
+            </select>
                     </div>
                     
                     <div class="form-group">

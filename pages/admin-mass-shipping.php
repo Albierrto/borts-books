@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $params = [];
                         
                         // Handle weight - convert pounds and ounces to total ounces
-                        if (!empty($_POST['weight_lbs']) || !empty($_POST['weight_oz'])) {
+                        if (isset($_POST['weight_lbs']) && $_POST['weight_lbs'] !== '' || isset($_POST['weight_oz']) && $_POST['weight_oz'] !== '') {
                             $weight_lbs = floatval($_POST['weight_lbs'] ?? 0);
                             $weight_oz = floatval($_POST['weight_oz'] ?? 0);
                             $total_weight_oz = ($weight_lbs * 16) + $weight_oz;
@@ -57,8 +57,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $stmt = $db->prepare($sql);
                             $stmt->execute($params);
                             
-                            $message = "Updated " . count($selectedIds) . " products successfully!";
+                            $rowsAffected = $stmt->rowCount();
+                            $message = "Updated " . $rowsAffected . " out of " . count($selectedIds) . " selected products successfully!";
+                            
+                            // Debug information (remove this later)
+                            if (isset($_POST['weight_lbs']) || isset($_POST['weight_oz'])) {
+                                $message .= " Weight data: {$_POST['weight_lbs']}lbs {$_POST['weight_oz']}oz = {$total_weight_oz}oz";
+                            }
+                        } else {
+                            $message = "No updates to apply. Please fill in at least one field.";
                         }
+                    } else {
+                        $message = "No products selected. Please select products to update.";
                     }
                     break;
                     

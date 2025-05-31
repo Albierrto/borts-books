@@ -370,7 +370,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <li><a href="/pages/about.php">About</a></li>
                 </ul>
             </nav>
-        </div>
+    </div>
     </header>
 
     <div class="mass-edit-container">
@@ -491,7 +491,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <i class="fas fa-medal"></i>
                         Update Condition
                     </button>
-                </form>
+        </form>
             </div>
 
             <!-- Dimensions Update -->
@@ -504,7 +504,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <i class="fas fa-expand-arrows-alt"></i>
                         Update Dimensions
                     </button>
-                </form>
+        </form>
             </div>
         </div>
 

@@ -410,7 +410,7 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
         <div class="product-detail-container">
             <div class="product-images-section">
                 <div class="main-image-container">
-                    <?php if ($images && count($images) > 0): ?>
+            <?php if ($images && count($images) > 0): ?>
                         <img id="mainImage" class="product-detail-image" src="<?php echo htmlspecialchars($images[0]['image_url']); ?>" alt="<?php echo htmlspecialchars($product['title']); ?> cover" onclick="openImageModal(0)">
                     <?php else: ?>
                         <img id="mainImage" class="product-detail-image" src="../assets/img/placeholder.png" alt="<?php echo htmlspecialchars($product['title']); ?> cover">
@@ -431,7 +431,7 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
                              alt="<?php echo htmlspecialchars($product['title']); ?> view <?php echo $index + 1; ?>"
                              onclick="changeMainImage('<?php echo htmlspecialchars($img['image_url']); ?>', this)"
                              loading="lazy">
-                    <?php endforeach; ?>
+                <?php endforeach; ?>
                     
                     <?php if ($remainingCount > 0): ?>
                         <div class="more-images-indicator" onclick="showAllImages()">
@@ -439,27 +439,27 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
                         </div>
                     <?php endif; ?>
                 </div>
-                <?php endif; ?>
+            <?php endif; ?>
             </div>
             
             <div class="product-info-section">
-                <div class="product-detail-title"><?php echo htmlspecialchars($product['title']); ?></div>
-                <div class="product-detail-price"><?php echo ($product['price'] > 0) ? '$' . number_format($product['price'], 2) : '<span style="color:#888">Price unavailable</span>'; ?></div>
-                <div class="product-detail-condition">Condition: <?php echo htmlspecialchars($product['condition']); ?></div>
+            <div class="product-detail-title"><?php echo htmlspecialchars($product['title']); ?></div>
+            <div class="product-detail-price"><?php echo ($product['price'] > 0) ? '$' . number_format($product['price'], 2) : '<span style="color:#888">Price unavailable</span>'; ?></div>
+            <div class="product-detail-condition">Condition: <?php echo htmlspecialchars($product['condition']); ?></div>
                 <div class="product-detail-description"><?php echo $product['description'] ? $product['description'] : '<span style="color:#aaa">No description available</span>'; ?></div>
                 
-                <!-- Add to Cart Button -->
+            <!-- Add to Cart Button -->
                 <div id="addToCartNotification" style="display:none;background:#d4edda;color:#155724;padding:1rem;margin-bottom:1rem;border-radius:8px;border:1px solid #c3e6cb;text-align:center;font-weight:600;">
                     Item added to cart successfully!
                 </div>
                 <form id="addToCartForm" action="/cart.php" method="POST" style="margin-top:1.5rem;">
-                    <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
+                <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
                     <input type="hidden" name="redirect" value="false">
                     <button type="submit" id="addToCartBtn" class="btn" style="background:#e63946;color:#fff;padding:1rem 2.5rem;border-radius:30px;font-weight:800;font-size:1.2rem;box-shadow:0 2px 12px rgba(35,41,70,0.13);transition:all 0.2s;border:none;cursor:pointer;width:100%;">
                         Add to Cart
                     </button>
-                </form>
-                <a href="/pages/shop.php" class="back-link">&larr; Back to Shop</a>
+            </form>
+            <a href="/pages/shop.php" class="back-link">&larr; Back to Shop</a>
             </div>
         </div>
         
@@ -844,7 +844,7 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
     </style>
     <?php endif; ?>
     
-    <script>
+        <script>
         // Pass PHP images array to JavaScript
         const productImages = <?php echo json_encode($images); ?>;
         let currentModalIndex = 0;
@@ -1163,7 +1163,7 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
                 document.body.appendChild(debugDiv);
             }
         });
-    </script>
+        </script>
     <script src="../assets/js/mobile-nav.js"></script>
 </body>
 </html> 
