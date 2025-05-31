@@ -374,4 +374,149 @@ if (!window.mobileNav) {
 // Export for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MobileNavigation;
-} 
+}
+
+// Mobile Navigation Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Create mobile navigation if it doesn't exist
+    if (!document.querySelector('.mobile-nav')) {
+        createMobileNav();
+    }
+    
+    // Initialize mobile navigation
+    initMobileNav();
+});
+
+function createMobileNav() {
+    // Get the current page links from desktop nav
+    const desktopNav = document.querySelector('nav ul');
+    if (!desktopNav) return;
+    
+    const links = Array.from(desktopNav.querySelectorAll('a')).map(link => ({
+        href: link.href,
+        text: link.textContent,
+        icon: getIconForPage(link.textContent)
+    }));
+    
+    // Create mobile nav HTML
+    const mobileNavHTML = `
+        <div class="mobile-nav" id="mobileNav">
+            <div class="mobile-nav-content">
+                <div class="mobile-nav-header">
+                    <a href="/index.php" class="logo">Bort's <span>Books</span></a>
+                    <button class="mobile-nav-close" id="mobileNavClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mobile-nav-links">
+                    ${links.map(link => `
+                        <a href="${link.href}">
+                            <i class="${link.icon}"></i>
+                            ${link.text}
+                        </a>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add mobile nav to body
+    document.body.insertAdjacentHTML('beforeend', mobileNavHTML);
+    
+    // Add mobile nav toggle button to header
+    const searchCart = document.querySelector('.search-cart');
+    if (searchCart) {
+        const toggleButton = document.createElement('button');
+        toggleButton.className = 'mobile-nav-toggle';
+        toggleButton.id = 'mobileNavToggle';
+        toggleButton.innerHTML = '<i class="fas fa-bars"></i>';
+        
+        // Insert before the search-cart div
+        searchCart.parentNode.insertBefore(toggleButton, searchCart);
+    }
+}
+
+function getIconForPage(pageText) {
+    const iconMap = {
+        'Home': 'fas fa-home',
+        'Shop': 'fas fa-store',
+        'Track Order': 'fas fa-shipping-fast',
+        'Sell Manga': 'fas fa-dollar-sign',
+        'Sell': 'fas fa-dollar-sign',
+        'About': 'fas fa-info-circle',
+        'Contact': 'fas fa-envelope',
+        'FAQ': 'fas fa-question-circle',
+        'Returns': 'fas fa-undo',
+        'Collections': 'fas fa-layer-group'
+    };
+    
+    return iconMap[pageText] || 'fas fa-link';
+}
+
+function initMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const mobileNavToggle = document.getElementById('mobileNavToggle');
+    const mobileNavClose = document.getElementById('mobileNavClose');
+    
+    if (!mobileNav || !mobileNavToggle) return;
+    
+    // Toggle mobile nav
+    mobileNavToggle.addEventListener('click', function() {
+        mobileNav.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    });
+    
+    // Close mobile nav
+    function closeMobileNav() {
+        mobileNav.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    
+    if (mobileNavClose) {
+        mobileNavClose.addEventListener('click', closeMobileNav);
+    }
+    
+    // Close on overlay click
+    mobileNav.addEventListener('click', function(e) {
+        if (e.target === mobileNav) {
+            closeMobileNav();
+        }
+    });
+    
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && mobileNav.classList.contains('active')) {
+            closeMobileNav();
+        }
+    });
+    
+    // Close mobile nav when clicking on a link
+    const mobileNavLinks = mobileNav.querySelectorAll('.mobile-nav-links a');
+    mobileNavLinks.forEach(link => {
+        link.addEventListener('click', closeMobileNav);
+    });
+}
+
+// Handle payment method switching on checkout page
+document.addEventListener('DOMContentLoaded', function() {
+    const creditCardRadio = document.getElementById('credit-card');
+    const applePayRadio = document.getElementById('apple-pay');
+    const creditCardForm = document.getElementById('credit-card-form');
+    const applePayForm = document.getElementById('apple-pay-form');
+    
+    if (creditCardRadio && applePayRadio && creditCardForm && applePayForm) {
+        creditCardRadio.addEventListener('change', function() {
+            if (this.checked) {
+                creditCardForm.style.display = 'block';
+                applePayForm.style.display = 'none';
+            }
+        });
+        
+        applePayRadio.addEventListener('change', function() {
+            if (this.checked) {
+                creditCardForm.style.display = 'none';
+                applePayForm.style.display = 'block';
+            }
+        });
+    }
+}); 

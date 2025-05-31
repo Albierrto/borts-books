@@ -98,11 +98,28 @@ $currentPage = "checkout";
                     <div class="payment-methods">
                         <div class="payment-method">
                             <input type="radio" id="credit-card" name="payment_method" value="credit_card" checked>
-                            <label for="credit-card">Credit Card</label>
+                            <label for="credit-card">
+                                <div class="payment-option">
+                                    <span class="payment-text">Credit or Debit Card</span>
+                                    <div class="card-icons">
+                                        <i class="fab fa-cc-visa"></i>
+                                        <i class="fab fa-cc-mastercard"></i>
+                                        <i class="fab fa-cc-amex"></i>
+                                        <i class="fab fa-cc-discover"></i>
+                                    </div>
+                                </div>
+                            </label>
                         </div>
                         <div class="payment-method">
-                            <input type="radio" id="paypal" name="payment_method" value="paypal">
-                            <label for="paypal">PayPal</label>
+                            <input type="radio" id="apple-pay" name="payment_method" value="apple_pay">
+                            <label for="apple-pay">
+                                <div class="payment-option">
+                                    <span class="payment-text">Apple Pay</span>
+                                    <div class="card-icons">
+                                        <i class="fab fa-apple-pay"></i>
+                                    </div>
+                                </div>
+                            </label>
                         </div>
                     </div>
                     <div id="credit-card-form">
@@ -119,6 +136,13 @@ $currentPage = "checkout";
                                 <label for="cvv">CVV</label>
                                 <input type="text" id="cvv" name="cvv" placeholder="123">
                             </div>
+                        </div>
+                    </div>
+                    <div id="apple-pay-form" style="display: none;">
+                        <div class="apple-pay-button">
+                            <button type="button" class="apple-pay-btn">
+                                <i class="fab fa-apple-pay"></i> Pay with Apple Pay
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -185,5 +209,6 @@ $currentPage = "checkout";
             <p>&copy; <?php echo date('Y'); ?> Bort's Books. All rights reserved.</p>
         </div>
     </footer>
+    <script src="../assets/js/mobile-nav.js"></script>
 </body>
 </html> 

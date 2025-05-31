@@ -336,7 +336,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="competitor-logo">eBay</div>
                 <div class="competitor-logo">Crunchyroll</div>
                 <div class="competitor-logo">Barnes & Noble</div>
-                <div class="competitor-logo">RightStuf</div>
             </div>
         </div>
 
@@ -447,5 +446,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }, 3000);
         }
     </script>
+    <script src="../assets/js/mobile-nav.js"></script>
 </body>
 </html> 

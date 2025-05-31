@@ -1446,5 +1446,6 @@ $cart_count = count($_SESSION['cart']);
             }
         });
     </script>
+    <script src="../assets/js/mobile-nav.js"></script>
 </body>
 </html> 

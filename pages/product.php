@@ -11,6 +11,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once '../includes/db.php';
+
+// Check if user is admin
+$isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header('Location: /pages/shop.php');
     exit;
@@ -442,7 +446,7 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
                 <div class="product-detail-title"><?php echo htmlspecialchars($product['title']); ?></div>
                 <div class="product-detail-price"><?php echo ($product['price'] > 0) ? '$' . number_format($product['price'], 2) : '<span style="color:#888">Price unavailable</span>'; ?></div>
                 <div class="product-detail-condition">Condition: <?php echo htmlspecialchars($product['condition']); ?></div>
-                <div class="product-detail-description"><?php echo $product['description'] ? htmlspecialchars($product['description']) : '<span style="color:#aaa">No description available</span>'; ?></div>
+                <div class="product-detail-description"><?php echo $product['description'] ? $product['description'] : '<span style="color:#aaa">No description available</span>'; ?></div>
                 
                 <!-- Add to Cart Button -->
                 <div id="addToCartNotification" style="display:none;background:#d4edda;color:#155724;padding:1rem;margin-bottom:1rem;border-radius:8px;border:1px solid #c3e6cb;text-align:center;font-weight:600;">
@@ -497,10 +501,631 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
         </div>
     </div>
     
+    <?php if ($isAdmin): ?>
+    <!-- Admin Panel - Only visible to admins -->
+    <div id="adminPanel" class="admin-panel">
+        <div class="admin-panel-header">
+            <h3><i class="fas fa-cog"></i> Admin Tools</h3>
+            <button onclick="toggleAdminPanel()" class="admin-toggle">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
+        <div class="admin-panel-content">
+            <div class="admin-actions">
+                <a href="/pages/edit-product.php?id=<?php echo $id; ?>" class="admin-btn admin-btn-primary">
+                    <i class="fas fa-edit"></i> Full Edit
+                </a>
+                <button onclick="quickEditDescription()" class="admin-btn admin-btn-secondary">
+                    <i class="fas fa-align-left"></i> Quick Edit Description
+                </button>
+                <button onclick="managePhotos()" class="admin-btn admin-btn-secondary">
+                    <i class="fas fa-images"></i> Manage Photos
+                </button>
+                <button onclick="quickEditPrice()" class="admin-btn admin-btn-secondary">
+                    <i class="fas fa-dollar-sign"></i> Edit Price
+                </button>
+            </div>
+            
+            <!-- Quick Edit Forms (hidden by default) -->
+            <div id="quickEditDescription" class="quick-edit-form" style="display: none;">
+                <h4>Quick Edit Description</h4>
+                <div class="editor-toolbar">
+                    <button type="button" onclick="insertLink()" class="toolbar-btn" title="Insert Link">
+                        <i class="fas fa-link"></i>
+                    </button>
+                    <button type="button" onclick="formatText('bold')" class="toolbar-btn" title="Bold">
+                        <i class="fas fa-bold"></i>
+                    </button>
+                    <button type="button" onclick="formatText('italic')" class="toolbar-btn" title="Italic">
+                        <i class="fas fa-italic"></i>
+                    </button>
+                    <button type="button" onclick="insertLineBreak()" class="toolbar-btn" title="Line Break">
+                        <i class="fas fa-level-down-alt"></i>
+                    </button>
+                </div>
+                <textarea id="descriptionEditor" rows="6" placeholder="Enter description with HTML formatting..."><?php echo htmlspecialchars($product['description']); ?></textarea>
+                <div class="quick-edit-actions">
+                    <button onclick="saveDescription()" class="admin-btn admin-btn-success">Save</button>
+                    <button onclick="cancelQuickEdit('quickEditDescription')" class="admin-btn admin-btn-cancel">Cancel</button>
+                </div>
+                <div class="editor-help">
+                    <small>
+                        <strong>HTML Tips:</strong> 
+                        &lt;a href="URL"&gt;Link Text&lt;/a&gt; • 
+                        &lt;b&gt;Bold&lt;/b&gt; • 
+                        &lt;i&gt;Italic&lt;/i&gt; • 
+                        &lt;br&gt; for line breaks
+                    </small>
+                </div>
+            </div>
+            
+            <div id="quickEditPrice" class="quick-edit-form" style="display: none;">
+                <h4>Quick Edit Price</h4>
+                <input type="number" id="priceEditor" step="0.01" value="<?php echo $product['price']; ?>" placeholder="0.00">
+                <div class="quick-edit-actions">
+                    <button onclick="savePrice()" class="admin-btn admin-btn-success">Save</button>
+                    <button onclick="cancelQuickEdit('quickEditPrice')" class="admin-btn admin-btn-cancel">Cancel</button>
+                </div>
+            </div>
+            
+            <div id="photoManager" class="quick-edit-form" style="display: none;">
+                <h4>Photo Management</h4>
+                <div class="photo-upload-section">
+                    <input type="file" id="newPhotos" multiple accept="image/*" style="margin-bottom: 1rem;">
+                    <button onclick="uploadPhotos()" class="admin-btn admin-btn-primary">Upload New Photos</button>
+                </div>
+                <div class="existing-photos">
+                    <h5>Current Photos (<?php echo count($images); ?>)</h5>
+                    <div class="admin-photo-grid">
+                        <?php foreach ($images as $index => $img): ?>
+                        <div class="admin-photo-item" data-image-id="<?php echo $img['id']; ?>">
+                            <img src="<?php echo htmlspecialchars($img['image_url']); ?>" alt="Photo <?php echo $index + 1; ?>">
+                            <div class="admin-photo-actions">
+                                <button onclick="deletePhoto(<?php echo $img['id']; ?>)" class="admin-btn-small admin-btn-danger" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <span class="photo-number"><?php echo $index + 1; ?></span>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="quick-edit-actions">
+                    <button onclick="cancelQuickEdit('photoManager')" class="admin-btn admin-btn-cancel">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .admin-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #fff;
+            border: 2px solid #e63946;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 400px;
+            min-width: 300px;
+        }
+        
+        .admin-panel-header {
+            background: #e63946;
+            color: white;
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .admin-panel-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .admin-toggle {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s;
+        }
+        
+        .admin-panel.collapsed .admin-toggle {
+            transform: rotate(-90deg);
+        }
+        
+        .admin-panel-content {
+            padding: 1rem;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .admin-panel.collapsed .admin-panel-content {
+            display: none;
+        }
+        
+        .admin-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .admin-btn {
+            padding: 0.5rem 0.75rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        .admin-btn-primary {
+            background: #e63946;
+            color: white;
+        }
+        
+        .admin-btn-primary:hover {
+            background: #d32f2f;
+        }
+        
+        .admin-btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .admin-btn-secondary:hover {
+            background: #e9ecef;
+        }
+        
+        .admin-btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .admin-btn-success:hover {
+            background: #218838;
+        }
+        
+        .admin-btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .admin-btn-cancel:hover {
+            background: #5a6268;
+        }
+        
+        .admin-btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .admin-btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .quick-edit-form {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+        
+        .quick-edit-form h4 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            color: #333;
+        }
+        
+        .quick-edit-form textarea,
+        .quick-edit-form input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .quick-edit-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .editor-toolbar {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .toolbar-btn {
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #333;
+        }
+        
+        .toolbar-btn:hover {
+            background: #f8f9fa;
+        }
+        
+        .editor-help {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: #fff3cd;
+            border-radius: 4px;
+        }
+        
+        .admin-photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .admin-photo-item {
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .admin-photo-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+        }
+        
+        .admin-photo-actions {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .admin-btn-small {
+            padding: 0.25rem;
+            font-size: 0.7rem;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .photo-number {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .admin-panel {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+            
+            .admin-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <?php endif; ?>
+    
     <script>
         // Pass PHP images array to JavaScript
         const productImages = <?php echo json_encode($images); ?>;
         let currentModalIndex = 0;
+        
+        // Debug: Log all available images
+        console.log('=== PRODUCT IMAGES DEBUG ===');
+        console.log('Total images found:', productImages ? productImages.length : 0);
+        if (productImages && productImages.length > 0) {
+            console.log('All image URLs:');
+            productImages.forEach((img, index) => {
+                console.log(`${index + 1}:`, img.image_url);
+            });
+        }
+        console.log('=== END DEBUG ===');
+        
+        <?php if ($isAdmin): ?>
+        // Admin Panel Functions
+        function toggleAdminPanel() {
+            const panel = document.getElementById('adminPanel');
+            panel.classList.toggle('collapsed');
+        }
+        
+        function quickEditDescription() {
+            hideAllQuickEdits();
+            document.getElementById('quickEditDescription').style.display = 'block';
+        }
+        
+        function quickEditPrice() {
+            hideAllQuickEdits();
+            document.getElementById('quickEditPrice').style.display = 'block';
+        }
+        
+        function managePhotos() {
+            hideAllQuickEdits();
+            document.getElementById('photoManager').style.display = 'block';
+        }
+        
+        function hideAllQuickEdits() {
+            document.getElementById('quickEditDescription').style.display = 'none';
+            document.getElementById('quickEditPrice').style.display = 'none';
+            document.getElementById('photoManager').style.display = 'none';
+        }
+        
+        function cancelQuickEdit(formId) {
+            document.getElementById(formId).style.display = 'none';
+        }
+        
+        // Rich Text Editor Functions
+        function insertLink() {
+            const url = prompt('Enter URL:');
+            const text = prompt('Enter link text:');
+            if (url && text) {
+                const editor = document.getElementById('descriptionEditor');
+                const linkHtml = `<a href="${url}">${text}</a>`;
+                insertAtCursor(editor, linkHtml);
+            }
+        }
+        
+        function formatText(format) {
+            const editor = document.getElementById('descriptionEditor');
+            const selectedText = getSelectedText(editor);
+            if (selectedText) {
+                let formattedText;
+                switch(format) {
+                    case 'bold':
+                        formattedText = `<b>${selectedText}</b>`;
+                        break;
+                    case 'italic':
+                        formattedText = `<i>${selectedText}</i>`;
+                        break;
+                    default:
+                        formattedText = selectedText;
+                }
+                replaceSelectedText(editor, formattedText);
+            } else {
+                const placeholder = format === 'bold' ? '<b>Bold Text</b>' : '<i>Italic Text</i>';
+                insertAtCursor(editor, placeholder);
+            }
+        }
+        
+        function insertLineBreak() {
+            const editor = document.getElementById('descriptionEditor');
+            insertAtCursor(editor, '<br>');
+        }
+        
+        function insertAtCursor(textarea, text) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const value = textarea.value;
+            textarea.value = value.substring(0, start) + text + value.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + text.length;
+            textarea.focus();
+        }
+        
+        function getSelectedText(textarea) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            return textarea.value.substring(start, end);
+        }
+        
+        function replaceSelectedText(textarea, newText) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const value = textarea.value;
+            textarea.value = value.substring(0, start) + newText + value.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + newText.length;
+            textarea.focus();
+        }
+        
+        // Save Functions
+        function saveDescription() {
+            const description = document.getElementById('descriptionEditor').value;
+            
+            fetch('/pages/admin-quick-edit.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'update_description',
+                    product_id: <?php echo $id; ?>,
+                    description: description
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the description on the page
+                    const descElement = document.querySelector('.product-detail-description');
+                    if (description.trim()) {
+                        descElement.innerHTML = description;
+                    } else {
+                        descElement.innerHTML = '<span style="color:#aaa">No description available</span>';
+                    }
+                    cancelQuickEdit('quickEditDescription');
+                    showAdminMessage('Description updated successfully!', 'success');
+                } else {
+                    showAdminMessage('Error updating description: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAdminMessage('Error updating description', 'error');
+            });
+        }
+        
+        function savePrice() {
+            const price = document.getElementById('priceEditor').value;
+            
+            fetch('/pages/admin-quick-edit.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'update_price',
+                    product_id: <?php echo $id; ?>,
+                    price: price
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the price on the page
+                    const priceElement = document.querySelector('.product-detail-price');
+                    priceElement.innerHTML = price > 0 ? '$' + parseFloat(price).toFixed(2) : '<span style="color:#888">Price unavailable</span>';
+                    cancelQuickEdit('quickEditPrice');
+                    showAdminMessage('Price updated successfully!', 'success');
+                } else {
+                    showAdminMessage('Error updating price: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAdminMessage('Error updating price', 'error');
+            });
+        }
+        
+        function uploadPhotos() {
+            const fileInput = document.getElementById('newPhotos');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                showAdminMessage('Please select photos to upload', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('product_id', <?php echo $id; ?>);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('images[]', files[i]);
+            }
+            
+            fetch('/pages/process-upload-images.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAdminMessage('Photos uploaded successfully!', 'success');
+                    // Refresh the page to show new photos
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showAdminMessage('Error uploading photos: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAdminMessage('Error uploading photos', 'error');
+            });
+        }
+        
+        function deletePhoto(imageId) {
+            if (!confirm('Are you sure you want to delete this photo?')) {
+                return;
+            }
+            
+            fetch('/pages/delete-image.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'image_id=' + imageId
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the photo from the admin grid
+                    const photoItem = document.querySelector(`[data-image-id="${imageId}"]`);
+                    if (photoItem) {
+                        photoItem.remove();
+                    }
+                    showAdminMessage('Photo deleted successfully!', 'success');
+                    // Refresh the page to update the main gallery
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showAdminMessage('Error deleting photo: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAdminMessage('Error deleting photo', 'error');
+            });
+        }
+        
+        function showAdminMessage(message, type) {
+            // Create or update admin message
+            let messageDiv = document.getElementById('adminMessage');
+            if (!messageDiv) {
+                messageDiv = document.createElement('div');
+                messageDiv.id = 'adminMessage';
+                messageDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 1rem;
+                    border-radius: 4px;
+                    z-index: 1001;
+                    font-weight: 600;
+                    max-width: 300px;
+                `;
+                document.body.appendChild(messageDiv);
+            }
+            
+            messageDiv.textContent = message;
+            messageDiv.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+            messageDiv.style.color = type === 'success' ? '#155724' : '#721c24';
+            messageDiv.style.border = type === 'success' ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
+            messageDiv.style.display = 'block';
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+        <?php endif; ?>
         
         // Test function to verify modal works
         function testModal() {
@@ -523,7 +1148,22 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
                 testBtn.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;background:red;color:white;padding:10px;';
                 document.body.appendChild(testBtn);
             }
+            
+            // Add debug info if debug mode is on
+            if (window.location.search.includes('debug=images')) {
+                const debugDiv = document.createElement('div');
+                debugDiv.style.cssText = 'position:fixed;top:50px;right:10px;z-index:9999;background:black;color:white;padding:10px;max-width:300px;font-size:12px;';
+                debugDiv.innerHTML = `
+                    <strong>Images Debug:</strong><br>
+                    Total: ${productImages ? productImages.length : 0}<br>
+                    <button onclick="openImageModal(0)" style="margin:5px;">Open Modal</button><br>
+                    <button onclick="nextImage()" style="margin:5px;">Next Image</button><br>
+                    <button onclick="prevImage()" style="margin:5px;">Prev Image</button>
+                `;
+                document.body.appendChild(debugDiv);
+            }
         });
     </script>
+    <script src="../assets/js/mobile-nav.js"></script>
 </body>
 </html> 

@@ -233,5 +233,6 @@ $num_items_in_cart = count($cart); // Count unique items instead of sum
             <?php endif; ?>
         </div>
     </main>
+    <script src="assets/js/mobile-nav.js"></script>
 </body>
 </html> 

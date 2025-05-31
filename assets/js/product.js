@@ -51,19 +51,40 @@ function changeMainImage(src, thumbnail) {
 }
 
 function openImageModal(index = 0) {
-    if (typeof productImages === 'undefined' || productImages.length === 0) return;
+    console.log('=== openImageModal called with index:', index, '===');
+    
+    if (typeof productImages === 'undefined' || productImages.length === 0) {
+        console.error('Cannot open modal: productImages not available');
+        return;
+    }
     
     currentModalIndex = index;
     const modal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
     const modalCounter = document.getElementById('modalCounter');
     
+    console.log('Modal elements found:', {
+        modal: !!modal,
+        modalImage: !!modalImage,
+        modalCounter: !!modalCounter
+    });
+    
+    if (!modal || !modalImage || !modalCounter) {
+        console.error('Modal elements not found in DOM');
+        alert('Error: Modal elements not found. Please refresh the page.');
+        return;
+    }
+    
     modalImage.src = productImages[currentModalIndex].image_url;
     modalImage.alt = productImages[currentModalIndex].alt || 'Product image';
     modalCounter.textContent = `${currentModalIndex + 1} / ${productImages.length}`;
     
+    console.log('Setting modal image to:', productImages[currentModalIndex].image_url);
+    
     modal.classList.add('active');
     document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    
+    console.log('Modal should now be visible');
 }
 
 function closeImageModal() {
@@ -95,16 +116,22 @@ function prevImage() {
 }
 
 function showAllImages() {
-    console.log('showAllImages function called - opening gallery modal');
+    console.log('=== showAllImages function called ===');
     
     // Check if productImages is available
-    if (typeof productImages === 'undefined' || productImages.length === 0) {
-        console.error('No product images available');
+    if (typeof productImages === 'undefined') {
+        console.error('productImages is undefined');
+        alert('Error: Product images not loaded. Please refresh the page.');
+        return;
+    }
+    
+    if (productImages.length === 0) {
+        console.error('productImages array is empty');
         alert('No additional images to display');
         return;
     }
     
-    console.log('Opening modal with', productImages.length, 'images');
+    console.log('Found', productImages.length, 'images. Opening gallery modal...');
     
     // Open modal with first image
     openImageModal(0);

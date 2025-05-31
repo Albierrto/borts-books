@@ -151,6 +151,70 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
             color: #232946;
             text-decoration: underline;
         }
+        
+        .editor-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex-wrap: wrap;
+        }
+        
+        .toolbar-btn {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: all 0.2s;
+        }
+        
+        .toolbar-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .toolbar-btn:active {
+            background: #dee2e6;
+        }
+        
+        .editor-help {
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .description-preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .description-preview h4 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+        
+        .preview-content {
+            background: white;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+        }
     </style>
 </head>
 <body>
@@ -193,7 +257,40 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <div class="form-group">
                     <label for="description">Description</label>
-                    <textarea id="description" name="description"><?php echo htmlspecialchars($product['description']); ?></textarea>
+                    <div class="editor-toolbar">
+                        <button type="button" onclick="insertLink()" class="toolbar-btn" title="Insert Link">
+                            <i class="fas fa-link"></i> Link
+                        </button>
+                        <button type="button" onclick="formatText('bold')" class="toolbar-btn" title="Bold">
+                            <i class="fas fa-bold"></i> Bold
+                        </button>
+                        <button type="button" onclick="formatText('italic')" class="toolbar-btn" title="Italic">
+                            <i class="fas fa-italic"></i> Italic
+                        </button>
+                        <button type="button" onclick="insertLineBreak()" class="toolbar-btn" title="Line Break">
+                            <i class="fas fa-level-down-alt"></i> Break
+                        </button>
+                        <button type="button" onclick="previewDescription()" class="toolbar-btn" title="Preview">
+                            <i class="fas fa-eye"></i> Preview
+                        </button>
+                    </div>
+                    <textarea id="description" name="description" rows="8" placeholder="Enter description with HTML formatting..."><?php echo htmlspecialchars($product['description']); ?></textarea>
+                    <div class="editor-help">
+                        <small>
+                            <strong>HTML Tips:</strong> 
+                            &lt;a href="URL"&gt;Link Text&lt;/a&gt; • 
+                            &lt;b&gt;Bold&lt;/b&gt; • 
+                            &lt;i&gt;Italic&lt;/i&gt; • 
+                            &lt;br&gt; for line breaks • 
+                            &lt;p&gt;Paragraphs&lt;/p&gt; • 
+                            &lt;ul&gt;&lt;li&gt;Lists&lt;/li&gt;&lt;/ul&gt;
+                        </small>
+                    </div>
+                    <div id="descriptionPreview" class="description-preview" style="display: none;">
+                        <h4>Preview:</h4>
+                        <div class="preview-content"></div>
+                        <button type="button" onclick="hidePreview()" class="btn" style="margin-top: 0.5rem;">Hide Preview</button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -235,6 +332,86 @@ $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     const select = document.getElementById('shipping_option');
                     const flatGroup = document.getElementById('flat-rate-group');
                     flatGroup.style.display = select.value === 'flat' ? 'block' : 'none';
+                }
+                
+                // Rich Text Editor Functions
+                function insertLink() {
+                    const url = prompt('Enter URL:');
+                    const text = prompt('Enter link text:');
+                    if (url && text) {
+                        const editor = document.getElementById('description');
+                        const linkHtml = `<a href="${url}">${text}</a>`;
+                        insertAtCursor(editor, linkHtml);
+                    }
+                }
+                
+                function formatText(format) {
+                    const editor = document.getElementById('description');
+                    const selectedText = getSelectedText(editor);
+                    if (selectedText) {
+                        let formattedText;
+                        switch(format) {
+                            case 'bold':
+                                formattedText = `<b>${selectedText}</b>`;
+                                break;
+                            case 'italic':
+                                formattedText = `<i>${selectedText}</i>`;
+                                break;
+                            default:
+                                formattedText = selectedText;
+                        }
+                        replaceSelectedText(editor, formattedText);
+                    } else {
+                        const placeholder = format === 'bold' ? '<b>Bold Text</b>' : '<i>Italic Text</i>';
+                        insertAtCursor(editor, placeholder);
+                    }
+                }
+                
+                function insertLineBreak() {
+                    const editor = document.getElementById('description');
+                    insertAtCursor(editor, '<br>');
+                }
+                
+                function insertAtCursor(textarea, text) {
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const value = textarea.value;
+                    textarea.value = value.substring(0, start) + text + value.substring(end);
+                    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+                    textarea.focus();
+                }
+                
+                function getSelectedText(textarea) {
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    return textarea.value.substring(start, end);
+                }
+                
+                function replaceSelectedText(textarea, newText) {
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const value = textarea.value;
+                    textarea.value = value.substring(0, start) + newText + value.substring(end);
+                    textarea.selectionStart = textarea.selectionEnd = start + newText.length;
+                    textarea.focus();
+                }
+                
+                function previewDescription() {
+                    const description = document.getElementById('description').value;
+                    const preview = document.getElementById('descriptionPreview');
+                    const previewContent = preview.querySelector('.preview-content');
+                    
+                    if (description.trim()) {
+                        previewContent.innerHTML = description;
+                        preview.style.display = 'block';
+                    } else {
+                        previewContent.innerHTML = '<em>No description to preview</em>';
+                        preview.style.display = 'block';
+                    }
+                }
+                
+                function hidePreview() {
+                    document.getElementById('descriptionPreview').style.display = 'none';
                 }
                 </script>
             </form>
