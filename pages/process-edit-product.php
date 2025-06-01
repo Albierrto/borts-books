@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['message_type'] = "error";
     }
 
-    header("Location: edit-product.php?id=" . $product_id);
+    header("Location: edit-product-clean.php?id=" . $product_id);
     exit;
 }
 

@@ -512,7 +512,7 @@ $num_items_in_cart = array_sum($_SESSION['cart']);
         </div>
         <div class="admin-panel-content">
             <div class="admin-actions">
-                <a href="/pages/edit-product.php?id=<?php echo $id; ?>" class="admin-btn admin-btn-primary">
+                <a href="/pages/edit-product-clean.php?id=<?php echo $id; ?>" class="admin-btn admin-btn-primary">
                     <i class="fas fa-edit"></i> Full Edit
                 </a>
                 <button onclick="quickEditDescription()" class="admin-btn admin-btn-secondary">

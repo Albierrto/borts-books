@@ -5,7 +5,7 @@ echo "<h1>Manual Upload Link Fix</h1>";
 echo "<h3>Current Status:</h3>";
 
 // Check current link
-$content = file_get_contents('edit-product.php');
+$content = file_get_contents('edit-product-clean.php');
 if (strpos($content, 'upload-images-production.php') !== false) {
     echo "✅ Upload link is already fixed and points to working version<br>";
 } else if (strpos($content, 'upload-images.php') !== false) {
@@ -33,13 +33,13 @@ echo "</div>";
 echo "<div style='background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 10px 0;'>";
 echo "<h4>Option 2: Test Edit Product Page</h4>";
 echo "<p>The edit product page should still work. The only issue is the upload button.</p>";
-echo "<p><a href='edit-product.php?id=815' target='_blank' style='background: #6c757d; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;'>📝 Test Edit Product Page</a></p>";
+echo "<p><a href='edit-product-clean.php?id=815' target='_blank' style='background: #6c757d; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;'>📝 Test Edit Product Page</a></p>";
 echo "</div>";
 
 echo "<div style='background: #d1ecf1; padding: 15px; border-left: 4px solid #17a2b8; margin: 10px 0;'>";
 echo "<h4>Option 3: Run Diagnostics</h4>";
 echo "<p>Check what specifically is wrong:</p>";
-echo "<p><a href='test-edit-product.php' style='background: #17a2b8; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;'>🔍 Run Full Diagnostic</a></p>";
+echo "<p><a href='test-edit-product-clean.php' style='background: #17a2b8; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;'>🔍 Run Full Diagnostic</a></p>";
 echo "</div>";
 
 echo "<br><h3>📋 Status Summary:</h3>";
@@ -50,5 +50,5 @@ echo "<li>⚠️ Edit product page may have issues (needs testing)</li>";
 echo "<li>⚠️ Upload button on edit page points to broken file</li>";
 echo "</ul>";
 
-echo "<br><p><em>The safest approach is to use the direct upload links above until we can properly fix the edit-product.php file.</em></p>";
+echo "<br><p><em>The safest approach is to use the direct upload links above until we can properly fix the edit-product-clean.php file.</em></p>";
 ?> 

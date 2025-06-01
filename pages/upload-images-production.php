@@ -71,7 +71,7 @@ try {
 </head>
 <body>
     <div class="container">
-        <a href="edit-product.php?id=<?php echo $product_id; ?>" class="btn" style="margin-bottom:20px">← Back to Edit Product</a>
+        <a href="edit-product-clean.php?id=<?php echo $product_id; ?>" class="btn" style="margin-bottom:20px">← Back to Edit Product</a>
         
         <div class="header">
             <h1>📸 Upload Images</h1>

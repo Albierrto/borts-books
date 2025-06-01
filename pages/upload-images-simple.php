@@ -73,7 +73,7 @@ try {
     <div class="container">
         <h1>Upload Images - Simple Version</h1>
         
-        <p><a href="edit-product.php?id=<?php echo $product_id; ?>">&larr; Back to Edit Product</a></p>
+        <p><a href="edit-product-clean.php?id=<?php echo $product_id; ?>">&larr; Back to Edit Product</a></p>
         
         <h2><?php echo htmlspecialchars($product['title']); ?></h2>
         <p><strong>Price:</strong> $<?php echo number_format($product['price'], 2); ?></p>

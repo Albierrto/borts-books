@@ -1,5 +1,5 @@
 <?php
-// Diagnostic test for edit-product.php
+// Diagnostic test for edit-product-clean.php
 echo "<h1>Edit Product Diagnostic Test</h1>";
 
 // Test 1: Basic PHP functionality
@@ -8,11 +8,11 @@ echo "✅ PHP is working - Time: " . date('Y-m-d H:i:s') . "<br><br>";
 
 // Test 2: File existence
 echo "<h3>Test 2: File Check</h3>";
-if (file_exists('edit-product.php')) {
-    echo "✅ edit-product.php exists<br>";
-    echo "File size: " . number_format(filesize('edit-product.php')) . " bytes<br>";
+if (file_exists('edit-product-clean.php')) {
+    echo "✅ edit-product-clean.php exists<br>";
+    echo "File size: " . number_format(filesize('edit-product-clean.php')) . " bytes<br>";
 } else {
-    echo "❌ edit-product.php not found<br>";
+    echo "❌ edit-product-clean.php not found<br>";
 }
 echo "<br>";
 
@@ -73,16 +73,16 @@ try {
 }
 echo "<br>";
 
-// Test 7: Try to include edit-product.php
+// Test 7: Try to include edit-product-clean.php
 echo "<h3>Test 7: Include Test</h3>";
-echo "Attempting to include edit-product.php...<br>";
+echo "Attempting to include edit-product-clean.php...<br>";
 
 // Capture any output/errors
 ob_start();
 $error = '';
 try {
     // Don't actually include it to avoid header issues, just check syntax
-    $content = file_get_contents('edit-product.php');
+    $content = file_get_contents('edit-product-clean.php');
     if ($content !== false) {
         echo "✅ File content readable<br>";
         
@@ -116,7 +116,7 @@ $output = ob_get_clean();
 echo $output;
 
 echo "<br><h3>🔧 Solutions</h3>";
-echo "<p><a href='edit-product.php?id=815' target='_blank'>Try to load edit-product.php directly</a></p>";
+echo "<p><a href='edit-product-clean.php?id=815' target='_blank'>Try to load edit-product-clean.php directly</a></p>";
 echo "<p><a href='upload-images-production.php?product_id=815' target='_blank'>Try upload images directly</a></p>";
 echo "<p><a href='debug-500-remote.php?product_id=815' target='_blank'>Run 500 error diagnostic</a></p>";
 

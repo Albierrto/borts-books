@@ -694,7 +694,7 @@ $categories = $cat_stmt->fetchAll(PDO::FETCH_COLUMN);
                                 <td><?php echo date('M j, Y', strtotime($product['created_at'])); ?></td>
                                 <td class="actions-cell">
                                     <div class="product-actions">
-                                        <a href="edit-product.php?id=<?php echo $product['id']; ?>" class="btn btn-sm btn-secondary">
+                                        <a href="edit-product-clean.php?id=<?php echo $product['id']; ?>" class="btn btn-sm btn-secondary">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <form action="delete-product.php" method="POST" style="display: inline;">

@@ -260,7 +260,7 @@ $existing_images = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
     <div class="upload-container">
         <div style="margin-bottom: 1rem;">
-            <a href="edit-product.php?id=<?php echo $product_id; ?>" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #666; text-decoration: none; font-weight: 600;">
+            <a href="edit-product-clean.php?id=<?php echo $product_id; ?>" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #666; text-decoration: none; font-weight: 600;">
                 <i class="fas fa-arrow-left"></i> Back to Edit Product
             </a>
         </div>

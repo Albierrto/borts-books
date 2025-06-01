@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['image_id'])) {
                 } else {
                     $_SESSION['message'] = "Image deleted successfully!";
                     $_SESSION['message_type'] = "success";
-                    header("Location: edit-product.php?id=" . $image['product_id']);
+                    header("Location: edit-product-clean.php?id=" . $image['product_id']);
                 }
                 exit;
             } else {
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['image_id'])) {
             } else {
                 $_SESSION['message'] = $e->getMessage();
                 $_SESSION['message_type'] = "error";
-                header("Location: edit-product.php?id=" . $image['product_id']);
+                header("Location: edit-product-clean.php?id=" . $image['product_id']);
             }
             exit;
         }

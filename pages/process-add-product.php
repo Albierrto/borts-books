@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $_SESSION['message'] = "Product added successfully!";
         $_SESSION['message_type'] = "success";
-        header("Location: edit-product.php?id=" . $product_id);
+        header("Location: edit-product-clean.php?id=" . $product_id);
         exit;
         
     } catch (Exception $e) {

@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
     }
     
     // Redirect back to product edit page
-    header("Location: edit-product.php?id=$product_id");
+    header("Location: edit-product-clean.php?id=$product_id");
     exit;
 } else {
     header("Location: admin.php");
