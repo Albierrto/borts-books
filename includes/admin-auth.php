@@ -12,6 +12,23 @@ require_once __DIR__ . '/password-security.php';
 require_once __DIR__ . '/database-encryption.php';
 
 /**
+ * Simple admin password verification function
+ */
+function verify_admin_password($password) {
+    try {
+        $adminCredentials = getAdminCredentials();
+        if (!$adminCredentials) {
+            return false;
+        }
+        
+        return password_verify($password, $adminCredentials['password_hash']);
+    } catch (Exception $e) {
+        error_log("Admin password verification error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * Check if admin is authenticated
  */
 function is_admin_logged_in() {
