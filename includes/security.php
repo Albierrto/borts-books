@@ -346,7 +346,10 @@ function analyze_request() {
     
     if ($ids === null) {
         try {
-            require_once __DIR__ . '/db.php';
+            // Ensure we include the correct db.php file
+            if (!defined('DB_CONNECTED')) {
+                require_once dirname(__FILE__) . '/db.php';
+            }
             $monitor = new SecurityMonitor($db ?? $pdo);
             $ids = new IntrusionDetectionSystem($monitor);
         } catch (Exception $e) {
