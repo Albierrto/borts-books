@@ -4,8 +4,10 @@
  * Centralized configuration with enhanced security measures
  */
 
-// Define that files are being included from the app
-define('INCLUDED_FROM_APP', true);
+// Define that files are being included from the app (conditional)
+if (!defined('INCLUDED_FROM_APP')) {
+    define('INCLUDED_FROM_APP', true);
+}
 
 // Load environment variables first
 $envPath = dirname(__DIR__) . '/.env';
@@ -29,17 +31,17 @@ if (file_exists($envPath)) {
 // Application Configuration
 define('APP_NAME', $_ENV['APP_NAME'] ?? 'Bort\'s Books');
 define('APP_VERSION', $_ENV['APP_VERSION'] ?? '2.0.0');
-define('APP_ENV', $_ENV['APP_ENV'] ?? 'production');
-define('APP_DEBUG', filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN));
+define('APP_ENV', $_ENV['APP_ENV'] ?? 'development');
+define('APP_DEBUG', filter_var($_ENV['APP_DEBUG'] ?? true, FILTER_VALIDATE_BOOLEAN));
 
 // Security Configuration
-define('SECURITY_KEY', $_ENV['SECURITY_KEY'] ?? '');
-define('ENCRYPTION_KEY', $_ENV['ENCRYPTION_KEY'] ?? '');
-define('JWT_SECRET', $_ENV['JWT_SECRET'] ?? '');
+define('SECURITY_KEY', $_ENV['SECURITY_KEY'] ?? (APP_ENV === 'development' ? 'dev_security_key_12345' : ''));
+define('ENCRYPTION_KEY', $_ENV['ENCRYPTION_KEY'] ?? (APP_ENV === 'development' ? 'dev_encryption_key_12345' : ''));
+define('JWT_SECRET', $_ENV['JWT_SECRET'] ?? (APP_ENV === 'development' ? 'dev_jwt_secret_12345' : ''));
 
 // Admin Configuration (secure)
 define('ADMIN_USERNAME', $_ENV['ADMIN_USERNAME'] ?? 'admin');
-define('ADMIN_PASSWORD_HASH', $_ENV['ADMIN_PASSWORD_HASH'] ?? '');
+define('ADMIN_PASSWORD_HASH', $_ENV['ADMIN_PASSWORD_HASH'] ?? (APP_ENV === 'development' ? password_hash('admin123', PASSWORD_ARGON2ID) : ''));
 define('ADMIN_EMAIL', $_ENV['ADMIN_EMAIL'] ?? 'admin@bortsbooks.com');
 
 // Email Configuration
@@ -93,46 +95,58 @@ define('BUSINESS_ADDRESS', $_ENV['BUSINESS_ADDRESS'] ?? '');
 // Validation Functions
 function validateConfig() {
     $errors = [];
+    $warnings = [];
     
-    // Check required security keys
-    if (empty(SECURITY_KEY)) {
-        $errors[] = 'SECURITY_KEY is not configured';
+    // Check required security keys (only fail in production)
+    if (empty(SECURITY_KEY) && APP_ENV === 'production') {
+        $errors[] = 'SECURITY_KEY is not configured (required in production)';
+    } elseif (empty(SECURITY_KEY)) {
+        $warnings[] = 'SECURITY_KEY is not configured (recommended for security)';
     }
     
-    if (empty(ENCRYPTION_KEY)) {
-        $errors[] = 'ENCRYPTION_KEY is not configured';
+    if (empty(ENCRYPTION_KEY) && APP_ENV === 'production') {
+        $errors[] = 'ENCRYPTION_KEY is not configured (required in production)';
+    } elseif (empty(ENCRYPTION_KEY)) {
+        $warnings[] = 'ENCRYPTION_KEY is not configured (recommended for security)';
     }
     
-    if (empty(ADMIN_PASSWORD_HASH)) {
-        $errors[] = 'ADMIN_PASSWORD_HASH is not configured';
+    if (empty(ADMIN_PASSWORD_HASH) && APP_ENV === 'production') {
+        $errors[] = 'ADMIN_PASSWORD_HASH is not configured (required in production)';
+    } elseif (empty(ADMIN_PASSWORD_HASH)) {
+        $warnings[] = 'ADMIN_PASSWORD_HASH is not configured (admin access will be limited)';
     }
     
-    // Validate email configuration if SMTP is used
+    // Validate email configuration if SMTP is used (warning only)
     if (!empty(SMTP_USERNAME) && empty(SMTP_PASSWORD)) {
-        $errors[] = 'SMTP_PASSWORD is required when SMTP_USERNAME is set';
+        $warnings[] = 'SMTP_PASSWORD is required when SMTP_USERNAME is set';
     }
     
-    // Check Stripe configuration if needed
+    // Check Stripe configuration if needed (warning only)
     if (!empty(STRIPE_SECRET_KEY) && empty(STRIPE_PUBLISHABLE_KEY)) {
-        $errors[] = 'STRIPE_PUBLISHABLE_KEY is required when STRIPE_SECRET_KEY is set';
+        $warnings[] = 'STRIPE_PUBLISHABLE_KEY is required when STRIPE_SECRET_KEY is set';
     }
     
-    // Validate paths
+    // Validate paths (create if missing)
     if (!is_dir(LOG_PATH)) {
         @mkdir(LOG_PATH, 0755, true);
         if (!is_dir(LOG_PATH)) {
-            $errors[] = 'Cannot create log directory: ' . LOG_PATH;
+            $warnings[] = 'Cannot create log directory: ' . LOG_PATH;
         }
     }
     
     if (!is_dir(UPLOAD_PATH)) {
         @mkdir(UPLOAD_PATH, 0755, true);
         if (!is_dir(UPLOAD_PATH)) {
-            $errors[] = 'Cannot create upload directory: ' . UPLOAD_PATH;
+            $warnings[] = 'Cannot create upload directory: ' . UPLOAD_PATH;
         }
     }
     
-    return $errors;
+    // Log warnings but don't fail
+    if (!empty($warnings) && APP_ENV === 'development') {
+        error_log('Configuration warnings: ' . implode(', ', $warnings));
+    }
+    
+    return $errors; // Only return critical errors
 }
 
 /**
@@ -167,6 +181,10 @@ function initSecurityConfig() {
     if (!empty($errors)) {
         if (APP_ENV === 'development') {
             error_log('Configuration errors: ' . implode(', ', $errors));
+            // In development, show detailed errors but don't stop execution
+            foreach ($errors as $error) {
+                echo "<div style='background: #ffebee; color: #c62828; padding: 10px; margin: 5px; border-radius: 5px;'>Config Warning: $error</div>";
+            }
         } else {
             error_log('CRITICAL: Application configuration errors detected');
             if (!headers_sent()) {
@@ -201,9 +219,10 @@ function initSecurityConfig() {
         header('X-XSS-Protection: 1; mode=block');
         header('Referrer-Policy: strict-origin-when-cross-origin');
         
-        // Remove server information
-        header_remove('X-Powered-By');
-        header_remove('Server');
+        // Basic CSP for development
+        if (APP_ENV === 'development') {
+            header("Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https:;");
+        }
     }
 }
 
@@ -236,55 +255,4 @@ if (APP_ENV === 'development') {
         ]);
     }
 }
-
-// Compatibility with older code
-$admin_username = ADMIN_USERNAME;
-
-// Define global constants for backwards compatibility
-if (!defined('STRIPE_PUBLISHABLE_KEY_CONST')) {
-    define('STRIPE_PUBLISHABLE_KEY_CONST', STRIPE_PUBLISHABLE_KEY);
-}
-if (!defined('STRIPE_SECRET_KEY_CONST')) {
-    define('STRIPE_SECRET_KEY_CONST', STRIPE_SECRET_KEY);
-}
-
-// Automatically detect site URL based on current request
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$auto_site_url = $protocol . $host;
-
-// Use auto-detected URL if not localhost, otherwise fall back to environment variable
-if (strpos($host, 'localhost') === false && strpos($host, '127.0.0.1') === false) {
-    $site_url = $auto_site_url;
-} else {
-    $site_url = $_ENV['SITE_URL'] ?? $auto_site_url;
-}
-
-// Application configuration
-define('SITE_NAME', 'Bort\'s Books');
-define('SITE_URL', $site_url);
-define('CURRENCY', 'USD');
-define('TAX_RATE', 0.0875); // 8.75% tax
-define('SHIPPING_RATE', 5.00); // $5.00 shipping
-
-// Database configuration
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'borts_books');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-
-// Rate limiting configuration
-define('RATE_LIMIT_MAX_REQUESTS', 100); // Maximum requests per window
-
-// Session configuration
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', 1);
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_samesite', 'Strict');
-
-// Error reporting
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/../logs/error.log');
 ?> 

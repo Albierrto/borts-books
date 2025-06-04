@@ -4,11 +4,6 @@
  * Provides centralized security functions for the entire application
  */
 
-// Define that files are being included from the app (needed for other includes)
-if (!defined('INCLUDED_FROM_APP')) {
-    define('INCLUDED_FROM_APP', true);
-}
-
 // Ensure config.php is loaded first for essential constants
 if (!defined('APP_NAME')) {
     require_once __DIR__ . '/config.php';
