@@ -1,84 +1,27 @@
 <?php
-// Simple Debug Page - Completely Isolated
-// This bypasses all existing configuration to identify the issue
-
+// Enable error reporting to catch any PHP errors
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 
-echo "<!DOCTYPE html><html><head><title>Simple Debug</title></head><body>";
-echo "<h1>Simple Configuration Debug</h1>";
-echo "<p>This page is completely isolated from the existing configuration system.</p>";
+echo "<h1>Simple Debug - No Auth Required</h1>";
 
-// Step 1: Check .env file
-echo "<h2>1. Environment File Check</h2>";
-$envPath = __DIR__ . '/.env';
-echo "Looking for .env at: " . $envPath . "<br>";
+echo "<h2>1. Basic PHP Test</h2>";
+echo "✅ PHP is working<br>";
+echo "PHP Version: " . phpversion() . "<br>";
+echo "Current directory: " . __DIR__ . "<br>";
 
-if (file_exists($envPath)) {
-    echo "✅ .env file found<br>";
-    
-    $envContent = file_get_contents($envPath);
-    if ($envContent !== false) {
-        echo "✅ .env file readable<br>";
-        echo "File size: " . strlen($envContent) . " bytes<br>";
-        
-        // Parse and show environment variables
-        $lines = explode("\n", $envContent);
-        echo "<h3>Environment Variables:</h3>";
-        echo "<table border='1' style='border-collapse: collapse; width: 100%; font-family: monospace;'>";
-        echo "<tr><th>Line</th><th>Variable</th><th>Status</th></tr>";
-        
-        $lineNum = 0;
-        foreach ($lines as $line) {
-            $lineNum++;
-            $line = trim($line);
-            
-            if (empty($line)) {
-                echo "<tr><td>$lineNum</td><td>[EMPTY LINE]</td><td>Skipped</td></tr>";
-                continue;
-            }
-            
-            if (strpos($line, '#') === 0) {
-                echo "<tr><td>$lineNum</td><td>$line</td><td>Comment</td></tr>";
-                continue;
-            }
-            
-            if (strpos($line, '=') !== false) {
-                list($name, $value) = array_map('trim', explode('=', $line, 2));
-                $value = trim($value, '"\'');
-                
-                // Hide sensitive values but show if they're set
-                if (strpos($name, 'PASS') !== false || strpos($name, 'SECRET') !== false || strpos($name, 'KEY') !== false) {
-                    $displayValue = strlen($value) > 0 ? '[SET - ' . strlen($value) . ' chars]' : '[EMPTY]';
-                } else {
-                    $displayValue = strlen($value) > 30 ? substr($value, 0, 30) . '...' : $value;
-                }
-                
-                $status = strlen($value) > 0 ? "✅ Set" : "❌ Empty";
-                echo "<tr><td>$lineNum</td><td>$name = $displayValue</td><td>$status</td></tr>";
-            } else {
-                echo "<tr><td>$lineNum</td><td>$line</td><td>❌ Invalid format</td></tr>";
-            }
-        }
-        echo "</table>";
-        
-    } else {
-        echo "❌ .env file not readable<br>";
-    }
-} else {
-    echo "❌ .env file not found<br>";
-}
-
-// Step 2: Check what files exist
-echo "<h2>2. Critical Files Check</h2>";
-$criticalFiles = [
-    'includes/config.php',
+echo "<h2>2. File Existence Check</h2>";
+$files = [
     'includes/security.php',
+    'includes/admin-auth.php',
+    'includes/config.php',
     'includes/db.php',
-    'includes/admin-auth.php'
+    'pages/admin-login.php',
+    'pages/admin-dashboard.php'
 ];
 
-foreach ($criticalFiles as $file) {
+foreach ($files as $file) {
     if (file_exists($file)) {
         echo "✅ $file exists<br>";
     } else {
@@ -86,72 +29,114 @@ foreach ($criticalFiles as $file) {
     }
 }
 
-// Step 3: Try to manually test config.php
-echo "<h2>3. Manual Config.php Test</h2>";
-if (file_exists('includes/config.php')) {
-    echo "Testing config.php directly...<br>";
-    
-    // Capture any output or errors
-    ob_start();
-    $error = null;
-    try {
-        // First, manually define INCLUDED_FROM_APP
-        if (!defined('INCLUDED_FROM_APP')) {
-            define('INCLUDED_FROM_APP', true);
-        }
-        
-        include 'includes/config.php';
-        echo "✅ config.php loaded successfully<br>";
-        
-        // Test if constants are defined
-        $constants = ['APP_NAME', 'APP_ENV', 'SECURITY_KEY', 'ENCRYPTION_KEY'];
-        foreach ($constants as $const) {
-            if (defined($const)) {
-                $value = constant($const);
-                if (in_array($const, ['SECURITY_KEY', 'ENCRYPTION_KEY'])) {
-                    echo "$const: " . (strlen($value) > 0 ? '✅ SET (' . strlen($value) . ' chars)' : '❌ EMPTY') . "<br>";
-                } else {
-                    echo "$const: $value<br>";
-                }
-            } else {
-                echo "❌ $const not defined<br>";
-            }
-        }
-        
-    } catch (Throwable $e) {
-        $error = $e;
-        echo "❌ config.php failed to load<br>";
-        echo "Error: " . $e->getMessage() . "<br>";
-        echo "File: " . $e->getFile() . "<br>";
-        echo "Line: " . $e->getLine() . "<br>";
-    }
-    
-    $output = ob_get_clean();
-    echo $output;
-    
-    if ($error) {
-        echo "<h3>Full Error Details:</h3>";
-        echo "<pre style='background: #ffebee; padding: 10px; border: 1px solid #red;'>";
-        echo "Message: " . $error->getMessage() . "\n";
-        echo "File: " . $error->getFile() . "\n";
-        echo "Line: " . $error->getLine() . "\n";
-        echo "Stack Trace:\n" . $error->getTraceAsString();
-        echo "</pre>";
-    }
-} else {
-    echo "❌ config.php file not found<br>";
+echo "<h2>3. Security.php Include Test</h2>";
+try {
+    require_once 'includes/security.php';
+    echo "✅ Security.php loaded successfully<br>";
+} catch (Exception $e) {
+    echo "❌ Security.php error: " . $e->getMessage() . "<br>";
+} catch (Error $e) {
+    echo "❌ Security.php fatal error: " . $e->getMessage() . "<br>";
 }
 
-// Step 4: Show PHP info
-echo "<h2>4. PHP Environment</h2>";
-echo "PHP Version: " . phpversion() . "<br>";
-echo "Server: " . ($_SERVER['SERVER_SOFTWARE'] ?? 'Unknown') . "<br>";
-echo "Document Root: " . ($_SERVER['DOCUMENT_ROOT'] ?? 'Unknown') . "<br>";
-echo "Current Directory: " . __DIR__ . "<br>";
+echo "<h2>4. Admin-auth.php Include Test</h2>";
+try {
+    require_once 'includes/admin-auth.php';
+    echo "✅ Admin-auth.php loaded successfully<br>";
+} catch (Exception $e) {
+    echo "❌ Admin-auth.php error: " . $e->getMessage() . "<br>";
+} catch (Error $e) {
+    echo "❌ Admin-auth.php fatal error: " . $e->getMessage() . "<br>";
+}
 
-echo "<h2>5. Next Steps</h2>";
-echo "<p>Based on the results above, we can identify what's causing the configuration error.</p>";
-echo "<p><a href='index.php'>Try Home Page</a> | <a href='pages/admin-login.php'>Try Admin Login</a></p>";
+echo "<h2>5. Admin Login Page Test</h2>";
+echo "<p>Testing admin login page without executing it:</p>";
 
-echo "</body></html>";
+// Check if we can read the admin-login.php file
+try {
+    $loginContent = file_get_contents('pages/admin-login.php');
+    if ($loginContent) {
+        echo "✅ Admin-login.php file readable (" . strlen($loginContent) . " characters)<br>";
+        
+        // Check for common PHP syntax issues
+        if (strpos($loginContent, '<?php') === false) {
+            echo "❌ No opening PHP tag found<br>";
+        } else {
+            echo "✅ Opening PHP tag found<br>";
+        }
+        
+        // Check for unmatched braces/brackets
+        $openBraces = substr_count($loginContent, '{');
+        $closeBraces = substr_count($loginContent, '}');
+        echo "Braces: $openBraces open, $closeBraces close<br>";
+        if ($openBraces != $closeBraces) {
+            echo "❌ Unmatched braces detected<br>";
+        } else {
+            echo "✅ Braces matched<br>";
+        }
+        
+    } else {
+        echo "❌ Cannot read admin-login.php file<br>";
+    }
+} catch (Exception $e) {
+    echo "❌ Error reading admin-login.php: " . $e->getMessage() . "<br>";
+}
+
+echo "<h2>6. Session Test</h2>";
+try {
+    if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+        echo "✅ Session started<br>";
+    } else {
+        echo "✅ Session already active<br>";
+    }
+    echo "Session ID: " . session_id() . "<br>";
+} catch (Exception $e) {
+    echo "❌ Session error: " . $e->getMessage() . "<br>";
+}
+
+echo "<h2>7. Function Availability Test</h2>";
+$functions = [
+    'secure_session_start',
+    'set_security_headers', 
+    'verify_csrf_token',
+    'generate_csrf_token',
+    'admin_login',
+    'is_admin_logged_in'
+];
+
+foreach ($functions as $func) {
+    if (function_exists($func)) {
+        echo "✅ $func() available<br>";
+    } else {
+        echo "❌ $func() not found<br>";
+    }
+}
+
+echo "<h2>8. Direct Admin Login Test</h2>";
+echo "<p>Try loading admin login directly (will show any PHP errors):</p>";
+
+// Capture any errors from the admin login page
+ob_start();
+try {
+    // Don't actually include it, just check if it would load
+    $syntax_check = php_check_syntax('pages/admin-login.php');
+    if (function_exists('php_check_syntax')) {
+        if ($syntax_check) {
+            echo "✅ Admin-login.php syntax is valid<br>";
+        } else {
+            echo "❌ Admin-login.php has syntax errors<br>";
+        }
+    } else {
+        echo "ℹ️ php_check_syntax not available (normal in many PHP versions)<br>";
+    }
+} catch (Exception $e) {
+    echo "❌ Syntax check error: " . $e->getMessage() . "<br>";
+}
+ob_end_clean();
+
+echo "<h2>9. Manual Links</h2>";
+echo '<a href="pages/admin-login.php" target="_blank">Direct Admin Login Link</a><br>';
+echo '<p style="color: red;">If the above link shows a white page, check your server error logs for PHP errors.</p>';
+
 ?> 
