@@ -1,6 +1,9 @@
 <?php
 session_start();
 
+// Include configuration first
+require_once 'includes/config.php';
+
 // Initialize cart if not set
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];

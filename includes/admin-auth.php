@@ -4,7 +4,10 @@
  * Provides secure admin login functionality with comprehensive security measures
  */
 
-require_once __DIR__ . '/config.php';
+// Only include config if not already loaded
+if (!defined('APP_NAME')) {
+    require_once __DIR__ . '/config.php';
+}
 require_once __DIR__ . '/password-security.php';
 require_once __DIR__ . '/database-encryption.php';
 

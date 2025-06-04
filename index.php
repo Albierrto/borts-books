@@ -14,6 +14,9 @@ if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
 // Start session for cart functionality
 session_start();
 
+// Include configuration first
+require_once 'includes/config.php';
+
 // Set page title
 $pageTitle = "Welcome to Bort's Books";
 $currentPage = "home";

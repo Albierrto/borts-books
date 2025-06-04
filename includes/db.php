@@ -93,7 +93,7 @@ try {
     error_log('Database connection failed: ' . $e->getMessage() . ' | DSN: ' . $dsn);
     
     // Show generic error to user
-    if ($_ENV['APP_ENV'] === 'development') {
+    if (defined('APP_ENV') && APP_ENV === 'development') {
         die('Database connection failed: ' . htmlspecialchars($e->getMessage()));
     } else {
         die('Database connection error. Please try again later or contact support.');
