@@ -2,6 +2,48 @@
 require_once dirname(__DIR__) . '/includes/security.php';
 require_once dirname(__DIR__) . '/includes/admin-auth.php';
 
+// Ensure database connections are available
+global $db, $pdo;
+if (!isset($db) || !($db instanceof PDO)) {
+    // Re-establish database connection if needed
+    try {
+        // Load environment variables
+        $envPath = dirname(__DIR__) . '/.env';
+        if (file_exists($envPath)) {
+            $envContent = file_get_contents($envPath);
+            $lines = explode("\n", $envContent);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (empty($line) || strpos($line, '#') === 0) continue;
+                if (strpos($line, '=') !== false) {
+                    list($name, $value) = array_map('trim', explode('=', $line, 2));
+                    $value = trim($value, '"\'');
+                    $_ENV[$name] = $value;
+                }
+            }
+        }
+        
+        $host = $_ENV['DB_HOST'] ?? 'localhost';
+        $dbname = $_ENV['DB_NAME'] ?? '';
+        $user = $_ENV['DB_USER'] ?? '';
+        $pass = $_ENV['DB_PASS'] ?? '';
+        $charset = $_ENV['DB_CHARSET'] ?? 'utf8mb4';
+        $port = $_ENV['DB_PORT'] ?? 3306;
+        
+        $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+        
+        $db = new PDO($dsn, $user, $pass, $options);
+        $pdo = $db; // Alias for compatibility
+    } catch (Exception $e) {
+        die('Database connection error. Please contact support.');
+    }
+}
+
 // Start secure session
 secure_session_start();
 
