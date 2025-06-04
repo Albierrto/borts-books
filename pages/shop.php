@@ -1,6 +1,6 @@
 <?php
-require_once '../includes/security.php';
-require_once '../includes/db.php';
+require_once dirname(__DIR__) . '/includes/security.php';
+require_once dirname(__DIR__) . '/includes/db.php';
 
 // Start secure session
 secure_session_start();
