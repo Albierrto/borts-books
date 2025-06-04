@@ -25,6 +25,12 @@ class SecurityMonitor {
             mkdir($logDir, 0750, true);
         }
         
+        // Only create tables if we have a valid database connection
+        if (!$this->pdo instanceof PDO) {
+            error_log("SecurityMonitor: No valid database connection available, skipping table creation");
+            return;
+        }
+        
         // Create security events table
         try {
             $this->pdo->exec("
@@ -44,7 +50,7 @@ class SecurityMonitor {
                     INDEX idx_ip_address (ip_address),
                     INDEX idx_created_at (created_at),
                     INDEX idx_threat_score (threat_score)
-                )
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
             
             // Create threat intelligence table
@@ -102,7 +108,23 @@ class SecurityMonitor {
         // Calculate threat score
         $threatScore = $this->calculateThreatScore($eventType, $data, $ipAddress);
         
-        // Store in database
+        // Always log to file first
+        $logEntry = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'event_type' => $eventType,
+            'severity' => $severity,
+            'ip' => $ipAddress,
+            'threat_score' => $threatScore,
+            'data' => $data
+        ];
+        
+        file_put_contents($this->logFile, json_encode($logEntry) . "\n", FILE_APPEND | LOCK_EX);
+        
+        // Store in database if connection is available
+        if (!$this->pdo instanceof PDO) {
+            return; // Skip database operations
+        }
+        
         try {
             $stmt = $this->pdo->prepare("
                 INSERT INTO security_events 
@@ -122,18 +144,6 @@ class SecurityMonitor {
                 $threatScore,
                 $blocked
             ]);
-            
-            // Log to file
-            $logEntry = [
-                'timestamp' => date('Y-m-d H:i:s'),
-                'event_type' => $eventType,
-                'severity' => $severity,
-                'ip' => $ipAddress,
-                'threat_score' => $threatScore,
-                'data' => $data
-            ];
-            
-            file_put_contents($this->logFile, json_encode($logEntry) . "\n", FILE_APPEND | LOCK_EX);
             
             // Check for immediate blocking
             if ($blocked) {
@@ -188,6 +198,11 @@ class SecurityMonitor {
      * Get IP reputation information
      */
     private function getIPReputation($ipAddress) {
+        // Return safe defaults if no database connection
+        if (!$this->pdo instanceof PDO) {
+            return ['threat_modifier' => 0];
+        }
+        
         try {
             $stmt = $this->pdo->prepare("
                 SELECT threat_type, confidence_score, blocked 
@@ -217,6 +232,11 @@ class SecurityMonitor {
      * Get count of recent events for IP
      */
     private function getRecentEventCount($eventType, $ipAddress, $timeWindow) {
+        // Return 0 if no database connection
+        if (!$this->pdo instanceof PDO) {
+            return 0;
+        }
+        
         try {
             $stmt = $this->pdo->prepare("
                 SELECT COUNT(*) as count 
@@ -225,8 +245,9 @@ class SecurityMonitor {
                 AND created_at > DATE_SUB(NOW(), INTERVAL ? SECOND)
             ");
             $stmt->execute([$eventType, $ipAddress, $timeWindow]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return $stmt->fetchColumn() ?: 0;
+            return $result['count'] ?? 0;
             
         } catch (PDOException $e) {
             return 0;

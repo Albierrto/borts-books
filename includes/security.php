@@ -12,6 +12,51 @@ if (!defined('APP_NAME')) {
 require_once __DIR__ . '/security-monitoring.php';
 
 /**
+ * Database connection singleton for security functions
+ */
+class SecurityDatabase {
+    private static $instance = null;
+    private $connection = null;
+    
+    private function __construct() {
+        $this->connect();
+    }
+    
+    private function connect() {
+        if (!defined('DB_CONNECTED')) {
+            $db_path = file_exists(__DIR__ . '/db.php') ? __DIR__ . '/db.php' : 'includes/db.php';
+            require_once $db_path;
+            
+            // Get the global database connection
+            global $db, $pdo;
+            $this->connection = $db ?? $pdo ?? null;
+        } else {
+            global $db, $pdo;
+            $this->connection = $db ?? $pdo ?? null;
+        }
+    }
+    
+    public static function getInstance() {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    
+    public function getConnection() {
+        return $this->connection;
+    }
+}
+
+/**
+ * Get database connection for security functions
+ */
+function getSecurityDatabase() {
+    $dbInstance = SecurityDatabase::getInstance();
+    return $dbInstance->getConnection();
+}
+
+/**
  * Start secure session with enhanced security settings
  */
 function secure_session_start() {
@@ -298,12 +343,8 @@ function check_honeypot_access() {
     
     if ($monitor === null) {
         try {
-            if (!defined('DB_CONNECTED')) {
-                // Use a more robust path resolution
-                $db_path = file_exists(__DIR__ . '/db.php') ? __DIR__ . '/db.php' : 'includes/db.php';
-                require_once $db_path;
-            }
-            $monitor = new SecurityMonitor($db ?? $pdo);
+            $db = getSecurityDatabase();
+            $monitor = new SecurityMonitor($db);
         } catch (Exception $e) {
             // If we can't initialize monitoring, just continue
             return;
@@ -321,12 +362,8 @@ function log_security_event($event_type, $data = [], $severity = 'medium') {
     
     if ($monitor === null) {
         try {
-            if (!defined('DB_CONNECTED')) {
-                // Use a more robust path resolution
-                $db_path = file_exists(__DIR__ . '/db.php') ? __DIR__ . '/db.php' : 'includes/db.php';
-                require_once $db_path;
-            }
-            $monitor = new SecurityMonitor($db ?? $pdo);
+            $db = getSecurityDatabase();
+            $monitor = new SecurityMonitor($db);
         } catch (Exception $e) {
             // Fallback to file logging
             $log_entry = [
@@ -354,13 +391,8 @@ function analyze_request() {
     
     if ($ids === null) {
         try {
-            // Ensure we include the correct db.php file
-            if (!defined('DB_CONNECTED')) {
-                // Use a more robust path resolution
-                $db_path = file_exists(__DIR__ . '/db.php') ? __DIR__ . '/db.php' : 'includes/db.php';
-                require_once $db_path;
-            }
-            $monitor = new SecurityMonitor($db ?? $pdo);
+            $db = getSecurityDatabase();
+            $monitor = new SecurityMonitor($db);
             $ids = new IntrusionDetectionSystem($monitor);
         } catch (Exception $e) {
             return; // Fail silently if can't initialize
