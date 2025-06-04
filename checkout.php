@@ -1,5 +1,13 @@
 <?php
-session_start();
+require_once 'includes/security.php';
+require_once 'includes/secure-email.php';
+require_once 'includes/database-encryption.php';
+
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
 
 $db_error = false;
 $config_error = false;
@@ -10,22 +18,29 @@ try {
     require_once 'includes/db.php';
 } catch (Exception $e) {
     $db_error = true;
-    $error_messages[] = 'Database connection failed: ' . $e->getMessage();
+    $error_messages[] = 'Database connection failed';
+    log_security_event('db_connection_failed', ['error' => $e->getMessage()], 'high');
 }
 
 try {
     require_once 'includes/config.php';
 } catch (Exception $e) {
     $config_error = true;
-    $error_messages[] = 'Configuration error: ' . $e->getMessage();
+    $error_messages[] = 'Configuration error';
+    log_security_event('config_error', ['error' => $e->getMessage()], 'high');
 }
 
 try {
     require_once 'includes/stripe-config.php';
 } catch (Exception $e) {
     $stripe_error = true;
-    $error_messages[] = 'Stripe configuration error: ' . $e->getMessage();
+    $error_messages[] = 'Payment system configuration error';
+    log_security_event('stripe_config_error', ['error' => $e->getMessage()], 'high');
 }
+
+// Initialize security components
+$encryption = new DatabaseEncryption();
+$emailSystem = new SecureEmailSystem();
 
 // Only try to clean up cart if database is working
 if (!$db_error) {
@@ -52,6 +67,7 @@ if ($db_error || $config_error) {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
         <title>Checkout Error - Bort's Books</title>
         <link rel="stylesheet" href="assets/css/styles.css">
     </head>
@@ -97,9 +113,10 @@ $subtotal = 0;
 
 if (!empty($cart) && !$db_error) {
     try {
-        $ids = implode(',', array_map('intval', array_keys($cart)));
-        
-        $stmt = $db->query("SELECT * FROM products WHERE id IN ($ids)");
+        $ids = array_keys($cart);
+        $placeholders = str_repeat('?,', count($ids) - 1) . '?';
+        $stmt = $db->prepare("SELECT * FROM products WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Attach images
@@ -115,13 +132,35 @@ if (!empty($cart) && !$db_error) {
         
     } catch (Exception $e) {
         $db_error = true;
-        $error_messages[] = 'Error loading cart items: ' . $e->getMessage();
+        $error_messages[] = 'Error loading cart items';
+        log_security_event('cart_load_error', ['error' => $e->getMessage()], 'medium');
     }
 }
 
-// Handle AJAX shipping calculation FIRST
-if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip'])) {
+// Handle AJAX shipping calculation FIRST with security
+if (isset($_POST['calculate_shipping_only'])) {
     header('Content-Type: application/json');
+    
+    // Verify CSRF token for AJAX requests
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        echo json_encode(['error' => 'Invalid request token']);
+        log_security_event('csrf_failure', ['page' => 'checkout_shipping'], 'medium');
+        exit;
+    }
+    
+    // Check rate limiting
+    if (!check_rate_limit('shipping_calc', 20, 3600)) {
+        echo json_encode(['error' => 'Too many shipping calculations. Please wait.']);
+        log_security_event('rate_limit_exceeded', ['page' => 'checkout_shipping'], 'medium');
+        exit;
+    }
+    
+    // Validate ZIP code
+    $zip = sanitize_input($_POST['zip'] ?? '');
+    if (!preg_match('/^\d{5}(-\d{4})?$/', $zip)) {
+        echo json_encode(['error' => 'Please enter a valid ZIP code']);
+        exit;
+    }
     
     try {
         // Check if we have products
@@ -131,14 +170,21 @@ if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip'])) {
         }
         
         require_once 'includes/usps-shipping.php';
-        $service = $_POST['shipping_service'] ?? 'Ground';
+        $service = sanitize_input($_POST['shipping_service'] ?? 'Ground');
+        
+        // Validate shipping service
+        $allowed_services = ['Ground', 'Priority', 'Express'];
+        if (!in_array($service, $allowed_services)) {
+            $service = 'Ground';
+        }
+        
         $calculated_shipping = 0;
         $warnings = [];
         $api_status = [];
         
         foreach ($products as $product) {
             $usps = new USPSShipping();
-            $shipping_result = $usps->calculateShipping($product, $_POST['zip'], $service);
+            $shipping_result = $usps->calculateShipping($product, $zip, $service);
             $calculated_shipping += $shipping_result['rate'];
             
             // Collect any warnings or API status info
@@ -174,8 +220,9 @@ if (isset($_POST['calculate_shipping_only']) && !empty($_POST['zip'])) {
         echo json_encode($response);
         
     } catch (Exception $e) {
+        error_log('Shipping calculation error: ' . $e->getMessage());
         echo json_encode([
-            'error' => 'Shipping calculation failed: ' . $e->getMessage(),
+            'error' => 'Shipping calculation failed. Please try again.',
             'fallback_message' => 'We apologize for the inconvenience. Please contact us for shipping rates.',
             'fallback_shipping' => 5.00
         ]);
@@ -189,86 +236,144 @@ $errors = [];
 $error = '';
 $shipping_cost = 0;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
-    // Check if Stripe is available
-    if ($stripe_error) {
-        $error = 'Payment system temporarily unavailable. Please try again later.';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['calculate_shipping_only'])) {
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Invalid request. Please refresh the page and try again.';
+        log_security_event('csrf_failure', ['page' => 'checkout'], 'medium');
     } else {
-        $customerInfo = [
-            'name' => $_POST['name'] ?? '',
-            'email' => $_POST['email'] ?? '',
-
-            'address' => $_POST['address'] ?? '',
-            'city' => $_POST['city'] ?? '',
-            'state' => $_POST['state'] ?? '',
-            'zip' => $_POST['zip'] ?? '',
-        ];
-
-        // Basic validation
-        if (empty($customerInfo['name'])) {
-            $errors[] = 'Name is required';
-        }
-        if (empty($customerInfo['email']) || !filter_var($customerInfo['email'], FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Valid email is required';
-        }
-
-        if (empty($customerInfo['address'])) {
-            $errors[] = 'Address is required';
-        }
-        if (empty($customerInfo['city'])) {
-            $errors[] = 'City is required';
-        }
-        if (empty($customerInfo['state'])) {
-            $errors[] = 'State is required';
-        }
-        if (empty($customerInfo['zip']) || !preg_match('/^\d{5}(-\d{4})?$/', $customerInfo['zip'])) {
-            $errors[] = 'Valid ZIP code is required';
-        }
-        
-        // Calculate shipping if address is provided
-        if (empty($errors) && !empty($customerInfo['zip']) && !empty($products)) {
-            try {
-                require_once 'includes/usps-shipping.php';
-                $selected_service = $_POST['shipping_service'] ?? 'Ground';
-                $total_shipping = 0;
-                
-                foreach ($products as $product) {
-                    $usps = new USPSShipping();
-                    $shipping_result = $usps->calculateShipping($product, $customerInfo['zip'], $selected_service);
-                    $total_shipping += $shipping_result['rate'];
-                }
-                
-                $shipping_cost = $total_shipping;
-            } catch (Exception $e) {
-                // Fallback to flat rate if shipping calculation fails
-                $shipping_cost = 5.00;
-                error_log('Shipping calculation error: ' . $e->getMessage());
-            }
+        // Check rate limiting for order submissions
+        if (!check_rate_limit('checkout_submission', 3, 3600)) {
+            $error = 'Too many checkout attempts. Please wait before trying again.';
+            log_security_event('rate_limit_exceeded', ['page' => 'checkout'], 'medium');
         } else {
-            // Default shipping cost
-            $shipping_cost = 5.00;
-        }
+            // Sanitize and validate all inputs
+            $first_name = sanitize_input($_POST['first_name'] ?? '');
+            $last_name = sanitize_input($_POST['last_name'] ?? '');
+            $email = validate_email($_POST['email'] ?? '');
+            $phone = sanitize_input($_POST['phone'] ?? '');
+            $address = sanitize_input($_POST['address'] ?? '');
+            $city = sanitize_input($_POST['city'] ?? '');
+            $state = sanitize_input($_POST['state'] ?? '');
+            $zip = sanitize_input($_POST['zip'] ?? '');
+            $shipping_service = sanitize_input($_POST['shipping_service'] ?? 'Ground');
+            
+            // Enhanced validation
+            $validation_errors = [];
+            
+            if (empty($first_name) || strlen($first_name) < 2) {
+                $validation_errors[] = 'Please enter a valid first name.';
+            } elseif (strlen($first_name) > 50) {
+                $validation_errors[] = 'First name is too long.';
+            }
+            
+            if (empty($last_name) || strlen($last_name) < 2) {
+                $validation_errors[] = 'Please enter a valid last name.';
+            } elseif (strlen($last_name) > 50) {
+                $validation_errors[] = 'Last name is too long.';
+            }
+            
+            if (!$email) {
+                $validation_errors[] = 'Please enter a valid email address.';
+            }
+            
+            if (!empty($phone) && !preg_match('/^[\d\s\-\(\)\+\.]{10,20}$/', $phone)) {
+                $validation_errors[] = 'Please enter a valid phone number.';
+            }
+            
+            if (empty($address) || strlen($address) < 5) {
+                $validation_errors[] = 'Please enter a valid address.';
+            } elseif (strlen($address) > 100) {
+                $validation_errors[] = 'Address is too long.';
+            }
+            
+            if (empty($city) || strlen($city) < 2) {
+                $validation_errors[] = 'Please enter a valid city.';
+            } elseif (strlen($city) > 50) {
+                $validation_errors[] = 'City name is too long.';
+            }
+            
+            if (empty($state) || strlen($state) != 2) {
+                $validation_errors[] = 'Please select a valid state.';
+            }
+            
+            if (!preg_match('/^\d{5}(-\d{4})?$/', $zip)) {
+                $validation_errors[] = 'Please enter a valid ZIP code.';
+            }
+            
+            // Validate shipping service
+            $allowed_services = ['Ground', 'Priority', 'Express'];
+            if (!in_array($shipping_service, $allowed_services)) {
+                $validation_errors[] = 'Please select a valid shipping service.';
+                $shipping_service = 'Ground';
+            }
+            
+            if (!empty($validation_errors)) {
+                $error = 'Please fix the following errors: ' . implode(' ', $validation_errors);
+            } else {
+                try {
+                    // Calculate shipping if address is provided
+                    if (empty($errors) && !empty($zip) && !empty($products)) {
+                        try {
+                            require_once 'includes/usps-shipping.php';
+                            $total_shipping = 0;
+                            
+                            foreach ($products as $product) {
+                                $usps = new USPSShipping();
+                                $shipping_result = $usps->calculateShipping($product, $zip, $shipping_service);
+                                $total_shipping += $shipping_result['rate'];
+                            }
+                            
+                            $shipping_cost = $total_shipping;
+                        } catch (Exception $e) {
+                            // Fallback to flat rate if shipping calculation fails
+                            $shipping_cost = 5.00;
+                            error_log('Shipping calculation error: ' . $e->getMessage());
+                        }
+                    } else {
+                        // Default shipping cost
+                        $shipping_cost = 5.00;
+                    }
 
-        if (empty($errors)) {
-            try {
-                // Create Stripe Checkout Session with calculated shipping
-                $session = createStripeCheckoutSession($cart, $customerInfo, $shipping_cost);
-                
-                if ($session) {
-                    // Store customer info in session for later use
-                    $_SESSION['customer_info'] = $customerInfo;
-                    $_SESSION['shipping_cost'] = $shipping_cost;
-                    
-                    // Redirect to Stripe Checkout
-                    header('Location: ' . $session->url);
-                    exit;
-                } else {
-                    $error = "There was an error creating your checkout session. Please try again.";
+                    if (empty($errors)) {
+                        try {
+                            // Create Stripe Checkout Session with calculated shipping
+                            $session = createStripeCheckoutSession($cart, [
+                                'name' => $first_name . ' ' . $last_name,
+                                'email' => $email,
+                                'address' => $address,
+                                'city' => $city,
+                                'state' => $state,
+                                'zip' => $zip
+                            ], $shipping_cost);
+                            
+                            if ($session) {
+                                // Store customer info in session for later use
+                                $_SESSION['customer_info'] = [
+                                    'name' => $first_name . ' ' . $last_name,
+                                    'email' => $email,
+                                    'address' => $address,
+                                    'city' => $city,
+                                    'state' => $state,
+                                    'zip' => $zip
+                                ];
+                                $_SESSION['shipping_cost'] = $shipping_cost;
+                                
+                                // Redirect to Stripe Checkout
+                                header('Location: ' . $session->url);
+                                exit;
+                            } else {
+                                $error = "There was an error creating your checkout session. Please try again.";
+                            }
+                        } catch (Exception $e) {
+                            error_log('Checkout Session Error: ' . $e->getMessage());
+                            $error = "There was an error processing your request: " . $e->getMessage();
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log('Shipping calculation error: ' . $e->getMessage());
+                    $error = "There was an error calculating shipping. Please try again later or contact support.";
                 }
-            } catch (Exception $e) {
-                error_log('Checkout Session Error: ' . $e->getMessage());
-                $error = "There was an error processing your request: " . $e->getMessage();
             }
         }
     }
@@ -301,6 +406,7 @@ if (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shippi
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <title>Checkout - Bort's Books</title>
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -384,13 +490,18 @@ if (!empty($_POST['zip']) && !empty($products) && empty($_POST['calculate_shippi
             <?php else: ?>
             
             <form method="POST" class="checkout-form">
-                <label for="name">Full Name *</label>
-                <input type="text" id="name" name="name" required value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>">
+                <input type="hidden" name="csrf_token" value="<?php echo generate_csrf_token(); ?>">
+                <label for="first_name">First Name *</label>
+                <input type="text" id="first_name" name="first_name" required value="<?php echo htmlspecialchars($_POST['first_name'] ?? ''); ?>">
+                
+                <label for="last_name">Last Name *</label>
+                <input type="text" id="last_name" name="last_name" required value="<?php echo htmlspecialchars($_POST['last_name'] ?? ''); ?>">
                 
                 <label for="email">Email Address *</label>
                 <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
                 
-
+                <label for="phone">Phone Number</label>
+                <input type="text" id="phone" name="phone" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
                 
                 <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #232946;">Shipping Address</h3>
                 

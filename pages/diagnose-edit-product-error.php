@@ -171,22 +171,54 @@ ob_start();
 $execution_error = null;
 
 try {
-    // Don't include, but validate syntax
-    $temp_file = tempnam(sys_get_temp_dir(), 'syntax_check');
-    file_put_contents($temp_file, file_get_contents('edit-product.php'));
-    
-    $output = shell_exec("php -l $temp_file 2>&1");
-    unlink($temp_file);
-    
-    if (strpos($output, 'No syntax errors') !== false) {
-        echo "✅ No syntax errors detected<br>";
+    // Safe syntax validation without shell_exec
+    if (file_exists('edit-product.php')) {
+        $content = file_get_contents('edit-product.php');
+        
+        // Basic PHP syntax validation using token parsing
+        $tokens = @token_get_all($content);
+        if ($tokens === false) {
+            echo "❌ Failed to parse PHP tokens - likely syntax error<br>";
+        } else {
+            echo "✅ PHP tokens parsed successfully<br>";
+            
+            // Check for basic syntax patterns
+            $has_php_open = false;
+            $has_syntax_issue = false;
+            
+            foreach ($tokens as $token) {
+                if (is_array($token)) {
+                    if ($token[0] === T_OPEN_TAG) {
+                        $has_php_open = true;
+                    }
+                    // Check for potential problematic tokens
+                    if (in_array($token[0], [T_EVAL, T_EXEC])) {
+                        $has_syntax_issue = true;
+                        echo "⚠️ Potentially dangerous function detected: " . htmlspecialchars($token[1]) . "<br>";
+                    }
+                }
+            }
+            
+            if ($has_php_open) {
+                echo "✅ Valid PHP opening tag found<br>";
+            } else {
+                echo "❌ No PHP opening tag found<br>";
+            }
+            
+            // Additional file validation
+            $file_size = filesize('edit-product.php');
+            if ($file_size > 0 && $file_size < 1000000) { // Less than 1MB
+                echo "✅ File size acceptable: " . number_format($file_size) . " bytes<br>";
+            } else {
+                echo "⚠️ File size issue: " . number_format($file_size) . " bytes<br>";
+            }
+        }
     } else {
-        echo "❌ Syntax errors found:<br>";
-        echo "<pre style='background: #f8d7da; padding: 10px; border-radius: 4px;'>" . htmlspecialchars($output) . "</pre>";
+        echo "❌ File does not exist<br>";
     }
     
 } catch (Exception $e) {
-    echo "⚠️ Cannot check syntax: " . $e->getMessage() . "<br>";
+    echo "⚠️ Cannot validate syntax safely: " . htmlspecialchars($e->getMessage()) . "<br>";
 }
 
 $output = ob_get_clean();

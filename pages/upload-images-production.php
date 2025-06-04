@@ -1,27 +1,51 @@
 <?php
-session_start();
+require_once '../includes/security.php';
+require_once '../includes/admin-auth.php';
 require_once '../includes/db.php';
 
-// Check if user is admin
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: ../admin/login.php');
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
+
+// Require admin authentication
+if (!admin_is_logged_in()) {
+    header('Location: ../admin/admin-login.php');
     exit;
 }
 
-$product_id = $_GET['product_id'] ?? null;
-if (!$product_id) {
-    header('Location: admin.php');
+// Check rate limiting
+if (!check_rate_limit('upload_images_production', 10, 300)) {
+    http_response_code(429);
+    die('Too many upload page requests. Please wait before trying again.');
+}
+
+// Validate and sanitize product ID
+$product_id = isset($_GET['product_id']) ? validate_int($_GET['product_id']) : null;
+if (!$product_id || $product_id <= 0) {
+    header('Location: admin-dashboard.php');
     exit;
 }
 
-// Get product details
-$sql = "SELECT * FROM products WHERE id = ?";
-$stmt = $db->prepare($sql);
-$stmt->execute([$product_id]);
-$product = $stmt->fetch(PDO::FETCH_ASSOC);
+// Log access for security monitoring
+log_security_event('upload_images_production_access', ['product_id' => $product_id], 'low');
 
-if (!$product) {
-    echo "Product not found!";
+// Get product details with error handling
+try {
+    $sql = "SELECT * FROM products WHERE id = ?";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$product_id]);
+    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$product) {
+        log_security_event('invalid_product_access', ['product_id' => $product_id], 'medium');
+        echo "Product not found!";
+        exit;
+    }
+} catch (Exception $e) {
+    log_security_event('database_error', ['error' => $e->getMessage()], 'high');
+    echo "Database error occurred.";
     exit;
 }
 
@@ -33,17 +57,26 @@ try {
     $existing_images = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     // Fallback for older schema
-    $sql = "SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC";
-    $stmt = $db->prepare($sql);
-    $stmt->execute([$product_id]);
-    $existing_images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $sql = "SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$product_id]);
+        $existing_images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e2) {
+        log_security_event('image_query_failed', ['error' => $e2->getMessage()], 'medium');
+        $existing_images = [];
+    }
 }
+
+// Generate CSRF token
+$csrf_token = generate_csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <title>Upload Images - <?php echo htmlspecialchars($product['title']); ?></title>
     <link rel="stylesheet" href="../assets/css/styles.css">
     <style>
@@ -65,18 +98,23 @@ try {
         .alert{padding:15px;margin:10px 0;border-radius:4px}
         .alert-success{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
         .alert-error{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+        .alert-info{background:#d1ecf1;color:#0c5460;border:1px solid #bee5eb}
         .preview{margin:10px 0;padding:8px;border:1px solid #ddd;border-radius:4px;display:inline-block}
         @media(max-width:768px){.grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}}
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="edit-product-clean.php?id=<?php echo $product_id; ?>" class="btn" style="margin-bottom:20px">← Back to Edit Product</a>
+        <a href="edit-product.php?id=<?php echo $product_id; ?>" class="btn" style="margin-bottom:20px">← Back to Edit Product</a>
         
         <div class="header">
-            <h1>📸 Upload Images</h1>
+            <h1>📸 Upload Images - Production</h1>
             <p>Product: <?php echo htmlspecialchars($product['title']); ?></p>
             <p>Current Images: <?php echo count($existing_images); ?></p>
+        </div>
+        
+        <div class="alert alert-info">
+            <strong>Security Notice:</strong> This is a secure admin-only upload interface with CSRF protection, rate limiting, and file validation.
         </div>
         
         <div id="message"></div>
@@ -85,6 +123,7 @@ try {
         <div class="section">
             <h3>Upload New Images</h3>
             <form id="uploadForm" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
                 
                 <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
@@ -108,9 +147,10 @@ try {
                 <?php foreach ($existing_images as $image): ?>
                 <div class="item" id="img-<?php echo $image['id']; ?>">
                     <?php 
-                    $filename = !empty($image['filename']) ? $image['filename'] : $image['image_url'];
+                    // Secure filename handling
+                    $filename = !empty($image['filename']) ? htmlspecialchars($image['filename']) : htmlspecialchars($image['image_url']);
                     ?>
-                    <img src="../assets/img/products/<?php echo htmlspecialchars($filename); ?>" alt="Product image">
+                    <img src="../assets/img/products/<?php echo $filename; ?>" alt="Product image">
                     <div style="margin-top:8px">
                         <?php if (isset($image['is_main']) && $image['is_main']): ?>
                             <span class="badge">Main Image</span>
@@ -162,6 +202,7 @@ try {
             if(files.length===0)return;
             
             const formData=new FormData();
+            formData.append('csrf_token','<?php echo $csrf_token; ?>');
             formData.append('product_id',<?php echo $product_id; ?>);
             files.forEach(file=>formData.append('images[]',file));
             
@@ -196,37 +237,46 @@ try {
         function deleteImg(id){
             if(!confirm('Delete this image?'))return;
             
+            const formData=new FormData();
+            formData.append('csrf_token','<?php echo $csrf_token; ?>');
+            formData.append('image_id',id);
+            
             fetch('delete-image.php',{
                 method:'POST',
-                headers:{'Content-Type':'application/x-www-form-urlencoded'},
-                body:`image_id=${id}`
+                body:formData
             })
             .then(response=>response.json())
             .then(data=>{
                 if(data.success){
                     document.getElementById('img-'+id).remove();
-                    showMessage('Image deleted','success');
+                    showMessage(data.message,'success');
                 }else{
-                    showMessage(data.message||'Delete failed','error');
+                    showMessage(data.message,'error');
                 }
-            });
+            })
+            .catch(()=>showMessage('Delete failed. Please try again.','error'));
         }
         
         function setMain(id){
+            const formData=new FormData();
+            formData.append('csrf_token','<?php echo $csrf_token; ?>');
+            formData.append('image_id',id);
+            formData.append('product_id',<?php echo $product_id; ?>);
+            
             fetch('set-main-image.php',{
                 method:'POST',
-                headers:{'Content-Type':'application/x-www-form-urlencoded'},
-                body:`image_id=${id}&product_id=<?php echo $product_id; ?>`
+                body:formData
             })
             .then(response=>response.json())
             .then(data=>{
                 if(data.success){
-                    showMessage('Main image updated','success');
-                    setTimeout(()=>location.reload(),1000);
+                    showMessage(data.message,'success');
+                    setTimeout(()=>location.reload(),1500);
                 }else{
-                    showMessage(data.message||'Update failed','error');
+                    showMessage(data.message,'error');
                 }
-            });
+            })
+            .catch(()=>showMessage('Set main failed. Please try again.','error'));
         }
     </script>
 </body>

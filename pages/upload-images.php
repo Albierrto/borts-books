@@ -1,35 +1,58 @@
 <?php
-session_start();
+require_once '../includes/security.php';
+require_once '../includes/admin-auth.php';
 require_once '../includes/db.php';
 
-// Check if user is admin
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: ../admin/login.php');
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
+
+// Require admin authentication
+if (!admin_is_logged_in()) {
+    header('Location: ../admin/admin-login.php');
     exit;
 }
 
-$product_id = $_GET['product_id'] ?? null;
-if (!$product_id) {
-    header('Location: admin.php');
+// Check rate limiting
+if (!check_rate_limit('upload_access', 10, 300)) {
+    http_response_code(429);
+    die('Too many upload page requests. Please wait before trying again.');
+}
+
+$product_id = isset($_GET['product_id']) ? validate_int($_GET['product_id']) : null;
+if (!$product_id || $product_id <= 0) {
+    header('Location: admin-dashboard.php');
     exit;
 }
 
-// Get product details
-$sql = "SELECT * FROM products WHERE id = ?";
-$stmt = $db->prepare($sql);
-$stmt->execute([$product_id]);
-$product = $stmt->fetch(PDO::FETCH_ASSOC);
+// Generate CSRF token
+$csrf_token = generate_csrf_token();
 
-if (!$product) {
-    echo "Product not found!";
+// Get product details with validation
+try {
+    $sql = "SELECT * FROM products WHERE id = ?";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$product_id]);
+    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$product) {
+        log_security_event('invalid_product_access', ['product_id' => $product_id], 'medium');
+        echo "Product not found!";
+        exit;
+    }
+
+    // Get existing images
+    $sql = "SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$product_id]);
+    $existing_images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    log_security_event('database_error', ['error' => $e->getMessage()], 'high');
+    echo "Database error occurred.";
     exit;
 }
-
-// Get existing images
-$sql = "SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC";
-$stmt = $db->prepare($sql);
-$stmt->execute([$product_id]);
-$existing_images = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -3,29 +3,69 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-$pageTitle = "Sell Your Manga Sets";
-$currentPage = "sell";
+require_once '../includes/security.php';
+require_once '../includes/secure-upload.php';
+require_once '../includes/secure-email.php';
+require_once '../includes/database-encryption.php';
 require_once '../includes/db.php';
 
-$successMsg = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Sanitize all user inputs
-    $full_name = trim(strip_tags($_POST['full_name'] ?? ''));
-    $email = trim(strip_tags($_POST['email'] ?? ''));
+// Start secure session
+secure_session_start();
 
-    $num_items = intval($_POST['num_items'] ?? 0);
-    $overall_condition = trim(strip_tags($_POST['overall_condition'] ?? ''));
+// Set security headers
+set_security_headers();
+
+// Generate CSRF token
+$csrf_token = generate_csrf_token();
+
+$pageTitle = "Sell Your Manga Sets";
+$currentPage = "sell";
+
+$successMsg = '';
+$errorMsg = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $errorMsg = 'Invalid request. Please try again.';
+        log_security_event('csrf_failure', ['page' => 'sell']);
+    } else {
+        // Check rate limiting
+        $clientId = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        if (!check_rate_limit('sell_submission', 3, 3600)) {
+            $errorMsg = 'Too many submissions. Please try again later.';
+            log_security_event('rate_limit_exceeded', ['page' => 'sell', 'ip' => $clientId]);
+        } else {
+            try {
+                // Initialize encryption and secure upload
+                $encryption = new DatabaseEncryption();
+                $secureUpload = new SecureFileUpload();
+                $emailSystem = new SecureEmailSystem();
+                
+                // Sanitize and validate inputs
+                $full_name = sanitize_input($_POST['full_name'] ?? '');
+                $email = validate_email($_POST['email'] ?? '');
+                $phone = sanitize_input($_POST['phone'] ?? '');
+                $num_items = validate_int($_POST['num_items'] ?? '');
+                $overall_condition = sanitize_input($_POST['overall_condition'] ?? '');
+                $description = sanitize_input($_POST['description'] ?? '');
     
-    // Set details as JSON (changed to sets instead of individual items)
+                // Validate required fields
+                if (empty($full_name) || !$email || !$num_items) {
+                    throw new Exception('Please fill in all required fields.');
+                }
+                
+                // Process set details
     $set_details = [];
     if (!empty($_POST['set_title'])) {
         $count = count($_POST['set_title']);
         for ($i = 0; $i < $count; $i++) {
-            $title = trim(strip_tags($_POST['set_title'][$i]));
-            $volumes = trim(strip_tags($_POST['set_volumes'][$i]));
-            $condition = trim(strip_tags($_POST['set_condition'][$i]));
-            $expected_price = trim(strip_tags($_POST['set_expected_price'][$i]));
-            if ($title !== '' || $volumes !== '' || $expected_price !== '') {
+                        $title = sanitize_input($_POST['set_title'][$i] ?? '');
+                        $volumes = sanitize_input($_POST['set_volumes'][$i] ?? '');
+                        $condition = sanitize_input($_POST['set_condition'][$i] ?? '');
+                        $expected_price = validate_float($_POST['set_expected_price'][$i] ?? '');
+                        
+                        if (!empty($title) || !empty($volumes) || $expected_price > 0) {
                 $set_details[] = [
                     'title' => $title,
                     'volumes' => $volumes,
@@ -35,35 +75,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-    $set_details_json = json_encode($set_details);
     
-    // Handle photo uploads
-    $photo_paths = [];
+                // Handle secure photo uploads
+                $uploaded_files = [];
     if (!empty($_FILES['collection_photos']['name'][0])) {
-        $upload_dir = __DIR__ . '/../uploads/sell-photos/';
-        if (!file_exists($upload_dir)) {
-            mkdir($upload_dir, 0755, true);
+                    // Check upload rate limiting
+                    if (!UploadRateLimit::checkLimit($clientId, 20, 3600)) {
+                        throw new Exception('Too many file uploads. Please try again later.');
         }
+                    
         foreach ($_FILES['collection_photos']['tmp_name'] as $idx => $tmp_name) {
             if ($_FILES['collection_photos']['error'][$idx] === UPLOAD_ERR_OK) {
-                $ext = pathinfo($_FILES['collection_photos']['name'][$idx], PATHINFO_EXTENSION);
-                $filename = uniqid('sell_', true) . '.' . $ext;
-                $dest = $upload_dir . $filename;
-                if (move_uploaded_file($tmp_name, $dest)) {
-                    $photo_paths[] = 'uploads/sell-photos/' . $filename;
+                            $file = [
+                                'name' => $_FILES['collection_photos']['name'][$idx],
+                                'type' => $_FILES['collection_photos']['type'][$idx],
+                                'tmp_name' => $tmp_name,
+                                'error' => $_FILES['collection_photos']['error'][$idx],
+                                'size' => $_FILES['collection_photos']['size'][$idx]
+                            ];
+                            
+                            $result = $secureUpload->processUpload($file, 'sell-submissions');
+                            
+                            if ($result['success']) {
+                                $uploaded_files[] = [
+                                    'filename' => $result['filename'],
+                                    'access_token' => $result['access_token'],
+                                    'size' => $result['size'],
+                                    'mime_type' => $result['mime_type']
+                                ];
+                            } else {
+                                throw new Exception('File upload failed: ' . implode(', ', $result['errors']));
                 }
             }
         }
     }
-    $photo_paths_json = json_encode($photo_paths);
-    
-    // SQL injection protection: using prepared statements
-    if (count($photo_paths) > 0) {
-        $stmt = $db->prepare('INSERT INTO sell_submissions (full_name, email, num_items, overall_condition, item_details, photo_paths) VALUES (?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$full_name, $email, $num_items, $overall_condition, $set_details_json, $photo_paths_json]);
+                
+                if (empty($uploaded_files)) {
+                    throw new Exception('At least one photo of your collection is required.');
+                }
+                
+                // Encrypt sensitive data
+                $encrypted_data = $encryption->encryptFields([
+                    'full_name' => $full_name,
+                    'email' => $email,
+                    'phone' => $phone,
+                    'description' => $description
+                ], ['full_name', 'email', 'phone', 'description']);
+                
+                // Create searchable hash for email
+                $email_hash = $encryption->createSearchHash($email, 'email');
+                
+                // Store in database with encryption
+                $stmt = $pdo->prepare('
+                    INSERT INTO sell_submissions (
+                        full_name, email, email_hash, phone, num_items, 
+                        overall_condition, item_details, photo_paths, description,
+                        status, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                ');
+                
+                $stmt->execute([
+                    $encrypted_data['full_name'],
+                    $encrypted_data['email'],
+                    $email_hash,
+                    $encrypted_data['phone'],
+                    $num_items,
+                    $overall_condition,
+                    json_encode($set_details),
+                    json_encode($uploaded_files),
+                    $encrypted_data['description'],
+                    'pending'
+                ]);
+                
+                // Send confirmation email
+                try {
+                    $emailSystem->sendEmail(
+                        $email,
+                        'Sell Submission Received - Bort\'s Books',
+                        "
+                        <h2>Thank you for your submission!</h2>
+                        <p>Dear $full_name,</p>
+                        <p>We have received your manga collection submission with $num_items items.</p>
+                        <p>Our team will review your submission and contact you within 2-3 business days with our assessment and quote.</p>
+                        <p>Submission Details:</p>
+                        <ul>
+                            <li>Number of items: $num_items</li>
+                            <li>Overall condition: $overall_condition</li>
+                            <li>Photos submitted: " . count($uploaded_files) . "</li>
+                        </ul>
+                        <p>If you have any questions, please don't hesitate to contact us.</p>
+                        <p>Best regards,<br>The Bort's Books Team</p>
+                        ",
+                        ['template' => 'transactional']
+                    );
+                } catch (Exception $e) {
+                    // Email failed but submission succeeded
+                    error_log("Confirmation email failed: " . $e->getMessage());
+                }
+                
+                // Log successful submission
+                log_security_event('sell_submission', [
+                    'email_hash' => $email_hash,
+                    'num_items' => $num_items,
+                    'files_uploaded' => count($uploaded_files)
+                ]);
+                
         $successMsg = 'Thank you for your submission! We will review your manga sets and contact you soon.';
-    } else {
-        $successMsg = '<span style="color:#b71c1c;">You must upload at least one photo of your collection.</span>';
+                
+                // Clear form data on success
+                $_POST = [];
+                
+            } catch (Exception $e) {
+                $errorMsg = htmlspecialchars($e->getMessage());
+                log_security_event('sell_submission_error', [
+                    'error' => $e->getMessage(),
+                    'ip' => $clientId
+                ]);
+            }
+        }
     }
 }
 
@@ -84,6 +213,60 @@ $cart_count = count($_SESSION['cart']);
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* Enhanced Security Styling */
+        .security-notice {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .file-upload-security {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .upload-progress {
+            width: 100%;
+            height: 6px;
+            background: #f0f0f0;
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .upload-progress-bar {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
         /* Mobile-First Responsive Design */
         .sell-container {
             max-width: 800px;
@@ -860,34 +1043,48 @@ $cart_count = count($_SESSION['cart']);
                 </p>
         </div>
 
-            <div class="success-message" id="successMessage">
-                <i class="fas fa-check-circle"></i> Your manga sets have been submitted successfully! We'll review your submission and get back to you within 24-48 hours.
+            <div class="security-notice">
+                <i class="fas fa-shield-alt"></i>
+                <strong>Secure Submission:</strong> Your personal information is encrypted and stored securely. 
+                File uploads are scanned for security and only image files (JPG, PNG, WebP) are accepted.
             </div>
 
-            <div class="error-message" id="errorMessage">
-                <i class="fas fa-exclamation-triangle"></i> There was an error submitting your form. Please try again.
+            <?php if ($successMsg): ?>
+                <div class="success-message">
+                    <i class="fas fa-check-circle"></i>
+                    <?php echo htmlspecialchars($successMsg); ?>
             </div>
+            <?php endif; ?>
+            
+            <?php if ($errorMsg): ?>
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <?php echo htmlspecialchars($errorMsg); ?>
+                </div>
+            <?php endif; ?>
 
-            <form id="sellForm" method="POST" action="/pages/process-sell.php">
-                <!-- Contact Information -->
+            <form id="sellForm" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                
                 <div class="form-section">
                     <h3><i class="fas fa-user"></i> Contact Information</h3>
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="name">Full Name *</label>
-                            <input type="text" id="name" name="name" required>
+                            <label for="full_name">Full Name *</label>
+                            <input type="text" id="full_name" name="full_name" required value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>">
                         </div>
                         
                         <div class="form-group">
                             <label for="email">Email Address *</label>
-                            <input type="email" id="email" name="email" required>
+                            <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
-                            
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
                         </div>
                         
                         <div class="form-group">
@@ -897,12 +1094,11 @@ $cart_count = count($_SESSION['cart']);
                     </div>
 
                     <div class="form-group">
-                        <label for="notes">Additional Notes</label>
-                        <textarea id="notes" name="notes" placeholder="Any additional information about your collection, preferred contact method, or special circumstances..."></textarea>
+                        <label for="description">Additional Description</label>
+                        <textarea id="description" name="description" rows="4" placeholder="Describe your collection, any special editions, damage, etc."><?php echo htmlspecialchars($_POST['description'] ?? ''); ?></textarea>
                     </div>
                 </div>
 
-                <!-- Manga Sets -->
                 <div class="form-section">
                     <h3><i class="fas fa-layer-group"></i> Your Manga Sets</h3>
                     
@@ -957,7 +1153,6 @@ $cart_count = count($_SESSION['cart']);
                     </div>
                 </div>
 
-                <!-- Photo Upload Section -->
                 <div class="form-section">
                     <h3><i class="fas fa-camera"></i> Photos of Your Collection *</h3>
                     
@@ -967,7 +1162,7 @@ $cart_count = count($_SESSION['cart']);
                     </div>
 
                     <div class="photo-upload-container">
-                        <label for="photoInput" class="upload-area">
+                        <label for="collection_photos" class="upload-area">
                             <div class="upload-content">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <h4>Click to Upload Photos</h4>
@@ -975,7 +1170,7 @@ $cart_count = count($_SESSION['cart']);
                                 <span class="upload-note">JPG, PNG, HEIC (Max 10MB each)</span>
                             </div>
                         </label>
-                        <input type="file" id="photoInput" name="collection_photos[]" multiple accept="image/*" style="display: none;">
+                        <input type="file" id="collection_photos" name="collection_photos[]" multiple accept="image/*" required style="display: none;">
                         
                         <div id="photoPreviewContainer" class="photo-preview-container"></div>
                         
@@ -989,7 +1184,6 @@ $cart_count = count($_SESSION['cart']);
                     </div>
                 </div>
 
-                <!-- Submit -->
                 <div class="button-group">
                     <button type="submit" id="submitBtn" class="btn btn-primary">
                         <i class="fas fa-paper-plane loading" style="display: none;"></i>
@@ -1187,7 +1381,7 @@ $cart_count = count($_SESSION['cart']);
         let uploadedPhotos = [];
         let photoIdCounter = 0;
 
-        const photoInput = document.getElementById('photoInput');
+        const photoInput = document.getElementById('collection_photos');
         const uploadArea = document.querySelector('.upload-area');
         const previewContainer = document.getElementById('photoPreviewContainer');
         const addMoreBtn = document.getElementById('addMorePhotos');

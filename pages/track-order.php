@@ -1,7 +1,14 @@
 <?php
-session_start();
+require_once '../includes/security.php';
+require_once '../includes/database-encryption.php';
 require_once '../includes/db.php';
 require_once '../includes/email-system.php';
+
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
 
 $pageTitle = "Track Your Order";
 $currentPage = "track";
@@ -9,44 +16,173 @@ $currentPage = "track";
 // Check if accessed from admin
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
 
+// Initialize security components
+$encryption = new DatabaseEncryption();
+
 $order = null;
 $error = '';
+$success_message = '';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);
-    $orderNumber = trim($_POST['order_number'] ?? '');
-    
-    if (!$email) {
-        $error = 'Please enter a valid email address';
-    } elseif (empty($orderNumber)) {
-        $error = 'Please enter your order number';
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Invalid request. Please refresh the page and try again.';
+        log_security_event('csrf_failure', ['page' => 'track-order']);
     } else {
-        $emailSystem = new EmailSystem($db);
-        $order = $emailSystem->getOrderByEmailAndNumber($email, $orderNumber);
-        
-        if (!$order) {
-            $error = 'Order not found. Please check your email address and order number.';
+        // Check rate limiting
+        if (!check_rate_limit('order_tracking', 10, 3600)) {
+            $error = 'Too many tracking requests. Please wait before trying again.';
+            log_security_event('rate_limit_exceeded', ['page' => 'track-order']);
+        } else {
+            // Sanitize and validate inputs
+            $email = validate_email($_POST['email'] ?? '');
+            $orderNumber = sanitize_input($_POST['order_number'] ?? '');
+            
+            // Enhanced validation
+            if (!$email) {
+                $error = 'Please enter a valid email address.';
+            } elseif (empty($orderNumber) || strlen($orderNumber) < 5) {
+                $error = 'Please enter a valid order number.';
+            } elseif (strlen($orderNumber) > 50) {
+                $error = 'Order number is too long.';
+            } elseif (!preg_match('/^[A-Za-z0-9\-_]+$/', $orderNumber)) {
+                $error = 'Order number contains invalid characters.';
+            } else {
+                try {
+                    // Create searchable hash for email
+                    $email_hash = $encryption->createSearchHash($email, 'email');
+                    
+                    // First, try to find order by email hash and order number
+                    $stmt = $db->prepare("
+                        SELECT o.*, c.email, c.name, c.address, c.city, c.state, c.zip 
+                        FROM orders o 
+                        LEFT JOIN customers c ON o.customer_id = c.id 
+                        WHERE o.order_number = ? AND c.email_hash = ?
+                    ");
+                    $stmt->execute([$orderNumber, $email_hash]);
+                    $order_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($order_data) {
+                        // Decrypt sensitive customer data if needed
+                        if (!empty($order_data['email'])) {
+                            try {
+                                $order_data['email'] = $encryption->decrypt($order_data['email']);
+                                $order_data['name'] = $encryption->decrypt($order_data['name']);
+                                $order_data['address'] = $encryption->decrypt($order_data['address']);
+                                // City, state, zip might not be encrypted depending on implementation
+                            } catch (Exception $e) {
+                                // Handle case where data might not be encrypted yet
+                                error_log('Decryption error in track order: ' . $e->getMessage());
+                            }
+                        }
+                        
+                        // Verify the email matches (double-check security)
+                        if (strtolower($order_data['email']) === strtolower($email)) {
+                            // Get order items
+                            $stmt = $db->prepare("
+                                SELECT oi.*, p.title, p.author, p.condition_description 
+                                FROM order_items oi 
+                                LEFT JOIN products p ON oi.product_id = p.id 
+                                WHERE oi.order_id = ?
+                            ");
+                            $stmt->execute([$order_data['id']]);
+                            $order_data['items'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                            
+                            $order = $order_data;
+                            
+                            // Log successful order lookup (without sensitive data)
+                            log_security_event('order_tracking_success', [
+                                'order_id' => $order_data['id'],
+                                'order_number' => $orderNumber,
+                                'email_hash' => $email_hash
+                            ]);
+                        } else {
+                            $error = 'Order not found. Please check your email address and order number.';
+                            log_security_event('order_tracking_email_mismatch', [
+                                'order_number' => $orderNumber,
+                                'email_hash' => $email_hash
+                            ]);
+                        }
+                    } else {
+                        $error = 'Order not found. Please check your email address and order number.';
+                        log_security_event('order_tracking_not_found', [
+                            'order_number' => $orderNumber,
+                            'email_hash' => $email_hash
+                        ]);
+                    }
+                    
+                } catch (Exception $e) {
+                    error_log('Order tracking error: ' . $e->getMessage());
+                    $error = 'There was an error looking up your order. Please try again later.';
+                    log_security_event('order_tracking_error', [
+                        'error' => $e->getMessage(),
+                        'order_number' => $orderNumber
+                    ]);
+                }
+            }
         }
     }
 }
+
+// Generate CSRF token
+$csrf_token = generate_csrf_token();
 
 // Initialize cart for header
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 $cart_count = count($_SESSION['cart']);
+
+/**
+ * Get order status display information
+ */
+function getOrderStatusInfo($status) {
+    $statuses = [
+        'pending' => ['label' => 'Pending', 'color' => '#ffc107', 'description' => 'Your order is being processed'],
+        'confirmed' => ['label' => 'Confirmed', 'color' => '#17a2b8', 'description' => 'Your order has been confirmed and is being prepared'],
+        'shipped' => ['label' => 'Shipped', 'color' => '#28a745', 'description' => 'Your order has been shipped'],
+        'delivered' => ['label' => 'Delivered', 'color' => '#28a745', 'description' => 'Your order has been delivered'],
+        'cancelled' => ['label' => 'Cancelled', 'color' => '#dc3545', 'description' => 'Your order has been cancelled']
+    ];
+    
+    return $statuses[$status] ?? ['label' => ucfirst($status), 'color' => '#6c757d', 'description' => 'Status unknown'];
+}
+
+/**
+ * Format order date safely
+ */
+function formatOrderDate($date) {
+    try {
+        return date('F j, Y \a\t g:i A', strtotime($date));
+    } catch (Exception $e) {
+        return 'Date unavailable';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <title><?php echo $pageTitle; ?> - Bort's Books</title>
     <link rel="stylesheet" href="../assets/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #f7f7fa; }
+        
+        .security-notice {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #2e7d32;
+            text-align: center;
+        }
+        
         .track-container {
             max-width: 800px;
             margin: 2rem auto;
@@ -100,6 +236,7 @@ $cart_count = count($_SESSION['cart']);
             border-radius: 12px;
             font-size: 1rem;
             transition: all 0.3s ease;
+            box-sizing: border-box;
         }
         .form-group input:focus {
             outline: none;
@@ -127,10 +264,24 @@ $cart_count = count($_SESSION['cart']);
             color: #fff;
             transform: translateY(-2px);
         }
+        .track-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
         .error-message {
             background: #ffe0e0;
             color: #d63384;
             border: 1px solid #f8d7da;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
             border-radius: 12px;
             padding: 1rem;
             margin-bottom: 1.5rem;
@@ -158,13 +309,12 @@ $cart_count = count($_SESSION['cart']);
             color: #232946;
         }
         .order-status {
-            background: #28a745;
-            color: #fff;
             padding: 0.5rem 1rem;
             border-radius: 50px;
             font-weight: 600;
             text-transform: uppercase;
             font-size: 0.9rem;
+            color: #fff;
         }
         .order-info {
             display: grid;
@@ -189,6 +339,7 @@ $cart_count = count($_SESSION['cart']);
         .info-value {
             font-size: 1.1rem;
             color: #232946;
+            word-break: break-word;
         }
         .order-items {
             background: #fff;
@@ -379,6 +530,8 @@ $cart_count = count($_SESSION['cart']);
                            placeholder="e.g. BB2400123">
                 </div>
                 
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                
                 <button type="submit" class="track-btn">
                     <i class="fas fa-search"></i>
                     Track Order
@@ -395,7 +548,7 @@ $cart_count = count($_SESSION['cart']);
                     <div class="order-info">
                         <div class="info-card">
                             <div class="info-label">Order Date</div>
-                            <div class="info-value"><?php echo date('M j, Y', strtotime($order['created_at'])); ?></div>
+                            <div class="info-value"><?php echo formatOrderDate($order['created_at']); ?></div>
                         </div>
                         
                         <div class="info-card">

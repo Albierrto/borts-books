@@ -1,45 +1,64 @@
 <?php
-// --- Production error settings: do NOT display errors to users ---
+require_once '../includes/security.php';
+require_once '../includes/db.php';
+
+// Start secure session
+secure_session_start();
+
+// Set security headers  
+set_security_headers();
+
+// Production error settings: do NOT display errors to users
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(0);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../php_error.log');
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// Check rate limiting
+if (!check_rate_limit('product_view', 50, 3600)) {
+    http_response_code(429);
+    die('Too many requests. Please wait before trying again.');
 }
-
-require_once '../includes/db.php';
 
 // Check if user is admin
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+// Validate product ID
+$id = isset($_GET['id']) ? validate_int($_GET['id']) : null;
+if (!$id || $id <= 0) {
     header('Location: /pages/shop.php');
     exit;
 }
-$id = (int)$_GET['id'];
 
 try {
-    // Fetch product
+    // Fetch product with prepared statement
     $stmt = $db->prepare('SELECT * FROM products WHERE id = ?');
     $stmt->execute([$id]);
     $product = $stmt->fetch(PDO::FETCH_ASSOC);
+    
     if (!$product) {
-        echo '<p>Product not found. <a href="/pages/shop.php">Back to shop</a></p>';
+        log_security_event('invalid_product_access', ['product_id' => $id], 'low');
+        header('Location: /pages/shop.php');
         exit;
     }
+    
     // Fetch all images for this product
-    $imgStmt = $db->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC');
+    $imgStmt = $db->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC');
     $imgStmt->execute([$id]);
     $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
+    
 } catch (Exception $e) {
-    echo '<p>There was an error loading this product.</p>';
+    log_security_event('product_page_error', [
+        'product_id' => $id,
+        'error' => $e->getMessage()
+    ], 'medium');
+    header('Location: /pages/shop.php');
     exit;
 }
 
-// Fetch up to 7 random recommended products (excluding current) with their images
+// Fetch recommended products with limit for security
+try {
 $recStmt = $db->prepare("
     SELECT p.*, (
         SELECT image_url FROM product_images 
@@ -52,18 +71,23 @@ $recStmt = $db->prepare("
 ");
 $recStmt->execute([$id]);
 $recommended = $recStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $recommended = [];
+    log_security_event('recommended_products_error', ['error' => $e->getMessage()], 'low');
+}
 
-// Initialize cart if not set and get cart count
+// Initialize cart securely
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
-$num_items_in_cart = array_sum($_SESSION['cart']);
+$num_items_in_cart = is_array($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <title><?php echo htmlspecialchars($product['title']); ?> - Bort's Books</title>
     <link rel="stylesheet" href="../assets/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">

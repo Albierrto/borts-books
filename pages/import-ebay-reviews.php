@@ -6,13 +6,14 @@
 
 session_start();
 
-// Admin authentication
-$admin_username = 'bort';
-$admin_password = 'LolaSombra1!';
+require_once '../includes/config.php';
+
+// Admin credentials
+$admin_username = 'admin';
 
 // Check if user is trying to login
 if (isset($_POST['login'])) {
-    if ($_POST['username'] === $admin_username && $_POST['password'] === $admin_password) {
+    if ($_POST['username'] === $admin_username && $_POST['password'] === ADMIN_PASSWORD_HASH) {
         $_SESSION['admin_logged_in'] = true;
         header('Location: ' . $_SERVER['PHP_SELF']);
         exit;

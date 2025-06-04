@@ -1,139 +1,233 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: admin-login.php');
-    exit;
+require_once '../includes/security.php';
+require_once '../includes/admin-auth.php';
+
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
+
+// Check admin authentication
+check_admin_auth();
+
+// Generate CSRF token for forms
+$csrf_token = generate_csrf_token();
+
+// Get dashboard statistics
+$stats = [
+    'total_books' => 0,
+    'total_collections' => 0,
+    'pending_requests' => 0,
+    'pending_submissions' => 0
+];
+
+try {
+    // Get total books
+    $stmt = $pdo->query("SELECT COUNT(*) FROM books");
+    $stats['total_books'] = $stmt->fetchColumn();
+    
+    // Get total collections
+    $stmt = $pdo->query("SELECT COUNT(*) FROM collections");
+    $stats['total_collections'] = $stmt->fetchColumn();
+    
+    // Get pending customer requests
+    $stmt = $pdo->query("SELECT COUNT(*) FROM customer_requests WHERE status = 'pending'");
+    $stats['pending_requests'] = $stmt->fetchColumn();
+    
+    // Get pending sell submissions
+    $stmt = $pdo->query("SELECT COUNT(*) FROM sell_submissions WHERE status = 'pending'");
+    $stats['pending_submissions'] = $stmt->fetchColumn();
+    
+} catch (PDOException $e) {
+    log_security_event('database_error', ['error' => $e->getMessage()]);
+    $error = "An error occurred while fetching dashboard statistics.";
 }
-$pageTitle = "Admin Dashboard";
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?> - Bort's Books</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Admin Dashboard - Bort's Books</title>
     <link rel="stylesheet" href="../assets/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        body { background: #f7f7fa; }
         .dashboard-container {
-            max-width: 900px;
-            margin: 3rem auto;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
-            padding: 2.5rem 2rem;
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
         }
         .dashboard-title {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 800;
-            margin-bottom: 2rem;
-            text-align: center;
+            color: #232946;
         }
-        .dashboard-grid {
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
-        .dashboard-card {
-            background: #f7f7fa;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(35,41,70,0.07);
-            padding: 2rem 1.2rem;
-            text-align: center;
-            transition: transform 0.13s, box-shadow 0.13s;
-            cursor: pointer;
-            text-decoration: none;
-            color: #232946;
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
         }
-        .dashboard-card:hover {
-            transform: translateY(-6px) scale(1.04);
-            box-shadow: 0 4px 16px rgba(35,41,70,0.13);
-            background: #eebbc3;
-            color: #232946;
+        .stat-card:hover {
+            transform: translateY(-5px);
         }
-        .dashboard-card i {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: #e63946;
-        }
-        .dashboard-card h3 {
-            font-size: 1.2rem;
-            font-weight: 700;
+        .stat-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: #666;
             margin-bottom: 0.5rem;
         }
-        .dashboard-card p {
-            color: #555;
-            font-size: 1rem;
-        }
-        .logout-link {
-            display: block;
-            text-align: center;
-            margin-top: 2.5rem;
-            color: #e63946;
+        .stat-value {
+            font-size: 2rem;
             font-weight: 700;
-            text-decoration: none;
+            color: #232946;
         }
-        .logout-link:hover { text-decoration: underline; }
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .action-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .action-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #232946;
+            margin-bottom: 1rem;
+        }
+        .action-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .action-item {
+            margin-bottom: 0.75rem;
+        }
+        .action-link {
+            display: block;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #232946;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .action-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+        }
+        .logout-btn {
+            padding: 0.75rem 1.5rem;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .logout-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container header-container">
-            <a href="../index.php" class="logo">Bort's <span>Books</span></a>
-            <nav>
-                <ul>
-                    <li><a href="/index.php">Home</a></li>
-                    <li><a href="/pages/shop.php">Shop</a></li>
-                    <li><a href="/pages/sell.php">Sell Manga</a></li>
-                    <li><a href="/pages/about.php">About</a></li>
-                </ul>
-            </nav>
-        </div>
-    </header>
     <div class="dashboard-container">
-        <div class="dashboard-title">Admin Dashboard</div>
-        <div class="dashboard-grid">
-            <a href="admin.php" class="dashboard-card">
-                <i class="fas fa-list"></i>
-                <h3>View & Manage Products</h3>
-                <p>See all products, edit, delete, and manage images.</p>
-            </a>
-            <a href="add-product.php" class="dashboard-card">
-                <i class="fas fa-plus-circle"></i>
-                <h3>Add New Product</h3>
-                <p>Add a new manga product to your store.</p>
-            </a>
-            <a href="ebay-import.php" class="dashboard-card">
-                <i class="fas fa-file-import"></i>
-                <h3>Import from eBay/CSV</h3>
-                <p>Bulk import products from eBay or CSV files.</p>
-            </a>
-            <a href="admin-sell-submissions.php" class="dashboard-card">
-                <i class="fas fa-inbox"></i>
-                <h3>View Sell Submissions</h3>
-                <p>Review and manage manga sell requests from users.</p>
-            </a>
-            <a href="admin-customer-requests.php" class="dashboard-card">
-                <i class="fas fa-headset"></i>
-                <h3>Customer Requests</h3>
-                <p>View and manage customer support requests from contact form.</p>
-            </a>
-            <a href="admin-email.php" class="dashboard-card">
-                <i class="fas fa-envelope"></i>
-                <h3>Email Marketing</h3>
-                <p>Manage newsletter subscribers and email campaigns.</p>
-            </a>
-            <a href="ebay-reviews-manager.php" class="dashboard-card">
-                <i class="fas fa-star"></i>
-                <h3>eBay Reviews Manager</h3>
-                <p>Import and manage your real eBay feedback easily.</p>
-            </a>
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Admin Dashboard</h1>
+            <form method="POST" action="admin-login.php" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                <button type="submit" name="logout" class="logout-btn">Logout</button>
+            </form>
         </div>
-        <a href="admin-login.php?logout=1" class="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        
+        <?php if (isset($error)): ?>
+            <div class="error-message">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Total Books</div>
+                <div class="stat-value"><?php echo number_format($stats['total_books']); ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Collections</div>
+                <div class="stat-value"><?php echo number_format($stats['total_collections']); ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Pending Requests</div>
+                <div class="stat-value"><?php echo number_format($stats['pending_requests']); ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Pending Submissions</div>
+                <div class="stat-value"><?php echo number_format($stats['pending_submissions']); ?></div>
+            </div>
+        </div>
+        
+        <div class="action-grid">
+            <div class="action-card">
+                <h2 class="action-title">Inventory Management</h2>
+                <ul class="action-list">
+                    <li class="action-item">
+                        <a href="admin-inventory.php" class="action-link">Manage Books</a>
+                    </li>
+                    <li class="action-item">
+                        <a href="admin-collections.php" class="action-link">Manage Collections</a>
+                    </li>
+                    <li class="action-item">
+                        <a href="admin-mass-shipping.php" class="action-link">Mass Shipping Update</a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="action-card">
+                <h2 class="action-title">Customer Interactions</h2>
+                <ul class="action-list">
+                    <li class="action-item">
+                        <a href="admin-customer-requests.php" class="action-link">Customer Requests</a>
+                    </li>
+                    <li class="action-item">
+                        <a href="admin-sell-submissions.php" class="action-link">Sell Submissions</a>
+                    </li>
+                    <li class="action-item">
+                        <a href="admin-email.php" class="action-link">Email Management</a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="action-card">
+                <h2 class="action-title">Quick Actions</h2>
+                <ul class="action-list">
+                    <li class="action-item">
+                        <a href="admin-quick-edit.php" class="action-link">Quick Edit Books</a>
+                    </li>
+                    <li class="action-item">
+                        <a href="admin-mass-delete.php" class="action-link">Mass Delete</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 </body>
 </html> 

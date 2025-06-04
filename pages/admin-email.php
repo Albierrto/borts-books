@@ -1,13 +1,17 @@
 <?php
-session_start();
+require_once '../includes/security.php';
+require_once '../includes/admin-auth.php';
 require_once '../includes/db.php';
 require_once '../includes/email-system.php';
 
-// Enhanced admin security check
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: admin-login.php');
-    exit;
-}
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
+
+// Check admin authentication
+check_admin_auth();
 
 // Session timeout after 2 hours
 if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time']) > 7200) {
@@ -16,10 +20,8 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time']) > 7200)
     exit;
 }
 
-// CSRF token for forms
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
+// Generate CSRF token for forms
+$csrf_token = generate_csrf_token();
 
 $pageTitle = "Email Marketing";
 $currentPage = "admin";
@@ -28,51 +30,117 @@ $emailSystem = new EmailSystem($db);
 
 // Handle actions
 $message = '';
-$messageType = '';
+$error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF protection
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        $message = 'Security token mismatch. Please try again.';
-        $messageType = 'error';
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Invalid request';
+        log_security_event('csrf_failure', ['page' => 'admin-email']);
     } else {
-        if (isset($_POST['action'])) {
-            switch ($_POST['action']) {
-                case 'export_subscribers':
-                    // Export active subscribers to CSV
-                    $subscribers = $emailSystem->getActiveSubscribers();
-                    
-                    header('Content-Type: text/csv');
-                    header('Content-Disposition: attachment; filename="newsletter_subscribers_' . date('Y-m-d') . '.csv"');
-                    
-                    $output = fopen('php://output', 'w');
-                    fputcsv($output, ['Email', 'Name', 'Subscribed Date', 'Source']);
-                    
-                    foreach ($subscribers as $sub) {
-                        fputcsv($output, [
-                            $sub['email'],
-                            $sub['name'] ?: 'Not provided',
-                            $sub['subscribed_at'],
-                            $sub['source']
-                        ]);
+        // Check rate limiting
+        if (!check_rate_limit('email_send', 10, 300)) {
+            $error = 'Too many email attempts. Please try again later.';
+            log_security_event('rate_limit_exceeded', ['page' => 'admin-email']);
+        } else {
+            $action = sanitize_input($_POST['action'] ?? '');
+            
+            if ($action === 'export_subscribers') {
+                // Export active subscribers to CSV
+                $subscribers = $emailSystem->getActiveSubscribers();
+                
+                header('Content-Type: text/csv');
+                header('Content-Disposition: attachment; filename="newsletter_subscribers_' . date('Y-m-d') . '.csv"');
+                
+                $output = fopen('php://output', 'w');
+                fputcsv($output, ['Email', 'Name', 'Subscribed Date', 'Source']);
+                
+                foreach ($subscribers as $sub) {
+                    fputcsv($output, [
+                        $sub['email'],
+                        $sub['name'] ?: 'Not provided',
+                        $sub['subscribed_at'],
+                        $sub['source']
+                    ]);
+                }
+                
+                fclose($output);
+                exit;
+            } else if ($action === 'add_subscriber') {
+                $email = validate_email($_POST['email'] ?? '');
+                $name = sanitize_input($_POST['name'] ?? '');
+                
+                if ($email) {
+                    $result = $emailSystem->addSubscriber($email, $name, 'admin');
+                    $message = $result['message'];
+                    $messageType = $result['success'] ? 'success' : 'error';
+                } else {
+                    $error = 'Please enter a valid email address';
+                }
+            } else if ($action === 'send_email') {
+                $to_email = validate_email($_POST['to_email'] ?? '');
+                $subject = sanitize_input($_POST['subject'] ?? '');
+                $message_body = sanitize_input($_POST['message'] ?? '');
+                $email_type = sanitize_input($_POST['email_type'] ?? 'general');
+                
+                if (!$to_email || empty($subject) || empty($message_body)) {
+                    $error = 'Email address, subject, and message are required';
+                } else {
+                    try {
+                        // Prepare email headers
+                        $headers = "MIME-Version: 1.0\r\n";
+                        $headers .= "Content-type:text/html;charset=UTF-8\r\n";
+                        $headers .= "From: Bort's Books <noreply@bortsbooks.com>\r\n";
+                        
+                        // Create HTML email template
+                        $html_message = "
+                        <html>
+                        <head>
+                            <style>
+                                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+                                .content { background: #f9f9f9; padding: 20px; }
+                                .footer { background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class='container'>
+                                <div class='header'>
+                                    <h1>Bort's Books</h1>
+                                </div>
+                                <div class='content'>
+                                    " . nl2br(htmlspecialchars($message_body)) . "
+                                </div>
+                                <div class='footer'>
+                                    <p><strong>Bort's Books</strong></p>
+                                    <p>Your trusted book dealer</p>
+                                </div>
+                            </div>
+                        </body>
+                        </html>";
+                        
+                        // Send email
+                        if (mail($to_email, $subject, $html_message, $headers)) {
+                            $message = 'Email sent successfully';
+                            log_security_event('email_sent', ['to' => $to_email, 'subject' => $subject, 'type' => $email_type]);
+                            
+                            // Log email in database if table exists
+                            try {
+                                $stmt = $pdo->prepare("INSERT INTO email_logs (to_email, subject, message, email_type, sent_at) VALUES (?, ?, ?, ?, NOW())");
+                                $stmt->execute([$to_email, $subject, $message_body, $email_type]);
+                            } catch (PDOException $e) {
+                                // Email logs table might not exist, continue without error
+                            }
+                        } else {
+                            $error = 'Failed to send email';
+                            log_security_event('email_failed', ['to' => $to_email, 'subject' => $subject]);
+                        }
+                    } catch (Exception $e) {
+                        $error = 'An error occurred while sending the email';
+                        log_security_event('email_error', ['error' => $e->getMessage()]);
                     }
-                    
-                    fclose($output);
-                    exit;
-                    
-                case 'add_subscriber':
-                    $email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
-                    $name = trim($_POST['name']);
-                    
-                    if ($email) {
-                        $result = $emailSystem->addSubscriber($email, $name, 'admin');
-                        $message = $result['message'];
-                        $messageType = $result['success'] ? 'success' : 'error';
-                    } else {
-                        $message = 'Please enter a valid email address';
-                        $messageType = 'error';
-                    }
-                    break;
+                }
             }
         }
     }
@@ -97,6 +165,27 @@ try {
     $customerStats = $customerStatsQuery->fetch(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $customerStats = ['total_customers' => 0, 'repeat_customers' => 0, 'avg_spent' => 0, 'total_revenue' => 0];
+}
+
+// Get recent email logs if table exists
+$email_logs = [];
+try {
+    $stmt = $pdo->query("SELECT * FROM email_logs ORDER BY sent_at DESC LIMIT 20");
+    $email_logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Email logs table might not exist
+}
+
+// Get customer emails for quick selection
+$customer_emails = [];
+try {
+    $stmt = $pdo->query("SELECT DISTINCT customer_email as email FROM customer_requests WHERE customer_email IS NOT NULL 
+                         UNION 
+                         SELECT DISTINCT seller_email as email FROM sell_submissions WHERE seller_email IS NOT NULL 
+                         ORDER BY email");
+    $customer_emails = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Tables might not exist
 }
 ?>
 <!DOCTYPE html>
@@ -354,6 +443,12 @@ try {
                 </div>
             <?php endif; ?>
 
+            <?php if ($error): ?>
+                <div class="message error">
+                    <?php echo htmlspecialchars($error); ?>
+                </div>
+            <?php endif; ?>
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-number"><?php echo number_format($stats['active_subscribers'] ?? 0); ?></div>
@@ -412,7 +507,7 @@ try {
                         <div style="margin-top: 1.5rem; text-align: center;">
                             <form method="POST" style="display: inline;">
                                 <input type="hidden" name="action" value="export_subscribers">
-                                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                                 <button type="submit" class="btn btn-secondary">
                                     <i class="fas fa-download"></i>
                                     Export CSV
@@ -430,7 +525,7 @@ try {
                     <div class="panel-content">
                         <form method="POST">
                             <input type="hidden" name="action" value="add_subscriber">
-                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                             
                             <div class="form-group">
                                 <label for="email">Email Address</label>

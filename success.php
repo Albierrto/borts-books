@@ -1,17 +1,36 @@
 <?php
-session_start();
+require_once 'includes/security.php';
 
-// Get session ID from URL
-$session_id = $_GET['session_id'] ?? '';
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
+
+// Check rate limiting
+if (!check_rate_limit('success_access', 10, 3600)) {
+    http_response_code(429);
+    die('Too many requests. Please wait before trying again.');
+}
+
+// Get and validate session ID from URL
+$session_id = sanitize_input($_GET['session_id'] ?? '');
 $order_details = null;
 $error = '';
 $db_error = false;
+
+// Validate session ID format
+if (empty($session_id) || !preg_match('/^cs_[a-zA-Z0-9_]+$/', $session_id)) {
+    $error = 'Invalid session ID format.';
+    log_security_event('invalid_session_format', ['session_id' => $session_id], 'medium');
+}
 
 // Try to load required files with error handling
 try {
     require_once 'includes/config.php';
 } catch (Exception $e) {
     error_log('Config error in success.php: ' . $e->getMessage());
+    log_security_event('config_load_error', ['error' => $e->getMessage()], 'high');
 }
 
 try {
@@ -19,6 +38,7 @@ try {
 } catch (Exception $e) {
     $db_error = true;
     error_log('Database connection error in success.php: ' . $e->getMessage());
+    log_security_event('db_connection_error', ['error' => $e->getMessage()], 'high');
 }
 
 try {
@@ -26,54 +46,94 @@ try {
 } catch (Exception $e) {
     error_log('Stripe config error in success.php: ' . $e->getMessage());
     $error = 'Payment verification system temporarily unavailable.';
+    log_security_event('stripe_config_error', ['error' => $e->getMessage()], 'high');
 }
 
-if (empty($session_id)) {
+if (empty($session_id) && empty($error)) {
     $error = 'Invalid session. Please contact support if you completed a payment.';
+    log_security_event('missing_session_id', [], 'medium');
 } elseif (!$error) {
     // Try to verify the payment with Stripe
     try {
         $session = verifyStripePayment($session_id);
         
         if ($session && $session->payment_status === 'paid') {
-            // Payment successful, prepare order details
+            // Payment successful, prepare order details with data validation
             $order_details = [
                 'session_id' => $session_id,
-                'amount_total' => $session->amount_total / 100, // Convert from cents
-                'customer_email' => $session->customer_details->email ?? $session->customer_email,
-                'customer_name' => $session->metadata->customer_name ?? '',
-        
-                'payment_intent' => $session->payment_intent ?? '',
+                'amount_total' => max(0, $session->amount_total / 100), // Convert from cents and validate
+                'customer_email' => validate_email($session->customer_details->email ?? $session->customer_email),
+                'customer_name' => sanitize_input($session->metadata->customer_name ?? ''),
+                'payment_intent' => sanitize_input($session->payment_intent ?? ''),
             ];
             
-            // Clear the cart since payment was successful
-            $_SESSION['cart'] = [];
-            unset($_SESSION['customer_info']);
-            
-            // Try to save order to database (optional - don't fail if database is down)
-            if (!$db_error) {
-                try {
-                    // Save order to database if possible
-                    $stmt = $db->prepare('INSERT INTO orders (stripe_session_id, customer_name, customer_email, total_amount, payment_status, created_at) VALUES (?, ?, ?, ?, ?, NOW())');
-                    $stmt->execute([
-                        $session_id,
-                        $order_details['customer_name'],
-                        $order_details['customer_email'],
-                        $order_details['amount_total'],
-                        'paid'
-                    ]);
-                } catch (Exception $e) {
-                    // Log error but don't fail the success page
-                    error_log('Failed to save order to database: ' . $e->getMessage());
-                }
+            // Validate critical order data
+            if (!$order_details['customer_email']) {
+                $error = 'Invalid customer email in payment session.';
+                log_security_event('invalid_customer_email', ['session_id' => $session_id], 'medium');
             }
             
+            if ($order_details['amount_total'] <= 0) {
+                $error = 'Invalid payment amount.';
+                log_security_event('invalid_payment_amount', ['session_id' => $session_id], 'high');
+            }
+            
+            if (empty($error)) {
+                // Clear the cart since payment was successful
+                $_SESSION['cart'] = [];
+                unset($_SESSION['customer_info']);
+                unset($_SESSION['shipping_cost']);
+                
+                // Try to save order to database (optional - don't fail if database is down)
+                if (!$db_error) {
+                    try {
+                        // Check for duplicate order first
+                        $duplicateCheck = $db->prepare('SELECT id FROM orders WHERE stripe_session_id = ?');
+                        $duplicateCheck->execute([$session_id]);
+                        
+                        if (!$duplicateCheck->fetch()) {
+                            // Encrypt sensitive data before storage
+                            require_once 'includes/database-encryption.php';
+                            $encryption = new DatabaseEncryption();
+                            
+                            $encrypted_name = $encryption->encrypt($order_details['customer_name']);
+                            $encrypted_email = $encryption->encrypt($order_details['customer_email']);
+                            
+                            $stmt = $db->prepare('INSERT INTO orders (stripe_session_id, customer_name, customer_email, total_amount, payment_status, created_at) VALUES (?, ?, ?, ?, ?, NOW())');
+                            $stmt->execute([
+                                $session_id,
+                                $encrypted_name,
+                                $encrypted_email,
+                                $order_details['amount_total'],
+                                'paid'
+                            ]);
+                            
+                            log_security_event('order_saved', [
+                                'session_id' => $session_id,
+                                'order_id' => $db->lastInsertId()
+                            ], 'low');
+                        }
+                    } catch (Exception $e) {
+                        // Log error but don't fail the success page
+                        error_log('Failed to save order to database: ' . $e->getMessage());
+                        log_security_event('order_save_failed', [
+                            'session_id' => $session_id,
+                            'error' => $e->getMessage()
+                        ], 'medium');
+                    }
+                }
+            }
         } else {
-            $error = 'Payment verification failed. Please contact support with session ID: ' . $session_id;
+            $error = 'Payment verification failed. Please contact support with session ID: ' . htmlspecialchars($session_id);
+            log_security_event('payment_verification_failed', ['session_id' => $session_id], 'high');
         }
     } catch (Exception $e) {
         error_log('Stripe verification error: ' . $e->getMessage());
-        $error = 'Payment verification failed. Please contact support with session ID: ' . $session_id;
+        $error = 'Payment verification failed. Please contact support with session ID: ' . htmlspecialchars($session_id);
+        log_security_event('stripe_verification_exception', [
+            'session_id' => $session_id,
+            'error' => $e->getMessage()
+        ], 'high');
     }
 }
 ?>
@@ -82,6 +142,7 @@ if (empty($session_id)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <title><?php echo $error ? 'Payment Issue' : 'Order Success'; ?> - Bort's Books</title>
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">

@@ -1,86 +1,129 @@
 <?php
-session_start();
+require_once '../includes/security.php';
+require_once '../includes/admin-auth.php';
 require_once '../includes/db.php';
 require_once '../includes/inventory-manager.php';
 
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
+
 // Check admin authentication
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: admin-login.php');
-    exit();
-}
+check_admin_auth();
+
+// Generate CSRF token for forms
+$csrf_token = generate_csrf_token();
 
 // Initialize inventory manager
 $inventoryManager = new InventoryManager($db);
 
 // Handle form submissions
 $message = '';
-$messageType = '';
+$error = '';
 
-if ($_POST) {
-    if (isset($_POST['restock_product'])) {
-        $product_id = (int)$_POST['product_id'];
-        $quantity = (int)$_POST['quantity'];
-        $reason = $_POST['reason'] ?? 'Manual restock';
-        $admin_user = $_SESSION['admin_username'] ?? 'Admin';
-        
-        if ($inventoryManager->restockProduct($product_id, $quantity, $reason, $admin_user)) {
-            $message = "Product restocked successfully!";
-            $messageType = "success";
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Invalid request';
+        log_security_event('csrf_failure', ['page' => 'admin-inventory']);
+    } else {
+        // Check rate limiting
+        if (!check_rate_limit('inventory_update', 20, 300)) {
+            $error = 'Too many update attempts. Please try again later.';
+            log_security_event('rate_limit_exceeded', ['page' => 'admin-inventory']);
         } else {
-            $message = "Failed to restock product.";
-            $messageType = "error";
-        }
-    }
-    
-    if (isset($_POST['update_settings'])) {
-        $product_id = (int)$_POST['product_id'];
-        $settings = [
-            'low_stock_threshold' => (int)$_POST['low_stock_threshold'],
-            'reorder_point' => (int)$_POST['reorder_point'],
-            'max_stock_level' => (int)$_POST['max_stock_level'],
-            'supplier_info' => $_POST['supplier_info'],
-            'auto_reorder' => isset($_POST['auto_reorder'])
-        ];
-        
-        if ($inventoryManager->setProductInventorySettings($product_id, $settings)) {
-            $message = "Inventory settings updated successfully!";
-            $messageType = "success";
-        } else {
-            $message = "Failed to update settings.";
-            $messageType = "error";
-        }
-    }
-    
-    if (isset($_POST['export_csv'])) {
-        $filepath = $inventoryManager->exportInventoryCSV();
-        if ($filepath && file_exists($filepath)) {
-            header('Content-Type: application/csv');
-            header('Content-Disposition: attachment; filename="' . basename($filepath) . '"');
-            header('Content-Length: ' . filesize($filepath));
-            readfile($filepath);
-            unlink($filepath); // Clean up
-            exit();
+            $action = sanitize_input($_POST['action'] ?? '');
+            
+            if ($action === 'add_book') {
+                $title = sanitize_input($_POST['title'] ?? '');
+                $author = sanitize_input($_POST['author'] ?? '');
+                $isbn = sanitize_input($_POST['isbn'] ?? '');
+                $price = validate_float($_POST['price'] ?? '');
+                $condition = sanitize_input($_POST['condition'] ?? '');
+                $description = sanitize_input($_POST['description'] ?? '');
+                
+                if (empty($title) || empty($author) || !$price) {
+                    $error = 'Title, author, and price are required';
+                } else {
+                    try {
+                        $stmt = $pdo->prepare("INSERT INTO books (title, author, isbn, price, condition_description, description) VALUES (?, ?, ?, ?, ?, ?)");
+                        $stmt->execute([$title, $author, $isbn, $price, $condition, $description]);
+                        
+                        $message = 'Book added successfully';
+                        log_security_event('book_added', ['title' => $title, 'author' => $author]);
+                    } catch (PDOException $e) {
+                        $error = 'An error occurred while adding the book';
+                        log_security_event('database_error', ['error' => $e->getMessage()]);
+                    }
+                }
+            } elseif ($action === 'delete_book') {
+                $book_id = validate_int($_POST['book_id'] ?? '');
+                
+                if (!$book_id) {
+                    $error = 'Invalid book ID';
+                } else {
+                    try {
+                        $stmt = $pdo->prepare("DELETE FROM books WHERE id = ?");
+                        $stmt->execute([$book_id]);
+                        
+                        $message = 'Book deleted successfully';
+                        log_security_event('book_deleted', ['id' => $book_id]);
+                    } catch (PDOException $e) {
+                        $error = 'An error occurred while deleting the book';
+                        log_security_event('database_error', ['error' => $e->getMessage()]);
+                    }
+                }
+            }
         }
     }
 }
 
-// Get analytics data
-$analytics = $inventoryManager->getInventoryAnalytics(30);
-$lowStockProducts = $inventoryManager->getLowStockProducts(20);
+// Get search parameters
+$search = sanitize_input($_GET['search'] ?? '');
+$condition_filter = sanitize_input($_GET['condition'] ?? '');
 
-// Get recent activity
-$stmt = $db->prepare("
-    SELECT 
-        il.*, 
-        p.title as product_title,
-        p.price
-    FROM inventory_logs il
-    JOIN products p ON il.product_id = p.id
-    ORDER BY il.created_at DESC
-    LIMIT 20
-");
-$stmt->execute();
-$recentActivity = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Build query
+$where_conditions = [];
+$params = [];
+
+if ($search) {
+    $where_conditions[] = "(title LIKE ? OR author LIKE ? OR isbn LIKE ?)";
+    $search_param = "%$search%";
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $params[] = $search_param;
+}
+
+if ($condition_filter) {
+    $where_conditions[] = "condition_description = ?";
+    $params[] = $condition_filter;
+}
+
+$where_clause = $where_conditions ? "WHERE " . implode(" AND ", $where_conditions) : "";
+
+// Get books
+try {
+    $stmt = $pdo->prepare("SELECT * FROM books $where_clause ORDER BY title");
+    $stmt->execute($params);
+    $books = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error = 'An error occurred while fetching books';
+    log_security_event('database_error', ['error' => $e->getMessage()]);
+    $books = [];
+}
+
+// Get statistics
+try {
+    $total_books = $pdo->query("SELECT COUNT(*) FROM books")->fetchColumn();
+    $total_value = $pdo->query("SELECT SUM(price) FROM books")->fetchColumn() ?: 0;
+    $conditions = $pdo->query("SELECT condition_description, COUNT(*) as count FROM books WHERE condition_description IS NOT NULL GROUP BY condition_description")->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $total_books = 0;
+    $total_value = 0;
+    $conditions = [];
+}
 ?>
 
 <!DOCTYPE html>
@@ -88,529 +131,355 @@ $recentActivity = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory Management - Bort's Books Admin</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Inventory Management - Bort's Books</title>
+    <link rel="stylesheet" href="../assets/css/styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-
         .container {
             max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 2rem auto;
+            padding: 0 1rem;
         }
-
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
-        .nav-links {
-            margin-top: 1rem;
-        }
-
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            margin-right: 1rem;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            background: rgba(255,255,255,0.1);
-            transition: all 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .message {
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
-        .message.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .message.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-        }
-
-        .card h3 {
-            color: #667eea;
-            margin-bottom: 1rem;
-            font-size: 1.3rem;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.5rem;
+            margin-bottom: 2rem;
         }
-
-        .stat-grid {
+        .title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #232946;
+        }
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
+            margin-bottom: 2rem;
         }
-
-        .stat-item {
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             text-align: center;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 8px;
         }
-
         .stat-value {
             font-size: 2rem;
             font-weight: 800;
             color: #667eea;
             display: block;
         }
-
         .stat-label {
-            font-size: 0.9rem;
             color: #666;
             margin-top: 0.5rem;
         }
-
-        .low-stock-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
-            background: #fff;
+        .form-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
         }
-
-        .low-stock-item.critical {
-            border-color: #dc3545;
-            background: #fff5f5;
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
         }
-
-        .low-stock-info h4 {
-            margin: 0;
-            font-size: 1rem;
-            color: #333;
-        }
-
-        .low-stock-info p {
-            margin: 0;
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        .stock-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .stock-badge.critical {
-            background: #dc3545;
-            color: white;
-        }
-
-        .stock-badge.low {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            margin: 0.25rem;
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-small {
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(45deg, #6c757d, #495057);
-        }
-
-        .btn-danger {
-            background: linear-gradient(45deg, #dc3545, #c82333);
-        }
-
         .form-group {
             margin-bottom: 1rem;
         }
-
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
             font-weight: 600;
+            margin-bottom: 0.5rem;
             color: #333;
         }
-
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
             padding: 0.75rem;
-            border: 1px solid #ddd;
+            border: 2px solid #ddd;
             border-radius: 6px;
             font-size: 1rem;
         }
-
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
-            outline: none;
             border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
         }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-
-        .modal-content {
+        .filters {
             background: white;
-            margin: 5% auto;
-            padding: 2rem;
+            padding: 1.5rem;
             border-radius: 12px;
-            max-width: 500px;
-            position: relative;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-
-        .close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 1.5rem;
-            cursor: pointer;
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr 200px auto;
+            gap: 1rem;
+            align-items: end;
+        }
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .book-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .book-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #232946;
+            margin-bottom: 0.5rem;
+        }
+        .book-author {
+            color: #667eea;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .book-details {
+            font-size: 0.9rem;
             color: #666;
+            margin-bottom: 1rem;
         }
-
-        .activity-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem;
-            border-bottom: 1px solid #e9ecef;
+        .book-price {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #28a745;
+            margin-bottom: 1rem;
         }
-
-        .activity-item:last-child {
-            border-bottom: none;
+        .submit-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
-
-        .activity-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
         }
-
-        .activity-icon.sale {
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .delete-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+        .message {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        .success {
             background: #d4edda;
             color: #155724;
         }
-
-        .activity-icon.restock {
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .condition-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .condition-excellent {
+            background: #d4edda;
+            color: #155724;
+        }
+        .condition-good {
             background: #cce5ff;
             color: #004085;
         }
-
-        .activity-icon.adjustment {
+        .condition-fair {
             background: #fff3cd;
             color: #856404;
         }
-
-        .chart-container {
-            height: 300px;
-            margin-top: 1rem;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .stat-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .container {
-                padding: 10px;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
+        .condition-poor {
+            background: #f8d7da;
+            color: #721c24;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="admin-dashboard.php" class="back-link">← Back to Dashboard</a>
+        
         <div class="header">
-            <h1><i class="fas fa-boxes"></i> Inventory Management</h1>
-            <p>Monitor stock levels, track sales, and manage your inventory efficiently</p>
-            <div class="nav-links">
-                <a href="admin.php"><i class="fas fa-arrow-left"></i> Back to Admin</a>
-                <a href="admin-dashboard.php"><i class="fas fa-chart-bar"></i> Dashboard</a>
-                <a href="#" onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</a>
-            </div>
+            <h1 class="title">Inventory Management</h1>
         </div>
-
+        
         <?php if ($message): ?>
-            <div class="message <?php echo $messageType; ?>">
+            <div class="message success">
                 <?php echo htmlspecialchars($message); ?>
             </div>
         <?php endif; ?>
-
-        <!-- Analytics Overview -->
-        <div class="dashboard-grid">
-            <div class="card">
-                <h3><i class="fas fa-chart-pie"></i> Inventory Overview</h3>
-                <div class="stat-grid">
-                    <div class="stat-item">
-                        <span class="stat-value"><?php echo number_format($analytics['overview']['total_products'] ?? 0); ?></span>
-                        <div class="stat-label">Total Products</div>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value"><?php echo number_format($analytics['overview']['total_units'] ?? 0); ?></span>
-                        <div class="stat-label">Total Units</div>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value">$<?php echo number_format($analytics['overview']['total_value'] ?? 0, 2); ?></span>
-                        <div class="stat-label">Total Value</div>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value"><?php echo $analytics['low_stock_count'] ?? 0; ?></span>
-                        <div class="stat-label">Low Stock Items</div>
-                    </div>
+        
+        <?php if ($error): ?>
+            <div class="message error">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
+        
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-value"><?php echo $total_books; ?></span>
+                <div class="stat-label">Total Books</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">$<?php echo number_format($total_value, 2); ?></span>
+                <div class="stat-label">Total Value</div>
+            </div>
+            <?php foreach ($conditions as $condition): ?>
+                <div class="stat-card">
+                    <span class="stat-value"><?php echo $condition['count']; ?></span>
+                    <div class="stat-label"><?php echo ucfirst($condition['condition_description']); ?></div>
                 </div>
-            </div>
-
-            <!-- Low Stock Alerts -->
-            <div class="card">
-                <h3><i class="fas fa-exclamation-triangle"></i> Low Stock Alerts</h3>
-                <?php if (empty($lowStockProducts)): ?>
-                    <p style="color: #28a745; font-weight: 600;">
-                        <i class="fas fa-check-circle"></i> All products are well stocked!
-                    </p>
-                <?php else: ?>
-                    <?php foreach ($lowStockProducts as $product): ?>
-                        <div class="low-stock-item <?php echo $product['stock_quantity'] <= 2 ? 'critical' : ''; ?>">
-                            <div class="low-stock-info">
-                                <h4><?php echo htmlspecialchars($product['title']); ?></h4>
-                                <p>$<?php echo number_format($product['price'], 2); ?> | Threshold: <?php echo $product['threshold']; ?></p>
-                            </div>
-                            <div>
-                                <span class="stock-badge <?php echo $product['stock_quantity'] <= 2 ? 'critical' : 'low'; ?>">
-                                    <?php echo $product['stock_quantity']; ?> left
-                                </span>
-                                <button class="btn btn-small" onclick="openRestockModal(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['title']); ?>')">
-                                    <i class="fas fa-plus"></i> Restock
-                                </button>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-
-            <!-- Top Sellers -->
-            <div class="card">
-                <h3><i class="fas fa-trophy"></i> Top Sellers (30 Days)</h3>
-                <?php if (empty($analytics['top_sellers'])): ?>
-                    <p style="color: #666;">No sales data available for the last 30 days.</p>
-                <?php else: ?>
-                    <?php foreach (array_slice($analytics['top_sellers'], 0, 5) as $index => $seller): ?>
-                        <div class="activity-item">
-                            <div style="display: flex; align-items: center;">
-                                <div class="activity-icon sale">
-                                    <span style="font-weight: bold;">#<?php echo $index + 1; ?></span>
-                                </div>
-                                <div>
-                                    <h4 style="margin: 0; font-size: 1rem;"><?php echo htmlspecialchars($seller['title']); ?></h4>
-                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">
-                                        <?php echo $seller['units_sold']; ?> units sold
-                                    </p>
-                                </div>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-weight: 600; color: #28a745;">
-                                    $<?php echo number_format($seller['revenue'], 2); ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-
-            <!-- Recent Activity -->
-            <div class="card">
-                <h3><i class="fas fa-history"></i> Recent Activity</h3>
-                <?php if (empty($recentActivity)): ?>
-                    <p style="color: #666;">No recent inventory activity.</p>
-                <?php else: ?>
-                    <?php foreach (array_slice($recentActivity, 0, 8) as $activity): ?>
-                        <div class="activity-item">
-                            <div style="display: flex; align-items: center;">
-                                <div class="activity-icon <?php echo $activity['action_type']; ?>">
-                                    <i class="fas fa-<?php 
-                                        echo $activity['action_type'] === 'sale' ? 'shopping-cart' : 
-                                            ($activity['action_type'] === 'restock' ? 'plus' : 'edit'); 
-                                    ?>"></i>
-                                </div>
-                                <div>
-                                    <h4 style="margin: 0; font-size: 0.9rem;">
-                                        <?php echo htmlspecialchars($activity['product_title']); ?>
-                                    </h4>
-                                    <p style="margin: 0; color: #666; font-size: 0.8rem;">
-                                        <?php echo ucfirst($activity['action_type']); ?>: 
-                                        <?php echo $activity['quantity_change'] > 0 ? '+' : ''; ?><?php echo $activity['quantity_change']; ?> units
-                                    </p>
-                                </div>
-                            </div>
-                            <div style="text-align: right; font-size: 0.8rem; color: #666;">
-                                <?php echo date('M j, g:i A', strtotime($activity['created_at'])); ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+            <?php endforeach; ?>
         </div>
-    </div>
-
-    <!-- Restock Modal -->
-    <div id="restockModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h3><i class="fas fa-plus-circle"></i> Restock Product</h3>
+        
+        <!-- Add Book Form -->
+        <div class="form-container">
+            <h2>Add New Book</h2>
             <form method="POST">
-                <input type="hidden" id="restock_product_id" name="product_id">
-                <div class="form-group">
-                    <label>Product:</label>
-                    <input type="text" id="restock_product_title" readonly style="background: #f8f9fa;">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                <input type="hidden" name="action" value="add_book">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="title">Title</label>
+                        <input type="text" name="title" id="title" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="author">Author</label>
+                        <input type="text" name="author" id="author" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="isbn">ISBN</label>
+                        <input type="text" name="isbn" id="isbn">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="price">Price ($)</label>
+                        <input type="number" name="price" id="price" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="condition">Condition</label>
+                        <select name="condition" id="condition">
+                            <option value="">Select condition</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                        </select>
+                    </div>
                 </div>
+                
                 <div class="form-group">
-                    <label for="quantity">Quantity to Add:</label>
-                    <input type="number" id="quantity" name="quantity" min="1" required>
+                    <label for="description">Description</label>
+                    <textarea name="description" id="description" rows="3"></textarea>
                 </div>
-                <div class="form-group">
-                    <label for="reason">Reason:</label>
-                    <input type="text" id="reason" name="reason" value="Manual restock" required>
-                </div>
-                <button type="submit" name="restock_product" class="btn">
-                    <i class="fas fa-plus"></i> Add Stock
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                
+                <button type="submit" class="submit-btn">Add Book</button>
             </form>
         </div>
+        
+        <!-- Filters -->
+        <div class="filters">
+            <form method="GET">
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label for="search">Search</label>
+                        <input type="text" name="search" id="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Title, author, or ISBN...">
+                    </div>
+                    <div class="form-group">
+                        <label for="condition_filter">Condition</label>
+                        <select name="condition" id="condition_filter">
+                            <option value="">All Conditions</option>
+                            <option value="excellent" <?php echo $condition_filter === 'excellent' ? 'selected' : ''; ?>>Excellent</option>
+                            <option value="good" <?php echo $condition_filter === 'good' ? 'selected' : ''; ?>>Good</option>
+                            <option value="fair" <?php echo $condition_filter === 'fair' ? 'selected' : ''; ?>>Fair</option>
+                            <option value="poor" <?php echo $condition_filter === 'poor' ? 'selected' : ''; ?>>Poor</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn">Filter</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Books Grid -->
+        <div class="books-grid">
+            <?php foreach ($books as $book): ?>
+                <div class="book-card">
+                    <div class="book-title">
+                        <?php echo htmlspecialchars($book['title']); ?>
+                    </div>
+                    <div class="book-author">
+                        by <?php echo htmlspecialchars($book['author']); ?>
+                    </div>
+                    <div class="book-details">
+                        <?php if ($book['isbn']): ?>
+                            ISBN: <?php echo htmlspecialchars($book['isbn']); ?><br>
+                        <?php endif; ?>
+                        <?php if ($book['condition_description']): ?>
+                            <span class="condition-badge condition-<?php echo $book['condition_description']; ?>">
+                                <?php echo ucfirst($book['condition_description']); ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="book-price">
+                        $<?php echo number_format($book['price'], 2); ?>
+                    </div>
+                    <?php if ($book['description']): ?>
+                        <div class="book-details">
+                            <?php echo htmlspecialchars($book['description']); ?>
+                        </div>
+                    <?php endif; ?>
+                    <form method="POST" style="margin-top: 1rem;">
+                        <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                        <input type="hidden" name="action" value="delete_book">
+                        <input type="hidden" name="book_id" value="<?php echo $book['id']; ?>">
+                        <button type="submit" class="delete-btn" onclick="return confirm('Are you sure you want to delete this book?')">Delete</button>
+                    </form>
+                </div>
+            <?php endforeach; ?>
+        </div>
     </div>
-
-    <!-- Export Form -->
-    <form id="exportForm" method="POST" style="display: none;">
-        <input type="hidden" name="export_csv" value="1">
-    </form>
-
-    <script>
-        function openRestockModal(productId, productTitle) {
-            document.getElementById('restock_product_id').value = productId;
-            document.getElementById('restock_product_title').value = productTitle;
-            document.getElementById('restockModal').style.display = 'block';
-        }
-
-        function closeModal() {
-            document.getElementById('restockModal').style.display = 'none';
-        }
-
-        function exportCSV() {
-            if (confirm('Export inventory data to CSV?')) {
-                document.getElementById('exportForm').submit();
-            }
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('restockModal');
-            if (event.target === modal) {
-                closeModal();
-            }
-        }
-
-        // Auto-refresh low stock alerts every 5 minutes
-        setInterval(function() {
-            location.reload();
-        }, 300000);
-    </script>
 </body>
 </html> 

@@ -32,9 +32,27 @@ if (!$db_error) {
 
 // Handle add/update/remove actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$db_error) {
+    // Apply rate limiting
+    $ip = $_SERVER['REMOTE_ADDR'];
+    $rate_limit_key = "cart_operations_{$ip}";
+    if (!check_rate_limit($rate_limit_key)) {
+        http_response_code(429);
+        die('Too many cart operations. Please try again later.');
+    }
+    
+    // Validate CSRF token
+    if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
+        http_response_code(403);
+        die('Invalid request');
+    }
+    
     // Add to cart
     if (isset($_POST['product_id']) || isset($_POST['add_to_cart'])) {
-        $pid = (int)$_POST['product_id'];
+        $pid = validate_input($_POST['product_id'] ?? $_POST['add_to_cart'], 'int');
+        if ($pid === false) {
+            http_response_code(400);
+            die('Invalid product ID');
+        }
         
         // Get product details for success message
         $stmt = $db->prepare('SELECT title FROM products WHERE id = ?');
@@ -72,9 +90,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$db_error) {
         }
     }
     
-    // Remove item (we're removing the update quantity functionality)
+    // Remove item
     if (isset($_POST['remove_id'])) {
-        $rid = (int)$_POST['remove_id'];
+        $rid = validate_input($_POST['remove_id'], 'int');
+        if ($rid === false) {
+            http_response_code(400);
+            die('Invalid product ID');
+        }
         unset($_SESSION['cart'][$rid]);
         header('Location: cart.php');
         exit;
@@ -93,8 +115,10 @@ $subtotal = 0;
 
 if (!empty($cart) && !$db_error) {
     try {
-        $ids = implode(',', array_map('intval', array_keys($cart)));
-        $stmt = $db->query("SELECT * FROM products WHERE id IN ($ids)");
+        $ids = array_keys($cart);
+        $placeholders = str_repeat('?,', count($ids) - 1) . '?';
+        $stmt = $db->prepare("SELECT * FROM products WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Attach images
         foreach ($products as &$prod) {
@@ -132,6 +156,7 @@ $num_items_in_cart = count($cart); // Count unique items instead of sum
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <title>Your Cart - Bort's Books</title>
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -214,6 +239,7 @@ $num_items_in_cart = count($cart); // Count unique items instead of sum
                         <td>
                             <?php if (!$db_error): ?>
                             <form method="POST" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="<?php echo generate_csrf_token(); ?>">
                                 <button class="cart-remove-btn" name="remove_id" value="<?php echo $prod['id']; ?>" title="Remove">&times;</button>
                             </form>
                             <?php endif; ?>

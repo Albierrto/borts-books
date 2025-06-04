@@ -1,80 +1,123 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: admin-login.php');
-    exit;
-}
-require_once '../includes/db.php';
-$pageTitle = "Sell Submissions";
+require_once '../includes/security.php';
+require_once '../includes/admin-auth.php';
 
-$debugMsg = '';
+// Start secure session
+secure_session_start();
 
-try {
-    // Handle delete
-    if (isset($_POST['delete_id'])) {
-        $delId = (int)$_POST['delete_id'];
-        $db->prepare('DELETE FROM sell_submissions WHERE id = ?')->execute([$delId]);
-        $db->prepare('DELETE FROM sell_submission_notes WHERE submission_id = ?')->execute([$delId]);
-        header('Location: admin-sell-submissions.php');
-        exit;
-    }
-    // Handle status update (no note)
-    if (isset($_POST['update_id']) && isset($_POST['status']) && !isset($_POST['add_note'])) {
-        $updId = (int)$_POST['update_id'];
-        $status = $_POST['status'] ?? 'Incomplete';
-        $db->prepare('UPDATE sell_submissions SET status=?, status_updated_at=NOW() WHERE id=?')->execute([$status, $updId]);
-        header('Location: admin-sell-submissions.php');
-        exit;
-    }
-    // Handle add note (with optional status update)
-    if (isset($_POST['update_id']) && isset($_POST['add_note'])) {
-        $updId = (int)$_POST['update_id'];
-        $status = $_POST['status'] ?? 'Incomplete';
-        $note = $_POST['note'] ?? '';
-        if (trim($note) !== '') {
-            $db->prepare('INSERT INTO sell_submission_notes (submission_id, note, status) VALUES (?, ?, ?)')->execute([$updId, $note, $status]);
-            $db->prepare('UPDATE sell_submissions SET status=?, note=?, status_updated_at=NOW() WHERE id=?')->execute([$status, $note, $updId]);
+// Set security headers
+set_security_headers();
+
+// Check admin authentication
+check_admin_auth();
+
+// Generate CSRF token for forms
+$csrf_token = generate_csrf_token();
+
+$message = '';
+$error = '';
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Invalid request';
+        log_security_event('csrf_failure', ['page' => 'admin-sell-submissions']);
+    } else {
+        // Check rate limiting
+        if (!check_rate_limit('submission_update', 15, 300)) {
+            $error = 'Too many update attempts. Please try again later.';
+            log_security_event('rate_limit_exceeded', ['page' => 'admin-sell-submissions']);
         } else {
-            $db->prepare('UPDATE sell_submissions SET status=?, status_updated_at=NOW() WHERE id=?')->execute([$status, $updId]);
+            $action = sanitize_input($_POST['action'] ?? '');
+            
+            if ($action === 'update_submission') {
+                $submission_id = validate_int($_POST['submission_id'] ?? '');
+                $status = sanitize_input($_POST['status'] ?? '');
+                $admin_notes = sanitize_input($_POST['admin_notes'] ?? '');
+                $quote_amount = validate_float($_POST['quote_amount'] ?? '');
+                
+                if (!$submission_id || empty($status)) {
+                    $error = 'Submission ID and status are required';
+                } else {
+                    try {
+                        $stmt = $pdo->prepare("UPDATE sell_submissions SET status = ?, admin_notes = ?, quote_amount = ?, updated_at = NOW() WHERE id = ?");
+                        $stmt->execute([$status, $admin_notes, $quote_amount, $submission_id]);
+                        
+                        $message = 'Submission updated successfully';
+                        log_security_event('submission_updated', ['id' => $submission_id, 'status' => $status]);
+                    } catch (PDOException $e) {
+                        $error = 'An error occurred while updating the submission';
+                        log_security_event('database_error', ['error' => $e->getMessage()]);
+                    }
+                }
+            } elseif ($action === 'delete_submission') {
+                $submission_id = validate_int($_POST['submission_id'] ?? '');
+                
+                if (!$submission_id) {
+                    $error = 'Invalid submission ID';
+        } else {
+                    try {
+                        $stmt = $pdo->prepare("DELETE FROM sell_submissions WHERE id = ?");
+                        $stmt->execute([$submission_id]);
+                        
+                        $message = 'Submission deleted successfully';
+                        log_security_event('submission_deleted', ['id' => $submission_id]);
+                    } catch (PDOException $e) {
+                        $error = 'An error occurred while deleting the submission';
+                        log_security_event('database_error', ['error' => $e->getMessage()]);
+                    }
+                }
+            }
         }
-        header('Location: admin-sell-submissions.php');
-        exit;
     }
-    // Handle delete note
-    if (isset($_POST['delete_note_id'])) {
-        $noteId = (int)$_POST['delete_note_id'];
-        $db->prepare('DELETE FROM sell_submission_notes WHERE id = ?')->execute([$noteId]);
-        header('Location: admin-sell-submissions.php');
-        exit;
-    }
-} catch (Exception $e) {
-    $debugMsg = 'DEBUG ERROR: ' . $e->getMessage();
 }
 
-// Status filter
-$statusFilter = $_GET['filter'] ?? 'all';
-$statusSql = '';
+// Get filter parameters
+$status_filter = sanitize_input($_GET['status'] ?? '');
+$search = sanitize_input($_GET['search'] ?? '');
+
+// Build query
+$where_conditions = [];
 $params = [];
-if (in_array($statusFilter, ['Incomplete', 'Working On', 'Completed'])) {
-    $statusSql = 'WHERE status = ?';
-    $params[] = $statusFilter;
+
+if ($status_filter) {
+    $where_conditions[] = "status = ?";
+    $params[] = $status_filter;
 }
-$stmt = $db->prepare('SELECT * FROM sell_submissions ' . $statusSql . ' ORDER BY submitted_at ASC');
+
+if ($search) {
+    $where_conditions[] = "(seller_name LIKE ? OR seller_email LIKE ? OR book_title LIKE ?)";
+    $search_param = "%$search%";
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $params[] = $search_param;
+}
+
+$where_clause = $where_conditions ? "WHERE " . implode(" AND ", $where_conditions) : "";
+
+// Get submissions
+try {
+    $stmt = $pdo->prepare("SELECT * FROM sell_submissions $where_clause ORDER BY created_at DESC");
 $stmt->execute($params);
 $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-function statusColor($status) {
-    switch (strtolower($status)) {
-        case 'completed': return 'rgba(44,182,125,0.18)'; // teal glass
-        case 'working on': return 'rgba(255,216,3,0.13)'; // gold glass
-        case 'incomplete': default: return 'rgba(242,95,76,0.13)'; // coral glass
-    }
+} catch (PDOException $e) {
+    $error = 'An error occurred while fetching submissions';
+    log_security_event('database_error', ['error' => $e->getMessage()]);
+    $submissions = [];
 }
-function statusBorder($status) {
-    switch (strtolower($status)) {
-        case 'completed': return '#2CB67D';
-        case 'working on': return '#FFD803';
-        case 'incomplete': default: return '#F25F4C';
-    }
+
+// Get statistics
+try {
+    $total_submissions = $pdo->query("SELECT COUNT(*) FROM sell_submissions")->fetchColumn();
+    $pending_submissions = $pdo->query("SELECT COUNT(*) FROM sell_submissions WHERE status = 'pending'")->fetchColumn();
+    $quoted_submissions = $pdo->query("SELECT COUNT(*) FROM sell_submissions WHERE status = 'quoted'")->fetchColumn();
+    $total_quoted_value = $pdo->query("SELECT SUM(quote_amount) FROM sell_submissions WHERE quote_amount IS NOT NULL")->fetchColumn() ?: 0;
+} catch (PDOException $e) {
+    $total_submissions = 0;
+    $pending_submissions = 0;
+    $quoted_submissions = 0;
+    $total_quoted_value = 0;
 }
 ?>
 <!DOCTYPE html>
@@ -84,331 +127,407 @@ function statusBorder($status) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sell Submissions - Bort's Books</title>
     <link rel="stylesheet" href="../assets/css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            background: #181A20;
-            font-family: 'Inter', Arial, sans-serif;
-            color: #F7F7F7;
-            min-height: 100vh;
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
         }
-        .admin-header { display:flex;align-items:center;gap:2rem;padding:1.2rem 2rem 0.5rem 2rem; }
-        .admin-header .logo { font-size:2rem;font-weight:800;color:#7F5AF0;text-decoration:none; letter-spacing: 1px; }
-        .admin-header .logo span { color:#2CB67D; }
-        .submissions-container { max-width: 1100px; margin: 2.5rem auto; background: transparent; border-radius: 16px; box-shadow: none; padding: 0; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #232946;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #667eea;
+            display: block;
+        }
+        .stat-label {
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        .filters {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr 200px auto;
+            gap: 1rem;
+            align-items: end;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        .submissions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
         .submission-card {
-            background: rgba(34,38,49,0.98);
-            border: 2px solid #23263A;
-            border-left: 8px solid;
-            border-left-color: inherit;
-            border-radius: 18px;
-            box-shadow: 0 6px 32px 0 rgba(0,0,0,0.18);
-            padding: 2.2rem 2rem 2rem 2rem;
-            margin-bottom: 2.2rem;
-            display: flex; flex-wrap: wrap; gap: 2.2rem;
-            transition: box-shadow 0.25s, transform 0.18s, background 0.3s, border-color 0.3s;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .submission-card:hover {
-            box-shadow: 0 12px 40px 0 rgba(127,90,240,0.13), 0 2px 12px rgba(44,182,125,0.10);
-            transform: translateY(-2px) scale(1.012);
+        .submission-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
         }
-        .submission-main { flex: 2 1 350px; min-width: 320px; }
-        .note-history {
-            flex: 1 1 220px; min-width: 220px; margin-top:0;
-            background: rgba(34,38,49,0.93);
-            border-radius:12px; padding:1.2rem 1rem; height:fit-content; align-self: flex-start;
-            box-shadow: 0 2px 12px 0 rgba(127,90,240,0.07);
-            backdrop-filter: blur(7px);
+        .submission-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #232946;
         }
-        .note-history-entry { margin-bottom:0.7rem; display: flex; align-items: center; color: #F7F7F7; font-size: 1.08rem; }
-        .note-history-date { color:#FFD803; font-size:0.97rem; margin-left:0.7rem; }
-        .note-delete-btn { background:none; border:none; color:#F25F4C; font-size:1.1rem; margin-left:0.7rem; cursor:pointer; padding:0; }
-        .note-delete-btn:hover { color:#FFD803; }
-        .submission-header { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.7rem; color: #2CB67D; letter-spacing: 0.5px; }
-        .submission-info { margin-bottom: 0.5rem; color: #F7F7F7; font-size: 1.08rem; }
-        .submission-label { font-weight: 700; color: #FFD803; }
-        .submission-photos { margin-top: 0.7rem; }
-        .submission-photos img { max-width: 120px; max-height: 120px; margin-right: 0.5rem; border-radius: 8px; border: 2px solid #FFD803; box-shadow: 0 2px 8px 0 rgba(44,182,125,0.08); transition: box-shadow 0.2s, border-color 0.2s; background: #23263A; }
-        .submission-photos img:hover { box-shadow: 0 4px 16px 0 #7F5AF0; border-color: #2CB67D; }
-        .item-table { width: 100%; border-collapse: collapse; margin-top: 0.7rem; margin-bottom: 0.7rem; }
-        .item-table th, .item-table td { border: 1.5px solid #FFD803; padding: 0.5rem 0.8rem; text-align: left; }
-        .item-table th { background: #2CB67D; font-weight: 700; color: #181A20; }
-        .item-table td { color: #F7F7F7; background: rgba(34,38,49,0.98); }
-        .back-link { display:inline-block;margin-bottom:1.5rem;color:#2CB67D;font-weight:700;text-decoration:underline; font-size: 1.08rem; }
-        .status-select { font-weight:700;padding:0.4rem 0.9rem;border-radius:4px;border:2px solid #FFD803; background: #23263A; color:#FFD803; font-size: 1.08rem; }
-        .note-input { width:100%;padding:0.5rem;border-radius:4px;border:2px solid #FFD803;margin-top:0.3rem;background:#23263A;color:#F7F7F7; font-size: 1.08rem; }
-        .admin-actions { margin-top:0.7rem;display:flex;gap:1rem;align-items:center; flex-wrap:wrap; }
-        .delete-btn { background:#F25F4C;color:#fff;border:none;border-radius:6px;padding:0.6rem 1.3rem;font-weight:700;cursor:pointer; box-shadow: 0 2px 8px 0 rgba(242,95,76,0.10); transition: background 0.18s, color 0.18s; font-size: 1.08rem; border: 2px solid #FFD803; }
-        .delete-btn:hover { background:#FFD803; color:#23263A; border-color: #2CB67D; }
-        .update-btn { background:#7F5AF0;color:#fff;border:none;border-radius:6px;padding:0.6rem 1.3rem;font-weight:700;cursor:pointer; box-shadow: 0 2px 8px 0 rgba(127,90,240,0.10); transition: background 0.18s, color 0.18s; font-size: 1.08rem; border: 2px solid #FFD803; }
-        .update-btn:hover { background:#2CB67D; color:#23263A; border-color: #7F5AF0; }
-        .status-dot { display:inline-block;width:16px;height:16px;border-radius:50%;margin-right:0.5rem;vertical-align:middle; box-shadow: 0 0 0 2px #fff; border: 2px solid #FFD803; }
-        .dates { font-size:1.08rem;color:#FFD803;margin-bottom:0.5rem; }
-        .status-filter { margin-bottom:2rem; }
-        .status-filter label { font-weight:700; margin-right:1rem; color: #FFD803; font-size: 1.08rem; }
-        .status-filter select { padding:0.5rem 1.3rem; border-radius:4px; border:2px solid #FFD803; font-size:1.08rem; background: #23263A; color: #FFD803; }
-        h1 { color: #FFD803; font-weight: 800; letter-spacing: 1px; font-size: 2.2rem; }
-        .status-select.status-dropdown, .status-select.status-dropdown option {
-            background: #23263A !important;
-            color: #FFD803 !important;
-            font-weight: 700;
-            font-size: 1.08rem;
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
-        .status-select.status-dropdown:focus, .status-select.status-dropdown option:focus {
-            outline: 2px solid #FFD803;
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
         }
-        .update-btn, .delete-btn {
-            min-width: 90px;
+        .status-reviewed {
+            background: #cce5ff;
+            color: #004085;
         }
-        @media (max-width: 900px) {
-            .submission-card { flex-direction: column; gap: 1.5rem; padding: 1.2rem 1rem; }
-            .submissions-container { padding: 0.5rem; }
+        .status-quoted {
+            background: #d4edda;
+            color: #155724;
         }
-        .photo-modal {
+        .status-accepted {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .status-completed {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .submission-details {
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .submission-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .submit-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+        }
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .delete-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+        .message {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .modal {
             display: none;
             position: fixed;
-            z-index: 9999;
-            left: 0;
             top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            overflow: auto;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
         }
         .modal-content {
-            margin: auto;
-            display: block;
-            max-width: 90%;
-            max-height: 90vh;
-            object-fit: contain;
+            background: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 600px;
+            position: relative;
+        }
+        .close {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        .close-modal {
-            position: absolute;
-            right: 25px;
-            top: 15px;
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
             cursor: pointer;
-            z-index: 10000;
+            color: #666;
         }
-        .modal-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
-            cursor: pointer;
-            padding: 16px;
-            user-select: none;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.3s;
-        }
-        .modal-nav:hover {
-            background: rgba(0, 0, 0, 0.8);
-        }
-        .prev {
-            left: 20px;
-        }
-        .next {
-            right: 20px;
-        }
-        .submission-photos img {
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .submission-photos img:hover {
-            transform: scale(1.05);
+        .quote-highlight {
+            background: #d4edda;
+            color: #155724;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
 <body>
-    <div class="admin-header">
-        <a href="../index.php" class="logo">Bort's <span>Books</span></a>
-        <a href="admin-dashboard.php" class="back-link">&larr; Back to Admin Dashboard</a>
+    <div class="container">
+        <a href="admin-dashboard.php" class="back-link">← Back to Dashboard</a>
+        
+        <div class="header">
+            <h1 class="title">Sell Submissions</h1>
+        </div>
+        
+        <?php if ($message): ?>
+            <div class="message success">
+                <?php echo htmlspecialchars($message); ?>
     </div>
-    <div class="submissions-container">
-        <?php if ($debugMsg): ?>
-            <div style="background:#F25F4C;color:#fff;padding:1rem 1.5rem;border-radius:8px;margin-bottom:1.5rem;font-weight:700;">
-                <?php echo $debugMsg; ?>
+        <?php endif; ?>
+        
+        <?php if ($error): ?>
+            <div class="message error">
+                <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
-        <h1 style="font-size:2rem;font-weight:700;margin-bottom:1.5rem;">Sell Submissions</h1>
-        <form class="status-filter" method="get" style="margin-bottom:2rem;">
-            <label for="filter">Filter by Status:</label>
-            <select name="filter" id="filter" onchange="this.form.submit()">
-                <option value="all" <?php if($statusFilter==='all') echo 'selected'; ?>>All</option>
-                <option value="Incomplete" <?php if($statusFilter==='Incomplete') echo 'selected'; ?>>Incomplete</option>
-                <option value="Working On" <?php if($statusFilter==='Working On') echo 'selected'; ?>>Working On</option>
-                <option value="Completed" <?php if($statusFilter==='Completed') echo 'selected'; ?>>Completed</option>
+        
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-value"><?php echo $total_submissions; ?></span>
+                <div class="stat-label">Total Submissions</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value"><?php echo $pending_submissions; ?></span>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value"><?php echo $quoted_submissions; ?></span>
+                <div class="stat-label">Quoted</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">$<?php echo number_format($total_quoted_value, 2); ?></span>
+                <div class="stat-label">Total Quoted Value</div>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="filters">
+            <form method="GET">
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label for="search">Search</label>
+                        <input type="text" name="search" id="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Seller name, email, or book title...">
+                    </div>
+                    <div class="form-group">
+                        <label for="status_filter">Status</label>
+                        <select name="status" id="status_filter">
+                            <option value="">All Statuses</option>
+                            <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                            <option value="reviewed" <?php echo $status_filter === 'reviewed' ? 'selected' : ''; ?>>Reviewed</option>
+                            <option value="quoted" <?php echo $status_filter === 'quoted' ? 'selected' : ''; ?>>Quoted</option>
+                            <option value="accepted" <?php echo $status_filter === 'accepted' ? 'selected' : ''; ?>>Accepted</option>
+                            <option value="completed" <?php echo $status_filter === 'completed' ? 'selected' : ''; ?>>Completed</option>
             </select>
-        </form>
-        <?php if (empty($submissions)): ?>
-            <p>No submissions yet.</p>
-        <?php else: ?>
-            <?php foreach ($submissions as $sub): ?>
-                <div class="submission-card" style="background:<?php echo statusColor($sub['status']); ?>;border-color:<?php echo statusBorder($sub['status']); ?>;">
-                    <div class="submission-main">
-                        <div class="dates">
-                            Submitted: <?php echo date('Y-m-d H:i', strtotime($sub['submitted_at'])); ?>
-                            | Last Status Update: <?php echo $sub['status_updated_at'] ? date('Y-m-d H:i', strtotime($sub['status_updated_at'])) : '-'; ?>
+                    </div>
+                    <button type="submit" class="submit-btn">Filter</button>
                         </div>
-                        <div class="submission-header">
-                            <span class="status-dot" style="background:<?php echo statusColor($sub['status']); ?>;"></span>
-                            <?php echo htmlspecialchars($sub['status'] ?? 'Incomplete'); ?>
-                            <div style="float:right;display:inline-flex;gap:0.7rem;align-items:center;">
-                                <form method="POST" class="admin-actions" style="display:inline-flex;align-items:center;gap:0.5rem;margin:0;">
-                                    <input type="hidden" name="update_id" value="<?php echo $sub['id']; ?>">
-                                    <select name="status" class="status-select status-dropdown">
-                                        <option value="Incomplete" <?php if (($sub['status'] ?? '') === 'Incomplete') echo 'selected'; ?>>Incomplete</option>
-                                        <option value="Working On" <?php if (($sub['status'] ?? '') === 'Working On') echo 'selected'; ?>>Working On</option>
-                                        <option value="Completed" <?php if (($sub['status'] ?? '') === 'Completed') echo 'selected'; ?>>Completed</option>
-                                    </select>
-                                    <button type="submit" class="update-btn">Save</button>
                                 </form>
                             </div>
-                        </div>
-                        <form method="POST" class="admin-actions" style="margin-bottom:0.7rem;gap:0.7rem;align-items:center;">
-                            <input type="hidden" name="update_id" value="<?php echo $sub['id']; ?>">
-                            <input type="hidden" name="add_note" value="1">
-                            <input type="text" name="note" class="note-input" placeholder="Add note..." value="">
-                            <select name="status" class="status-select status-dropdown" style="display:none;">
-                                <option value="Incomplete" <?php if (($sub['status'] ?? '') === 'Incomplete') echo 'selected'; ?>>Incomplete</option>
-                                <option value="Working On" <?php if (($sub['status'] ?? '') === 'Working On') echo 'selected'; ?>>Working On</option>
-                                <option value="Completed" <?php if (($sub['status'] ?? '') === 'Completed') echo 'selected'; ?>>Completed</option>
-                            </select>
-                            <button type="submit" class="update-btn" style="background:#7F5AF0;">Add Note</button>
-                        </form>
-                        <form method="POST" onsubmit="return confirm('Delete this submission?');" style="display:inline;">
-                            <input type="hidden" name="delete_id" value="<?php echo $sub['id']; ?>">
-                            <button type="submit" class="delete-btn">Delete</button>
-                        </form>
-                        <div class="submission-info"><span class="submission-label">Name:</span> <?php echo htmlspecialchars($sub['full_name']); ?></div>
-                        <div class="submission-info"><span class="submission-label">Email:</span> <?php echo htmlspecialchars($sub['email']); ?></div>
         
-                        <div class="submission-info"><span class="submission-label"># Items:</span> <?php echo htmlspecialchars($sub['num_items']); ?></div>
-                        <div class="submission-info"><span class="submission-label">Overall Condition:</span> <?php echo htmlspecialchars($sub['overall_condition']); ?></div>
-                        <?php $items = json_decode($sub['item_details'], true); if ($items && count($items)): ?>
-                            <div class="submission-info"><span class="submission-label">Item Details:</span></div>
-                            <table class="item-table">
-                                <tr><th>Title</th><th>Volume</th><th>Condition</th><th>Expected Price</th></tr>
-                                <?php foreach ($items as $item): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($item['title']); ?></td>
-                                        <td><?php echo htmlspecialchars($item['volume']); ?></td>
-                                        <td><?php echo htmlspecialchars($item['condition']); ?></td>
-                                        <td><?php echo htmlspecialchars($item['expected_price']); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </table>
+        <!-- Submissions Grid -->
+        <div class="submissions-grid">
+            <?php foreach ($submissions as $submission): ?>
+                <div class="submission-card">
+                    <div class="submission-header">
+                        <div class="submission-title">
+                            <?php echo htmlspecialchars($submission['book_title'] ?? 'Book Submission'); ?>
+                        </div>
+                        <span class="status-badge status-<?php echo $submission['status']; ?>">
+                            <?php echo ucfirst($submission['status']); ?>
+                        </span>
+                    </div>
+                    
+                    <div class="submission-details">
+                        <strong>Seller:</strong> <?php echo htmlspecialchars($submission['seller_name']); ?><br>
+                        <strong>Email:</strong> <?php echo htmlspecialchars($submission['seller_email']); ?><br>
+                        <?php if ($submission['seller_phone']): ?>
+                            <strong>Phone:</strong> <?php echo htmlspecialchars($submission['seller_phone']); ?><br>
                         <?php endif; ?>
-                        <?php $photos = json_decode($sub['photo_paths'], true); if ($photos && count($photos)): ?>
-                            <div class="submission-photos"><span class="submission-label">Photos:</span><br>
-                                <?php foreach ($photos as $photo): ?>
-                                    <img src="../<?php echo htmlspecialchars($photo); ?>" alt="Collection Photo" onclick="openPhotoModal(<?php echo htmlspecialchars(json_encode(array_map(function($p) { return '../' . $p; }, $photos))); ?>, <?php echo array_search($photo, $photos); ?>)">
-                                <?php endforeach; ?>
+                        <strong>Author:</strong> <?php echo htmlspecialchars($submission['book_author'] ?? 'N/A'); ?><br>
+                        <strong>ISBN:</strong> <?php echo htmlspecialchars($submission['book_isbn'] ?? 'N/A'); ?><br>
+                        <strong>Condition:</strong> <?php echo htmlspecialchars($submission['book_condition'] ?? 'N/A'); ?><br>
+                        <strong>Submitted:</strong> <?php echo date('M j, Y g:i A', strtotime($submission['created_at'])); ?><br>
+                        <?php if ($submission['description']): ?>
+                            <strong>Description:</strong> <?php echo htmlspecialchars($submission['description']); ?><br>
+                        <?php endif; ?>
+                        <?php if ($submission['quote_amount']): ?>
+                            <div class="quote-highlight">
+                                Quote: $<?php echo number_format($submission['quote_amount'], 2); ?>
                             </div>
                         <?php endif; ?>
-                    </div>
-                    <div class="note-history">
-                        <div style="font-weight:600;margin-bottom:0.5rem;">Note History:</div>
-                        <?php
-                        $notesStmt = $db->prepare('SELECT * FROM sell_submission_notes WHERE submission_id = ? ORDER BY created_at DESC');
-                        $notesStmt->execute([$sub['id']]);
-                        $notes = $notesStmt->fetchAll(PDO::FETCH_ASSOC);
-                        if ($notes):
-                            foreach ($notes as $n): ?>
-                                <div class="note-history-entry">
-                                    <span><?php echo htmlspecialchars($n['note']); ?></span>
-                                    <span class="note-history-date"><?php echo date('Y-m-d H:i', strtotime($n['created_at'])); ?></span>
-                                    <form method="POST" style="display:inline;margin:0;">
-                                        <input type="hidden" name="delete_note_id" value="<?php echo $n['id']; ?>">
-                                        <button type="submit" class="note-delete-btn" title="Delete note" onclick="return confirm('Delete this note?');">&times;</button>
-                                    </form>
-                                </div>
-                        <?php endforeach;
-                        else: ?>
-                            <div style="color:#aaa;">No notes yet.</div>
+                        <?php if ($submission['admin_notes']): ?>
+                            <strong>Admin Notes:</strong> <?php echo htmlspecialchars($submission['admin_notes']); ?>
                         <?php endif; ?>
+                    </div>
+                    
+                    <div class="submission-actions">
+                        <button class="submit-btn btn-small" onclick="openUpdateModal(<?php echo $submission['id']; ?>, '<?php echo htmlspecialchars($submission['status']); ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', '<?php echo $submission['quote_amount'] ?? ''; ?>')">
+                            Update
+                        </button>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                            <input type="hidden" name="action" value="delete_submission">
+                            <input type="hidden" name="submission_id" value="<?php echo $submission['id']; ?>">
+                            <button type="submit" class="delete-btn btn-small" onclick="return confirm('Are you sure you want to delete this submission?')">Delete</button>
+                        </form>
                     </div>
                 </div>
             <?php endforeach; ?>
-        <?php endif; ?>
+        </div>
     </div>
-    <!-- Full Screen Photo Gallery Modal -->
-    <div id="photoModal" class="photo-modal">
-        <span class="close-modal">&times;</span>
-        <img class="modal-content" id="modalImg">
-        <div class="modal-nav prev" onclick="prevPhoto()">❮</div>
-        <div class="modal-nav next" onclick="nextPhoto()">❯</div>
+    
+    <!-- Update Modal -->
+    <div id="updateModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3>Update Submission</h3>
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                <input type="hidden" name="action" value="update_submission">
+                <input type="hidden" id="update_submission_id" name="submission_id">
+                
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select name="status" id="status" required>
+                        <option value="pending">Pending</option>
+                        <option value="reviewed">Reviewed</option>
+                        <option value="quoted">Quoted</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="quote_amount">Quote Amount ($)</label>
+                    <input type="number" name="quote_amount" id="quote_amount" step="0.01" min="0">
+                </div>
+                
+                <div class="form-group">
+                    <label for="admin_notes">Admin Notes</label>
+                    <textarea name="admin_notes" id="admin_notes" rows="4"></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn">Update Submission</button>
+                <button type="button" class="delete-btn" onclick="closeModal()">Cancel</button>
+            </form>
+        </div>
     </div>
 
     <script>
-        let currentPhotoIndex = 0;
-        let currentPhotos = [];
-        const modal = document.getElementById('photoModal');
-        const modalImg = document.getElementById('modalImg');
-        const closeBtn = document.querySelector('.close-modal');
-
-        // Open modal with photo
-        function openPhotoModal(photos, index) {
-            currentPhotos = photos;
-            currentPhotoIndex = index;
-            modal.style.display = "block";
-            modalImg.src = photos[index];
-            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        function openUpdateModal(submissionId, currentStatus, currentNotes, currentQuote) {
+            document.getElementById('update_submission_id').value = submissionId;
+            document.getElementById('status').value = currentStatus;
+            document.getElementById('admin_notes').value = currentNotes;
+            document.getElementById('quote_amount').value = currentQuote;
+            document.getElementById('updateModal').style.display = 'block';
         }
-
-        // Close modal
-        function closePhotoModal() {
-            modal.style.display = "none";
-            document.body.style.overflow = 'auto'; // Re-enable scrolling
+        
+        function closeModal() {
+            document.getElementById('updateModal').style.display = 'none';
         }
-
-        // Navigate photos
-        function nextPhoto() {
-            currentPhotoIndex = (currentPhotoIndex + 1) % currentPhotos.length;
-            modalImg.src = currentPhotos[currentPhotoIndex];
-        }
-
-        function prevPhoto() {
-            currentPhotoIndex = (currentPhotoIndex - 1 + currentPhotos.length) % currentPhotos.length;
-            modalImg.src = currentPhotos[currentPhotoIndex];
-        }
-
-        // Close modal when clicking the close button
-        closeBtn.onclick = closePhotoModal;
-
-        // Close modal when clicking outside the image
-        modal.onclick = function(e) {
-            if (e.target === modal) {
-                closePhotoModal();
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('updateModal');
+            if (event.target === modal) {
+                closeModal();
             }
         }
-
-        // Keyboard navigation
-        document.addEventListener('keydown', function(e) {
-            if (modal.style.display === "block") {
-                if (e.key === "ArrowRight") {
-                    nextPhoto();
-                } else if (e.key === "ArrowLeft") {
-                    prevPhoto();
-                } else if (e.key === "Escape") {
-                    closePhotoModal();
-                }
-            }
-        });
     </script>
 </body>
 </html> 

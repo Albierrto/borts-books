@@ -4,40 +4,33 @@
  * Use this to manually import your eBay reviews
  */
 
-session_start();
+require_once '../includes/security.php';
+require_once '../includes/admin-auth.php';
+require_once '../includes/password-security.php';
 
-// Admin authentication
-$admin_username = 'bort';
-$admin_password = 'LolaSombra1!';
+// Start secure session
+secure_session_start();
 
-// Check if user is trying to login
-if (isset($_POST['login'])) {
-    if ($_POST['username'] === $admin_username && $_POST['password'] === $admin_password) {
-        $_SESSION['admin_logged_in'] = true;
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    } else {
-        $login_error = 'Invalid username or password';
-    }
-}
+// Set security headers
+set_security_headers();
 
-// Check if user is trying to logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: ' . $_SERVER['PHP_SELF']);
-    exit;
-}
+// Check honeypot and security monitoring
+check_honeypot_access();
 
-// Check if user is logged in
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    // Show login form
+$error_message = '';
+$success_message = '';
+
+// Check if admin is already logged in through main system
+if (!is_admin_logged_in()) {
+    // If not logged in, show login form
     ?>
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Admin Login - Bort's Books</title>
+        <title>Admin Access Required - Bort's Books</title>
+        <link rel="stylesheet" href="../assets/css/styles.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
         <style>
             body {
@@ -51,112 +44,82 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
                 justify-content: center;
             }
             
-            .login-container {
+            .access-container {
                 background: white;
                 border-radius: 12px;
-                padding: 2rem;
+                padding: 3rem;
                 box-shadow: 0 8px 30px rgba(0,0,0,0.2);
                 width: 100%;
-                max-width: 400px;
+                max-width: 500px;
+                text-align: center;
             }
             
-            .login-header {
-                text-align: center;
+            .access-header {
                 margin-bottom: 2rem;
             }
             
-            .login-header h1 {
+            .access-header h1 {
                 color: #333;
                 margin: 0 0 0.5rem 0;
+                font-size: 2rem;
             }
             
-            .login-header p {
+            .access-header p {
                 color: #666;
                 margin: 0;
+                font-size: 1.1rem;
             }
             
-            .form-group {
-                margin-bottom: 1.5rem;
-            }
-            
-            .form-group label {
-                display: block;
-                margin-bottom: 0.5rem;
-                color: #333;
-                font-weight: 600;
-            }
-            
-            .form-group input {
-                width: 100%;
-                padding: 12px;
-                border: 2px solid #e1e5e9;
+            .security-notice {
+                background: #fff3cd;
+                border: 1px solid #ffeaa7;
                 border-radius: 8px;
-                font-size: 1rem;
-                transition: border-color 0.3s ease;
-                box-sizing: border-box;
-            }
-            
-            .form-group input:focus {
-                outline: none;
-                border-color: #667eea;
+                padding: 1.5rem;
+                margin: 2rem 0;
+                color: #856404;
             }
             
             .btn-login {
-                width: 100%;
                 background: #667eea;
                 color: white;
                 border: none;
-                padding: 12px;
+                padding: 1rem 2rem;
                 border-radius: 8px;
-                font-size: 1rem;
+                font-size: 1.1rem;
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
             }
             
             .btn-login:hover {
                 background: #5a6fd8;
                 transform: translateY(-1px);
             }
-            
-            .error {
-                background: #f8d7da;
-                color: #721c24;
-                padding: 1rem;
-                border-radius: 8px;
-                margin-bottom: 1rem;
-                border: 1px solid #f5c6cb;
-            }
         </style>
     </head>
     <body>
-        <div class="login-container">
-            <div class="login-header">
-                <h1><i class="fas fa-lock"></i> Admin Login</h1>
-                <p>Bort's Books Administration</p>
+        <div class="access-container">
+            <div class="access-header">
+                <h1><i class="fas fa-shield-alt"></i> Admin Access Required</h1>
+                <p>eBay Reviews Import Tool</p>
             </div>
             
-            <?php if (isset($login_error)): ?>
-                <div class="error">
-                    <i class="fas fa-exclamation-triangle"></i> <?php echo $login_error; ?>
-                </div>
-            <?php endif; ?>
+            <div class="security-notice">
+                <i class="fas fa-info-circle"></i>
+                <strong>Security Notice:</strong> This tool requires admin authentication through the main admin system for security purposes.
+            </div>
             
-            <form method="POST">
-                <div class="form-group">
-                    <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Password:</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                
-                <button type="submit" name="login" class="btn-login">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </button>
-            </form>
+            <p style="color: #666; margin: 2rem 0;">
+                Please log in through the main admin dashboard to access this import tool.
+            </p>
+            
+            <a href="../pages/admin-login.php" class="btn-login">
+                <i class="fas fa-sign-in-alt"></i> Go to Admin Login
+            </a>
         </div>
     </body>
     </html>
@@ -164,14 +127,88 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit;
 }
 
+// Admin is logged in, show import interface
 require_once '../includes/db.php';
 require_once '../includes/reviews-system.php';
+
+// Check CSRF token for POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid request. Please try again.';
+        log_security_event('csrf_failure', ['page' => 'import-ebay-reviews']);
+    } else {
+        // Check rate limiting
+        if (!check_rate_limit('import_reviews', 10, 3600)) {
+            $error_message = 'Too many import attempts. Please try again later.';
+            log_security_event('rate_limit_exceeded', ['page' => 'import-ebay-reviews']);
+        }
+    }
+}
 
 // Initialize reviews system
 $reviewsSystem = new ReviewsSystem($db);
 
-// Sample eBay reviews - Replace these with your actual eBay reviews
-$ebayReviews = [
+// Handle review import
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error_message) && isset($_POST['import_reviews'])) {
+    try {
+        $imported_count = 0;
+        $skipped_count = 0;
+        
+        // Process each review from form data
+        if (!empty($_POST['reviews']) && is_array($_POST['reviews'])) {
+            foreach ($_POST['reviews'] as $review_data) {
+                // Validate and sanitize review data
+                $customer_name = sanitize_input($review_data['customer_name'] ?? '');
+                $rating = validate_int($review_data['rating'] ?? 0);
+                $review_title = sanitize_input($review_data['review_title'] ?? '');
+                $review_text = sanitize_input($review_data['review_text'] ?? '');
+                $ebay_feedback_id = sanitize_input($review_data['ebay_feedback_id'] ?? '');
+                
+                // Validate required fields
+                if (empty($customer_name) || $rating < 1 || $rating > 5 || empty($review_text)) {
+                    $skipped_count++;
+                    continue;
+                }
+                
+                // Check if already imported
+                if ($reviewsSystem->reviewExists($ebay_feedback_id)) {
+                    $skipped_count++;
+                    continue;
+                }
+                
+                // Add review
+                $result = $reviewsSystem->addReview([
+                    'customer_name' => $customer_name,
+                    'rating' => $rating,
+                    'title' => $review_title,
+                    'content' => $review_text,
+                    'source' => 'ebay',
+                    'source_id' => $ebay_feedback_id,
+                    'verified' => true
+                ]);
+                
+                if ($result) {
+                    $imported_count++;
+                } else {
+                    $skipped_count++;
+                }
+            }
+        }
+        
+        $success_message = "Import completed: $imported_count reviews imported, $skipped_count skipped (duplicates or invalid data)";
+        log_security_event('reviews_imported', ['imported' => $imported_count, 'skipped' => $skipped_count]);
+        
+    } catch (Exception $e) {
+        $error_message = 'Import failed: ' . htmlspecialchars($e->getMessage());
+        log_security_event('import_error', ['error' => $e->getMessage()]);
+    }
+}
+
+// Generate CSRF token
+$csrf_token = generate_csrf_token();
+
+// Sample eBay reviews template (sanitized)
+$sampleReviews = [
     [
         'customer_name' => 'manga_collector_2023',
         'rating' => 5,
@@ -215,34 +252,6 @@ $ebayReviews = [
         'ebay_feedback_id' => 'fb_006'
     ]
 ];
-
-// Check if form was submitted
-if ($_POST['action'] === 'import' && $_POST['confirm'] === 'yes') {
-    $imported = 0;
-    $errors = 0;
-    
-    foreach ($ebayReviews as $review) {
-        try {
-            $result = $reviewsSystem->importEbayReview(
-                $review['customer_name'],
-                $review['rating'],
-                $review['review_text'],
-                $review['review_title'],
-                $review['ebay_feedback_id']
-            );
-            
-            if ($result) {
-                $imported++;
-            } else {
-                $errors++;
-            }
-        } catch (Exception $e) {
-            $errors++;
-        }
-    }
-    
-    $message = "Import completed! Imported: $imported reviews, Errors: $errors";
-}
 
 ?>
 <!DOCTYPE html>
@@ -373,9 +382,15 @@ if ($_POST['action'] === 'import' && $_POST['confirm'] === 'yes') {
             <p>Import your existing eBay feedback to build credibility on your website</p>
         </div>
         
-        <?php if (isset($message)): ?>
+        <?php if (isset($success_message)): ?>
             <div class="message">
-                <i class="fas fa-check-circle"></i> <?php echo $message; ?>
+                <i class="fas fa-check-circle"></i> <?php echo $success_message; ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if (isset($error_message)): ?>
+            <div class="warning">
+                <i class="fas fa-exclamation-triangle"></i> <?php echo $error_message; ?>
             </div>
         <?php endif; ?>
         
@@ -389,9 +404,9 @@ if ($_POST['action'] === 'import' && $_POST['confirm'] === 'yes') {
             </ol>
         </div>
         
-        <h3>Reviews to Import (<?php echo count($ebayReviews); ?> total):</h3>
+        <h3>Reviews to Import (<?php echo count($sampleReviews); ?> total):</h3>
         
-        <?php foreach ($ebayReviews as $index => $review): ?>
+        <?php foreach ($sampleReviews as $index => $review): ?>
             <div class="review-preview">
                 <h4><?php echo htmlspecialchars($review['review_title']); ?></h4>
                 <div class="stars">
@@ -410,10 +425,36 @@ if ($_POST['action'] === 'import' && $_POST['confirm'] === 'yes') {
             <p>This will add all the reviews above to your website's review system. They will be marked as "eBay" reviews and show verified purchase badges.</p>
             
             <form method="POST">
-                <input type="hidden" name="action" value="import">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                <input type="hidden" name="import_reviews" value="1">
                 <label>
-                    <input type="checkbox" name="confirm" value="yes" required>
-                    I confirm these are genuine eBay reviews and I want to import them
+                    <input type="checkbox" name="reviews[]" value="<?php echo htmlspecialchars(json_encode($sampleReviews[0])); ?>" required>
+                    <?php echo htmlspecialchars($sampleReviews[0]['review_title']); ?>
+                </label>
+                <br><br>
+                <label>
+                    <input type="checkbox" name="reviews[]" value="<?php echo htmlspecialchars(json_encode($sampleReviews[1])); ?>" required>
+                    <?php echo htmlspecialchars($sampleReviews[1]['review_title']); ?>
+                </label>
+                <br><br>
+                <label>
+                    <input type="checkbox" name="reviews[]" value="<?php echo htmlspecialchars(json_encode($sampleReviews[2])); ?>" required>
+                    <?php echo htmlspecialchars($sampleReviews[2]['review_title']); ?>
+                </label>
+                <br><br>
+                <label>
+                    <input type="checkbox" name="reviews[]" value="<?php echo htmlspecialchars(json_encode($sampleReviews[3])); ?>" required>
+                    <?php echo htmlspecialchars($sampleReviews[3]['review_title']); ?>
+                </label>
+                <br><br>
+                <label>
+                    <input type="checkbox" name="reviews[]" value="<?php echo htmlspecialchars(json_encode($sampleReviews[4])); ?>" required>
+                    <?php echo htmlspecialchars($sampleReviews[4]['review_title']); ?>
+                </label>
+                <br><br>
+                <label>
+                    <input type="checkbox" name="reviews[]" value="<?php echo htmlspecialchars(json_encode($sampleReviews[5])); ?>" required>
+                    <?php echo htmlspecialchars($sampleReviews[5]['review_title']); ?>
                 </label>
                 <br><br>
                 <button type="submit" class="btn">

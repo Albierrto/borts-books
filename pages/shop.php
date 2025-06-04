@@ -1,9 +1,23 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-session_start();
+require_once '../includes/security.php';
 require_once '../includes/db.php';
+
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
+
+// Disable error display for production
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
+
+// Check rate limiting for shop browsing
+if (!check_rate_limit('shop_access', 100, 3600)) {
+    http_response_code(429);
+    die('Too many requests. Please wait before trying again.');
+}
 
 // Initialize cart if not set
 if (!isset($_SESSION['cart'])) {
@@ -14,25 +28,36 @@ $cart_count = count($_SESSION['cart']);
 $pageTitle = "Shop";
 $currentPage = "shop";
 
-// Build filter conditions
+// Secure input validation
+$title_filter = isset($_GET['title']) ? sanitize_input($_GET['title']) : '';
+$min_price = isset($_GET['min_price']) ? validate_float($_GET['min_price']) : null;
+$max_price = isset($_GET['max_price']) ? validate_float($_GET['max_price']) : null;
+$condition_filter = isset($_GET['condition']) ? sanitize_input($_GET['condition']) : '';
+$sort_param = isset($_GET['sort']) ? sanitize_input($_GET['sort']) : '';
+
+// Validate inputs
 $where = [];
 $params = [];
 
-if (!empty($_GET['title'])) {
+if (!empty($title_filter) && strlen($title_filter) <= 100) {
     $where[] = "p.title LIKE ?";
-    $params[] = '%' . $_GET['title'] . '%';
+    $params[] = '%' . $title_filter . '%';
 }
-if (!empty($_GET['min_price'])) {
+
+if ($min_price !== null && $min_price >= 0 && $min_price <= 10000) {
     $where[] = "p.price >= ?";
-    $params[] = $_GET['min_price'];
+    $params[] = $min_price;
 }
-if (!empty($_GET['max_price'])) {
+
+if ($max_price !== null && $max_price >= 0 && $max_price <= 10000) {
     $where[] = "p.price <= ?";
-    $params[] = $_GET['max_price'];
+    $params[] = $max_price;
 }
-if (!empty($_GET['condition'])) {
+
+$allowed_conditions = ['New', 'Like New', 'Very Good', 'Good', 'Acceptable'];
+if (!empty($condition_filter) && in_array($condition_filter, $allowed_conditions)) {
     $where[] = "p.condition = ?";
-    $params[] = $_GET['condition'];
+    $params[] = $condition_filter;
 }
 
 $sql = "
@@ -44,26 +69,51 @@ $sql = "
     FROM products p
     WHERE p.title IS NOT NULL AND p.title != ''
 ";
+
 if ($where) {
     $sql .= " AND " . implode(" AND ", $where);
 }
 
-$sort = $_GET['sort'] ?? '';
-if ($sort == 'price_asc') $sql .= " ORDER BY p.price ASC";
-elseif ($sort == 'price_desc') $sql .= " ORDER BY p.price DESC";
-elseif ($sort == 'date_asc') $sql .= " ORDER BY p.created_at ASC";
-elseif ($sort == 'date_desc') $sql .= " ORDER BY p.created_at DESC";
-else $sql .= " ORDER BY p.id DESC";
+// Secure sorting
+$allowed_sorts = ['price_asc', 'price_desc', 'date_asc', 'date_desc'];
+if (in_array($sort_param, $allowed_sorts)) {
+    switch ($sort_param) {
+        case 'price_asc':
+            $sql .= " ORDER BY p.price ASC";
+            break;
+        case 'price_desc':
+            $sql .= " ORDER BY p.price DESC";
+            break;
+        case 'date_asc':
+            $sql .= " ORDER BY p.created_at ASC";
+            break;
+        case 'date_desc':
+            $sql .= " ORDER BY p.created_at DESC";
+            break;
+    }
+} else {
+    $sql .= " ORDER BY p.id DESC";
+}
 
-$stmt = $db->prepare($sql);
-$stmt->execute($params);
-$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Add LIMIT for performance and security
+$sql .= " LIMIT 100";
+
+try {
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    log_security_event('shop_query_error', ['error' => $e->getMessage()], 'medium');
+    $products = [];
+    $error_message = 'Unable to load products at this time. Please try again later.';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <title>Shop - Bort's Books</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

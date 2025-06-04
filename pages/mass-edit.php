@@ -1,141 +1,329 @@
 <?php
-session_start();
+require_once '../includes/security.php';
+require_once '../includes/admin-auth.php';
 require_once '../includes/db.php';
 
-// Require admin login
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
+
+// Require admin authentication
+if (!admin_is_logged_in()) {
     header('Location: admin-login.php');
     exit;
 }
 
+// Check rate limiting
+if (!check_rate_limit('mass_edit', 10, 300)) {
+    http_response_code(429);
+    die('Too many mass edit requests. Please wait before trying again.');
+}
+
 $message = '';
 $messageType = '';
+$csrf_token = generate_csrf_token();
 
-// Handle bulk price update
+// Handle form submissions with CSRF protection
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $message = 'Invalid request. Please refresh the page and try again.';
+        $messageType = 'error';
+        log_security_event('csrf_failure', ['page' => 'mass_edit'], 'medium');
+    } else {
+        try {
+            // Handle bulk price update by percentage
 if (isset($_POST['bulk_price_percent']) && is_numeric($_POST['bulk_price_percent'])) {
-    $percent = floatval($_POST['bulk_price_percent']);
-    $stmt = $db->prepare("UPDATE products SET price = ROUND(price * (? / 100.0), 2)");
+                $percent = validate_float($_POST['bulk_price_percent']);
+                if ($percent === false || $percent < 1 || $percent > 500) {
+                    throw new Exception('Invalid percentage value. Must be between 1 and 500.');
+                }
+                
+                $stmt = $db->prepare("UPDATE products SET price = ROUND(price * (? / 100.0), 2) WHERE price > 0");
     $stmt->execute([$percent]);
     $affected = $stmt->rowCount();
     $message = "Updated prices for $affected products by {$percent}%";
     $messageType = 'success';
+                
+                log_security_event('bulk_price_update', [
+                    'percentage' => $percent,
+                    'affected_products' => $affected
+                ], 'low');
 }
 
 // Handle bulk price adjustment (add/subtract fixed amount)
-if (isset($_POST['bulk_price_adjustment']) && is_numeric($_POST['bulk_price_adjustment'])) {
-    $adjustment = floatval($_POST['bulk_price_adjustment']);
-    $operation = $_POST['price_operation'] ?? 'add';
-    $operator = $operation === 'subtract' ? '-' : '+';
-    
-    $stmt = $db->prepare("UPDATE products SET price = GREATEST(0.01, ROUND(price $operator ?, 2))");
+            elseif (isset($_POST['bulk_price_adjustment']) && is_numeric($_POST['bulk_price_adjustment'])) {
+                $adjustment = validate_float($_POST['bulk_price_adjustment']);
+                $operation = sanitize_input($_POST['price_operation'] ?? 'add');
+                
+                if ($adjustment === false || $adjustment < 0 || $adjustment > 1000) {
+                    throw new Exception('Invalid adjustment amount. Must be between 0 and 1000.');
+                }
+                
+                if (!in_array($operation, ['add', 'subtract'])) {
+                    throw new Exception('Invalid price operation.');
+                }
+                
+                if ($operation === 'subtract') {
+                    $stmt = $db->prepare("UPDATE products SET price = GREATEST(0.01, ROUND(price - ?, 2)) WHERE price > ?");
+                    $stmt->execute([$adjustment, $adjustment]);
+                } else {
+                    $stmt = $db->prepare("UPDATE products SET price = ROUND(price + ?, 2)");
     $stmt->execute([$adjustment]);
+                }
+                
     $affected = $stmt->rowCount();
     $action = $operation === 'subtract' ? 'decreased' : 'increased';
     $message = "Price $action by $" . number_format($adjustment, 2) . " for $affected products";
     $messageType = 'success';
+                
+                log_security_event('bulk_price_adjustment', [
+                    'operation' => $operation,
+                    'adjustment' => $adjustment,
+                    'affected_products' => $affected
+                ], 'low');
 }
 
 // Handle bulk weight update
-if (isset($_POST['bulk_weight']) && is_numeric($_POST['bulk_weight'])) {
-    $weight = floatval($_POST['bulk_weight']);
+            elseif (isset($_POST['bulk_weight']) && is_numeric($_POST['bulk_weight'])) {
+                $weight = validate_float($_POST['bulk_weight']);
+                if ($weight === false || $weight < 0 || $weight > 100) {
+                    throw new Exception('Invalid weight value. Must be between 0 and 100 ounces.');
+                }
+                
     $stmt = $db->prepare("UPDATE products SET weight = ?");
     $stmt->execute([$weight]);
     $affected = $stmt->rowCount();
     $message = "Updated weight to {$weight} oz for $affected products";
     $messageType = 'success';
+                
+                log_security_event('bulk_weight_update', [
+                    'weight' => $weight,
+                    'affected_products' => $affected
+                ], 'low');
 }
 
 // Handle bulk shipping option update
-if (isset($_POST['bulk_shipping_option'])) {
-    $shippingOption = $_POST['bulk_shipping_option'];
-    $flatRate = isset($_POST['bulk_flat_rate']) && is_numeric($_POST['bulk_flat_rate']) ? floatval($_POST['bulk_flat_rate']) : null;
+            elseif (isset($_POST['bulk_shipping_option'])) {
+                $shippingOption = sanitize_input($_POST['bulk_shipping_option']);
+                $flatRate = isset($_POST['bulk_flat_rate']) && is_numeric($_POST['bulk_flat_rate']) 
+                    ? validate_float($_POST['bulk_flat_rate']) : null;
+                
+                $allowed_shipping_options = ['calculated', 'free', 'flat'];
+                if (!in_array($shippingOption, $allowed_shipping_options)) {
+                    throw new Exception('Invalid shipping option.');
+                }
+                
+                if ($shippingOption === 'flat' && ($flatRate === false || $flatRate < 0 || $flatRate > 100)) {
+                    throw new Exception('Invalid flat rate amount. Must be between 0 and 100.');
+                }
     
     $stmt = $db->prepare("UPDATE products SET shipping_option = ?, flat_rate = ?");
     $stmt->execute([$shippingOption, $flatRate]);
     $affected = $stmt->rowCount();
     $message = "Updated shipping option to '$shippingOption' for $affected products";
     $messageType = 'success';
+                
+                log_security_event('bulk_shipping_update', [
+                    'shipping_option' => $shippingOption,
+                    'flat_rate' => $flatRate,
+                    'affected_products' => $affected
+                ], 'low');
 }
 
-// Handle bulk description append/prepend
-if (isset($_POST['bulk_description_text']) && !empty($_POST['bulk_description_text'])) {
-    $text = trim($_POST['bulk_description_text']);
-    $operation = $_POST['description_operation'] ?? 'append';
+            // Handle bulk description update
+            elseif (isset($_POST['bulk_description_text']) && !empty($_POST['bulk_description_text'])) {
+                $text = sanitize_input($_POST['bulk_description_text']);
+                $operation = sanitize_input($_POST['description_operation'] ?? 'append');
+                
+                if (strlen($text) > 500) {
+                    throw new Exception('Description text too long. Maximum 500 characters.');
+                }
+                
+                $allowed_operations = ['append', 'prepend', 'replace'];
+                if (!in_array($operation, $allowed_operations)) {
+                    throw new Exception('Invalid description operation.');
+                }
     
     if ($operation === 'replace') {
         $stmt = $db->prepare("UPDATE products SET description = ?");
         $stmt->execute([$text]);
     } elseif ($operation === 'prepend') {
-        $stmt = $db->prepare("UPDATE products SET description = CONCAT(?, ' ', description)");
+                    $stmt = $db->prepare("UPDATE products SET description = CONCAT(?, ' ', COALESCE(description, ''))");
         $stmt->execute([$text]);
     } else { // append
-        $stmt = $db->prepare("UPDATE products SET description = CONCAT(description, ' ', ?)");
+                    $stmt = $db->prepare("UPDATE products SET description = CONCAT(COALESCE(description, ''), ' ', ?)");
         $stmt->execute([$text]);
     }
     
     $affected = $stmt->rowCount();
     $message = "Updated descriptions for $affected products ($operation operation)";
     $messageType = 'success';
+                
+                log_security_event('bulk_description_update', [
+                    'operation' => $operation,
+                    'affected_products' => $affected
+                ], 'low');
 }
 
 // Handle bulk condition update
-if (isset($_POST['bulk_condition'])) {
-    $condition = $_POST['bulk_condition'];
+            elseif (isset($_POST['bulk_condition'])) {
+                $condition = sanitize_input($_POST['bulk_condition']);
+                $allowed_conditions = ['New', 'Like New', 'Very Good', 'Good', 'Acceptable'];
+                
+                if (!in_array($condition, $allowed_conditions)) {
+                    throw new Exception('Invalid condition value.');
+                }
+                
     $stmt = $db->prepare("UPDATE products SET `condition` = ?");
     $stmt->execute([$condition]);
     $affected = $stmt->rowCount();
     $message = "Updated condition to '$condition' for $affected products";
     $messageType = 'success';
+                
+                log_security_event('bulk_condition_update', [
+                    'condition' => $condition,
+                    'affected_products' => $affected
+                ], 'low');
 }
 
 // Handle bulk dimensions update
-if (isset($_POST['bulk_dimensions']) && !empty($_POST['bulk_dimensions'])) {
-    $dimensions = trim($_POST['bulk_dimensions']);
+            elseif (isset($_POST['bulk_dimensions']) && !empty($_POST['bulk_dimensions'])) {
+                $dimensions = sanitize_input($_POST['bulk_dimensions']);
+                
+                // Validate dimensions format (e.g., "5x8x1" or "5 x 8 x 1")
+                if (!preg_match('/^[\d\.\s]*x[\d\.\s]*x[\d\.\s]*$/', $dimensions)) {
+                    throw new Exception('Invalid dimensions format. Use format like "5x8x1".');
+                }
+                
+                if (strlen($dimensions) > 20) {
+                    throw new Exception('Dimensions string too long.');
+                }
+                
     $stmt = $db->prepare("UPDATE products SET dimensions = ?");
     $stmt->execute([$dimensions]);
     $affected = $stmt->rowCount();
     $message = "Updated dimensions to '$dimensions' for $affected products";
     $messageType = 'success';
+                
+                log_security_event('bulk_dimensions_update', [
+                    'dimensions' => $dimensions,
+                    'affected_products' => $affected
+                ], 'low');
 }
 
 // Handle individual product updates
-if (isset($_POST['save']) && isset($_POST['products']) && is_array($_POST['products'])) {
+            elseif (isset($_POST['save']) && isset($_POST['products']) && is_array($_POST['products'])) {
     $updated = 0;
+                
     foreach ($_POST['products'] as $id => $prod) {
+                    $product_id = validate_int($id);
+                    if ($product_id === false) continue;
+                    
+                    $title = sanitize_input($prod['title'] ?? '');
+                    $price = validate_float($prod['price'] ?? '0');
+                    $description = sanitize_input($prod['description'] ?? '');
+                    $condition = sanitize_input($prod['condition'] ?? '');
+                    $weight = isset($prod['weight']) && is_numeric($prod['weight']) ? validate_float($prod['weight']) : null;
+                    $dimensions = sanitize_input($prod['dimensions'] ?? '');
+                    $shipping_option = sanitize_input($prod['shipping_option'] ?? 'calculated');
+                    $flat_rate = isset($prod['flat_rate']) && is_numeric($prod['flat_rate']) ? validate_float($prod['flat_rate']) : null;
+                    
+                    // Validation
+                    if (empty($title) || strlen($title) > 255) continue;
+                    if ($price === false || $price < 0 || $price > 10000) continue;
+                    if (strlen($description) > 1000) continue;
+                    if (!in_array($condition, ['New', 'Like New', 'Very Good', 'Good', 'Acceptable'])) continue;
+                    if (!in_array($shipping_option, ['calculated', 'free', 'flat'])) continue;
+                    if ($weight !== null && ($weight < 0 || $weight > 100)) continue;
+                    if ($flat_rate !== null && ($flat_rate < 0 || $flat_rate > 100)) continue;
+                    
         $stmt = $db->prepare("UPDATE products SET title=?, price=?, description=?, `condition`=?, weight=?, dimensions=?, shipping_option=?, flat_rate=? WHERE id=?");
         $stmt->execute([
-            $prod['title'],
-            is_numeric($prod['price']) ? $prod['price'] : 0,
-            $prod['description'],
-            $prod['condition'],
-            is_numeric($prod['weight']) ? $prod['weight'] : null,
-            $prod['dimensions'],
-            $prod['shipping_option'],
-            is_numeric($prod['flat_rate']) ? $prod['flat_rate'] : null,
-            $id
+                        $title,
+                        $price,
+                        $description,
+                        $condition,
+                        $weight,
+                        $dimensions,
+                        $shipping_option,
+                        $flat_rate,
+                        $product_id
         ]);
+                    
         if ($stmt->rowCount() > 0) $updated++;
     }
+                
     $message = "Updated $updated products individually";
     $messageType = 'success';
+                
+                log_security_event('individual_product_updates', [
+                    'updated_count' => $updated
+                ], 'low');
 }
 
-// Handle delete
-if (isset($_POST['delete_selected']) && isset($_POST['delete_ids']) && is_array($_POST['delete_ids'])) {
-    $ids = array_map('intval', $_POST['delete_ids']);
-    if ($ids) {
+            // Handle delete with validation
+            elseif (isset($_POST['delete_selected']) && isset($_POST['delete_ids']) && is_array($_POST['delete_ids'])) {
+                $ids = [];
+                foreach ($_POST['delete_ids'] as $id) {
+                    $validated_id = validate_int($id);
+                    if ($validated_id !== false && $validated_id > 0) {
+                        $ids[] = $validated_id;
+                    }
+                }
+                
+                if (!empty($ids)) {
+                    // Limit batch deletion for safety
+                    if (count($ids) > 50) {
+                        throw new Exception('Cannot delete more than 50 products at once for safety.');
+                    }
+                    
         $placeholders = str_repeat('?,', count($ids) - 1) . '?';
         $stmt = $db->prepare("DELETE FROM products WHERE id IN ($placeholders)");
         $stmt->execute($ids);
         $deleted = $stmt->rowCount();
         $message = "Deleted $deleted products";
+                    $messageType = 'warning';
+                    
+                    log_security_event('bulk_product_deletion', [
+                        'deleted_count' => $deleted,
+                        'deleted_ids' => $ids
+                    ], 'medium');
+                }
+            }
+            
+        } catch (Exception $e) {
+            $message = 'Error: ' . htmlspecialchars($e->getMessage());
         $messageType = 'error';
+            log_security_event('mass_edit_error', [
+                'error' => $e->getMessage()
+            ], 'medium');
+        }
     }
 }
 
-// Fetch all products
-$stmt = $db->query('SELECT * FROM products ORDER BY id DESC LIMIT 100'); // Limit for performance
+// Fetch products with pagination for security
+$page = max(1, validate_int($_GET['page'] ?? '1') ?: 1);
+$per_page = 50; // Limit for performance and security
+$offset = ($page - 1) * $per_page;
+
+try {
+    $stmt = $db->prepare('SELECT * FROM products ORDER BY id DESC LIMIT ? OFFSET ?');
+    $stmt->execute([$per_page, $offset]);
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Get total count for pagination
+    $count_stmt = $db->query('SELECT COUNT(*) FROM products');
+    $total_products = $count_stmt->fetchColumn();
+    $total_pages = ceil($total_products / $per_page);
+} catch (Exception $e) {
+    $products = [];
+    $total_products = 0;
+    $total_pages = 1;
+    error_log('Error fetching products in mass-edit: ' . $e->getMessage());
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

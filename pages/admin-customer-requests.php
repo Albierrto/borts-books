@@ -1,59 +1,80 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: admin-login.php');
-    exit;
-}
+require_once '../includes/security.php';
+require_once '../includes/admin-auth.php';
 
-require_once '../includes/db.php';
+// Start secure session
+secure_session_start();
 
-$pageTitle = "Customer Requests";
+// Set security headers
+set_security_headers();
+
+// Check admin authentication
+check_admin_auth();
+
+// Generate CSRF token for forms
+$csrf_token = generate_csrf_token();
+
 $message = '';
+$error = '';
 
-// Handle status updates
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    if ($_POST['action'] === 'update_status') {
-        $request_id = (int)$_POST['request_id'];
-        $status = $_POST['status'];
-        $admin_notes = trim($_POST['admin_notes'] ?? '');
-        
-        try {
-            $stmt = $db->prepare("
-                UPDATE customer_requests 
-                SET status = ?, admin_notes = ?, updated_at = NOW() 
-                WHERE id = ?
-            ");
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Invalid request';
+        log_security_event('csrf_failure', ['page' => 'admin-customer-requests']);
+    } else {
+        // Check rate limiting
+        if (!check_rate_limit('request_update', 15, 300)) {
+            $error = 'Too many update attempts. Please try again later.';
+            log_security_event('rate_limit_exceeded', ['page' => 'admin-customer-requests']);
+        } else {
+            $action = sanitize_input($_POST['action'] ?? '');
             
-            if ($stmt->execute([$status, $admin_notes, $request_id])) {
-                $message = '<div class="alert success"><i class="fas fa-check-circle"></i> Request updated successfully!</div>';
-            } else {
-                $message = '<div class="alert error"><i class="fas fa-exclamation-triangle"></i> Failed to update request.</div>';
+            if ($action === 'update_status') {
+                $request_id = validate_int($_POST['request_id'] ?? '');
+                $status = sanitize_input($_POST['status'] ?? '');
+                $admin_notes = sanitize_input($_POST['admin_notes'] ?? '');
+                
+                if (!$request_id || empty($status)) {
+                    $error = 'Request ID and status are required';
+                } else {
+                    try {
+                        $stmt = $pdo->prepare("UPDATE customer_requests SET status = ?, admin_notes = ?, updated_at = NOW() WHERE id = ?");
+                        $stmt->execute([$status, $admin_notes, $request_id]);
+                        
+                        $message = 'Request updated successfully';
+                        log_security_event('request_updated', ['id' => $request_id, 'status' => $status]);
+                    } catch (PDOException $e) {
+                        $error = 'An error occurred while updating the request';
+                        log_security_event('database_error', ['error' => $e->getMessage()]);
+                    }
+                }
+            } elseif ($action === 'delete_request') {
+                $request_id = validate_int($_POST['request_id'] ?? '');
+                
+                if (!$request_id) {
+                    $error = 'Invalid request ID';
+                } else {
+                    try {
+                        $stmt = $pdo->prepare("DELETE FROM customer_requests WHERE id = ?");
+                        $stmt->execute([$request_id]);
+                        
+                        $message = 'Request deleted successfully';
+                        log_security_event('request_deleted', ['id' => $request_id]);
+                    } catch (PDOException $e) {
+                        $error = 'An error occurred while deleting the request';
+                        log_security_event('database_error', ['error' => $e->getMessage()]);
+                    }
+                }
             }
-        } catch (Exception $e) {
-            $message = '<div class="alert error"><i class="fas fa-exclamation-triangle"></i> Error: ' . htmlspecialchars($e->getMessage()) . '</div>';
-        }
-    }
-    
-    if ($_POST['action'] === 'delete_request') {
-        $request_id = (int)$_POST['request_id'];
-        
-        try {
-            $stmt = $db->prepare("DELETE FROM customer_requests WHERE id = ?");
-            if ($stmt->execute([$request_id])) {
-                $message = '<div class="alert success"><i class="fas fa-check-circle"></i> Request deleted successfully!</div>';
-            } else {
-                $message = '<div class="alert error"><i class="fas fa-exclamation-triangle"></i> Failed to delete request.</div>';
-            }
-        } catch (Exception $e) {
-            $message = '<div class="alert error"><i class="fas fa-exclamation-triangle"></i> Error: ' . htmlspecialchars($e->getMessage()) . '</div>';
         }
     }
 }
 
 // Get filter parameters
-$status_filter = $_GET['status'] ?? '';
-$inquiry_filter = $_GET['inquiry_type'] ?? '';
-$search = $_GET['search'] ?? '';
+$status_filter = sanitize_input($_GET['status'] ?? '');
+$search = sanitize_input($_GET['search'] ?? '');
 
 // Build query
 $where_conditions = [];
@@ -64,66 +85,36 @@ if ($status_filter) {
     $params[] = $status_filter;
 }
 
-if ($inquiry_filter) {
-    $where_conditions[] = "inquiry_type = ?";
-    $params[] = $inquiry_filter;
-}
-
 if ($search) {
-    $where_conditions[] = "(name LIKE ? OR email LIKE ? OR subject LIKE ? OR message LIKE ?)";
+    $where_conditions[] = "(customer_name LIKE ? OR customer_email LIKE ? OR book_title LIKE ?)";
     $search_param = "%$search%";
-    $params = array_merge($params, [$search_param, $search_param, $search_param, $search_param]);
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $params[] = $search_param;
 }
 
 $where_clause = $where_conditions ? "WHERE " . implode(" AND ", $where_conditions) : "";
 
-// Get customer requests
+// Get requests
 try {
-    $stmt = $db->prepare("
-        SELECT * FROM customer_requests 
-        $where_clause 
-        ORDER BY created_at DESC
-    ");
+    $stmt = $pdo->prepare("SELECT * FROM customer_requests $where_clause ORDER BY created_at DESC");
     $stmt->execute($params);
     $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Get counts for dashboard
-    $stats_stmt = $db->query("
-        SELECT 
-            COUNT(*) as total,
-            SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_count,
-            SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_count,
-            SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_count
-        FROM customer_requests
-    ");
-    $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
-    
-} catch (Exception $e) {
+} catch (PDOException $e) {
+    $error = 'An error occurred while fetching requests';
+    log_security_event('database_error', ['error' => $e->getMessage()]);
     $requests = [];
-    $stats = ['total' => 0, 'new_count' => 0, 'in_progress_count' => 0, 'resolved_count' => 0];
-    $message = '<div class="alert error"><i class="fas fa-exclamation-triangle"></i> Error loading requests: ' . htmlspecialchars($e->getMessage()) . '</div>';
 }
 
-function getStatusBadge($status) {
-    $badges = [
-        'new' => '<span class="status-badge status-new">New</span>',
-        'in_progress' => '<span class="status-badge status-progress">In Progress</span>',
-        'resolved' => '<span class="status-badge status-resolved">Resolved</span>',
-        'closed' => '<span class="status-badge status-closed">Closed</span>'
-    ];
-    return $badges[$status] ?? '<span class="status-badge">Unknown</span>';
-}
-
-function getInquiryIcon($type) {
-    $icons = [
-        'order' => 'fas fa-shopping-cart',
-        'shipping' => 'fas fa-truck',
-        'return' => 'fas fa-undo',
-        'selling' => 'fas fa-handshake',
-        'technical' => 'fas fa-cog',
-        'other' => 'fas fa-question-circle'
-    ];
-    return $icons[$type] ?? 'fas fa-envelope';
+// Get statistics
+try {
+    $total_requests = $pdo->query("SELECT COUNT(*) FROM customer_requests")->fetchColumn();
+    $pending_requests = $pdo->query("SELECT COUNT(*) FROM customer_requests WHERE status = 'pending'")->fetchColumn();
+    $completed_requests = $pdo->query("SELECT COUNT(*) FROM customer_requests WHERE status = 'completed'")->fetchColumn();
+} catch (PDOException $e) {
+    $total_requests = 0;
+    $pending_requests = 0;
+    $completed_requests = 0;
 }
 ?>
 <!DOCTYPE html>
@@ -131,50 +122,24 @@ function getInquiryIcon($type) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?> - Bort's Books Admin</title>
+    <title>Customer Requests - Bort's Books</title>
     <link rel="stylesheet" href="../assets/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        body { background: #f7f7fa; }
-        .admin-container {
+        .container {
             max-width: 1400px;
             margin: 2rem auto;
             padding: 0 1rem;
         }
-        .admin-header {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
-            padding: 2rem;
-            margin-bottom: 2rem;
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
+            margin-bottom: 2rem;
         }
-        .admin-title {
+        .title {
             font-size: 2rem;
             font-weight: 800;
             color: #232946;
-            margin: 0;
-        }
-        .back-link {
-            background: #eebbc3;
-            color: #232946;
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .back-link:hover {
-            background: #232946;
-            color: #fff;
-            transform: translateY(-1px);
         }
         .stats-grid {
             display: grid;
@@ -183,224 +148,34 @@ function getInquiryIcon($type) {
             margin-bottom: 2rem;
         }
         .stat-card {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
+            background: white;
             padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             text-align: center;
         }
-        .stat-number {
+        .stat-value {
             font-size: 2rem;
             font-weight: 800;
-            color: #232946;
-            margin-bottom: 0.5rem;
+            color: #667eea;
+            display: block;
         }
         .stat-label {
             color: #666;
-            font-weight: 600;
+            margin-top: 0.5rem;
         }
-        .filters-section {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
+        .filters {
+            background: white;
             padding: 1.5rem;
+            border-radius: 12px;
             margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .filters-form {
+        .filter-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: 1fr 200px auto;
             gap: 1rem;
             align-items: end;
-        }
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-        }
-        .filter-group label {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #232946;
-        }
-        .filter-group input,
-        .filter-group select {
-            padding: 0.8rem;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        .filter-btn {
-            background: #eebbc3;
-            color: #232946;
-            border: none;
-            border-radius: 8px;
-            padding: 0.8rem 1.5rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .filter-btn:hover {
-            background: #232946;
-            color: #fff;
-        }
-        .requests-table {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(35,41,70,0.08);
-            overflow: hidden;
-        }
-        .table-header {
-            background: #232946;
-            color: #fff;
-            padding: 1rem 1.5rem;
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .table th,
-        .table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e9ecef;
-        }
-        .table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #232946;
-        }
-        .table tr:hover {
-            background: #f8f9fa;
-        }
-        .status-badge {
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        .status-new {
-            background: #fff3cd;
-            color: #856404;
-        }
-        .status-progress {
-            background: #cce5ff;
-            color: #004085;
-        }
-        .status-resolved {
-            background: #d4edda;
-            color: #155724;
-        }
-        .status-closed {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .inquiry-type {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .btn-small {
-            padding: 0.4rem 0.8rem;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-        .btn-view {
-            background: #17a2b8;
-            color: #fff;
-        }
-        .btn-view:hover {
-            background: #138496;
-        }
-        .btn-delete {
-            background: #dc3545;
-            color: #fff;
-        }
-        .btn-delete:hover {
-            background: #c82333;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background-color: #fff;
-            margin: 5% auto;
-            padding: 2rem;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #eebbc3;
-        }
-        .modal-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #232946;
-        }
-        .close {
-            color: #aaa;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .close:hover {
-            color: #000;
-        }
-        .request-details {
-            margin-bottom: 1.5rem;
-        }
-        .detail-row {
-            display: flex;
-            margin-bottom: 1rem;
-            gap: 1rem;
-        }
-        .detail-label {
-            font-weight: 600;
-            color: #232946;
-            min-width: 100px;
-        }
-        .detail-value {
-            flex: 1;
-            color: #666;
-        }
-        .message-content {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 8px;
-            border-left: 4px solid #eebbc3;
-            margin: 1rem 0;
-        }
-        .update-form {
-            border-top: 2px solid #eebbc3;
-            padding-top: 1.5rem;
         }
         .form-group {
             margin-bottom: 1rem;
@@ -409,341 +184,312 @@ function getInquiryIcon($type) {
             display: block;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #232946;
+            color: #333;
         }
+        .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 0.8rem;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 6px;
             font-size: 1rem;
         }
-        .form-group textarea {
-            min-height: 100px;
-            resize: vertical;
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
         }
-        .modal-actions {
+        .requests-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+        .request-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .request-header {
             display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 1.5rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
         }
-        .btn {
-            padding: 0.8rem 1.5rem;
+        .request-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #232946;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-in-progress {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .request-details {
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .request-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .submit-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
             border: none;
-            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        .btn-primary {
-            background: #eebbc3;
-            color: #232946;
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
         }
-        .btn-primary:hover {
-            background: #232946;
-            color: #fff;
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
         }
-        .btn-secondary {
-            background: #6c757d;
-            color: #fff;
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
-        .btn-secondary:hover {
-            background: #545b62;
+        .delete-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
         }
-        .alert {
+        .message {
             padding: 1rem;
-            border-radius: 8px;
+            border-radius: 6px;
             margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            font-weight: 600;
         }
-        .alert.success {
+        .success {
             background: #d4edda;
-            border: 1px solid #c3e6cb;
             color: #155724;
         }
-        .alert.error {
+        .error {
             background: #f8d7da;
-            border: 1px solid #f5c6cb;
             color: #721c24;
         }
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #666;
-        }
-        .empty-state i {
-            font-size: 3rem;
+        .back-link {
+            display: inline-block;
             margin-bottom: 1rem;
-            color: #ccc;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
         }
-        @media (max-width: 768px) {
-            .admin-header {
-                flex-direction: column;
-                text-align: center;
-            }
-            .filters-form {
-                grid-template-columns: 1fr;
-            }
-            .table {
-                font-size: 0.9rem;
-            }
-            .action-buttons {
-                flex-direction: column;
-            }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <div class="admin-container">
-        <div class="admin-header">
-            <h1 class="admin-title">Customer Requests</h1>
-            <a href="admin-dashboard.php" class="back-link">
-                <i class="fas fa-arrow-left"></i>
-                Back to Dashboard
-            </a>
+    <div class="container">
+        <a href="admin-dashboard.php" class="back-link">← Back to Dashboard</a>
+        
+        <div class="header">
+            <h1 class="title">Customer Requests</h1>
         </div>
-
-        <?php echo $message; ?>
-
+        
+        <?php if ($message): ?>
+            <div class="message success">
+                <?php echo htmlspecialchars($message); ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if ($error): ?>
+            <div class="message error">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
+        
         <!-- Statistics -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-number"><?php echo $stats['total']; ?></div>
+                <span class="stat-value"><?php echo $total_requests; ?></span>
                 <div class="stat-label">Total Requests</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number"><?php echo $stats['new_count']; ?></div>
-                <div class="stat-label">New</div>
+                <span class="stat-value"><?php echo $pending_requests; ?></span>
+                <div class="stat-label">Pending</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number"><?php echo $stats['in_progress_count']; ?></div>
-                <div class="stat-label">In Progress</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number"><?php echo $stats['resolved_count']; ?></div>
-                <div class="stat-label">Resolved</div>
+                <span class="stat-value"><?php echo $completed_requests; ?></span>
+                <div class="stat-label">Completed</div>
             </div>
         </div>
-
+        
         <!-- Filters -->
-        <div class="filters-section">
-            <form class="filters-form" method="GET">
-                <div class="filter-group">
-                    <label for="search">Search</label>
-                    <input type="text" id="search" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Name, email, subject...">
-                </div>
-                <div class="filter-group">
-                    <label for="status">Status</label>
-                    <select id="status" name="status">
-                        <option value="">All Statuses</option>
-                        <option value="new" <?php echo $status_filter === 'new' ? 'selected' : ''; ?>>New</option>
-                        <option value="in_progress" <?php echo $status_filter === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
-                        <option value="resolved" <?php echo $status_filter === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
-                        <option value="closed" <?php echo $status_filter === 'closed' ? 'selected' : ''; ?>>Closed</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="inquiry_type">Inquiry Type</label>
-                    <select id="inquiry_type" name="inquiry_type">
-                        <option value="">All Types</option>
-                        <option value="order" <?php echo $inquiry_filter === 'order' ? 'selected' : ''; ?>>Order Support</option>
-                        <option value="shipping" <?php echo $inquiry_filter === 'shipping' ? 'selected' : ''; ?>>Shipping</option>
-                        <option value="return" <?php echo $inquiry_filter === 'return' ? 'selected' : ''; ?>>Returns</option>
-                        <option value="selling" <?php echo $inquiry_filter === 'selling' ? 'selected' : ''; ?>>Selling</option>
-                        <option value="technical" <?php echo $inquiry_filter === 'technical' ? 'selected' : ''; ?>>Technical</option>
-                        <option value="other" <?php echo $inquiry_filter === 'other' ? 'selected' : ''; ?>>Other</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <button type="submit" class="filter-btn">
-                        <i class="fas fa-search"></i>
-                        Filter
-                    </button>
+        <div class="filters">
+            <form method="GET">
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label for="search">Search</label>
+                        <input type="text" name="search" id="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Customer name, email, or book title...">
+                    </div>
+                    <div class="form-group">
+                        <label for="status_filter">Status</label>
+                        <select name="status" id="status_filter">
+                            <option value="">All Statuses</option>
+                            <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                            <option value="in-progress" <?php echo $status_filter === 'in-progress' ? 'selected' : ''; ?>>In Progress</option>
+                            <option value="completed" <?php echo $status_filter === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                            <option value="cancelled" <?php echo $status_filter === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn">Filter</button>
                 </div>
             </form>
         </div>
-
-        <!-- Requests Table -->
-        <div class="requests-table">
-            <div class="table-header">
-                <i class="fas fa-inbox"></i>
-                Customer Requests (<?php echo count($requests); ?>)
-            </div>
-            
-            <?php if (empty($requests)): ?>
-                <div class="empty-state">
-                    <i class="fas fa-inbox"></i>
-                    <h3>No requests found</h3>
-                    <p>No customer requests match your current filters.</p>
+        
+        <!-- Requests Grid -->
+        <div class="requests-grid">
+            <?php foreach ($requests as $request): ?>
+                <div class="request-card">
+                    <div class="request-header">
+                        <div class="request-title">
+                            <?php echo htmlspecialchars($request['book_title'] ?? 'Book Request'); ?>
+                        </div>
+                        <span class="status-badge status-<?php echo $request['status']; ?>">
+                            <?php echo ucfirst(str_replace('-', ' ', $request['status'])); ?>
+                        </span>
+                    </div>
+                    
+                    <div class="request-details">
+                        <strong>Customer:</strong> <?php echo htmlspecialchars($request['customer_name']); ?><br>
+                        <strong>Email:</strong> <?php echo htmlspecialchars($request['customer_email']); ?><br>
+                        <?php if ($request['customer_phone']): ?>
+                            <strong>Phone:</strong> <?php echo htmlspecialchars($request['customer_phone']); ?><br>
+                        <?php endif; ?>
+                        <strong>Requested:</strong> <?php echo date('M j, Y g:i A', strtotime($request['created_at'])); ?><br>
+                        <?php if ($request['description']): ?>
+                            <strong>Description:</strong> <?php echo htmlspecialchars($request['description']); ?><br>
+                        <?php endif; ?>
+                        <?php if ($request['admin_notes']): ?>
+                            <strong>Admin Notes:</strong> <?php echo htmlspecialchars($request['admin_notes']); ?>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="request-actions">
+                        <button class="submit-btn btn-small" onclick="openUpdateModal(<?php echo $request['id']; ?>, '<?php echo htmlspecialchars($request['status']); ?>', '<?php echo htmlspecialchars($request['admin_notes'] ?? ''); ?>')">
+                            Update
+                        </button>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                            <input type="hidden" name="action" value="delete_request">
+                            <input type="hidden" name="request_id" value="<?php echo $request['id']; ?>">
+                            <button type="submit" class="delete-btn btn-small" onclick="return confirm('Are you sure you want to delete this request?')">Delete</button>
+                        </form>
+                    </div>
                 </div>
-            <?php else: ?>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Customer</th>
-                            <th>Subject</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($requests as $request): ?>
-                            <tr>
-                                <td><?php echo date('M j, Y g:i A', strtotime($request['created_at'])); ?></td>
-                                <td>
-                                    <strong><?php echo htmlspecialchars($request['name']); ?></strong><br>
-                                    <small><?php echo htmlspecialchars($request['email']); ?></small>
-                                </td>
-                                <td><?php echo htmlspecialchars($request['subject']); ?></td>
-                                <td>
-                                    <div class="inquiry-type">
-                                        <i class="<?php echo getInquiryIcon($request['inquiry_type']); ?>"></i>
-                                        <?php echo ucfirst($request['inquiry_type'] ?: 'General'); ?>
-                                    </div>
-                                </td>
-                                <td><?php echo getStatusBadge($request['status']); ?></td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="btn-small btn-view" onclick="viewRequest(<?php echo $request['id']; ?>)">
-                                            <i class="fas fa-eye"></i>
-                                            View
-                                        </button>
-                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this request?')">
-                                            <input type="hidden" name="action" value="delete_request">
-                                            <input type="hidden" name="request_id" value="<?php echo $request['id']; ?>">
-                                            <button type="submit" class="btn-small btn-delete">
-                                                <i class="fas fa-trash"></i>
-                                                Delete
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </div>
     </div>
-
-    <!-- Request Details Modal -->
-    <div id="requestModal" class="modal">
+    
+    <!-- Update Modal -->
+    <div id="updateModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Request Details</h2>
-                <span class="close" onclick="closeModal()">&times;</span>
-            </div>
-            <div id="modalBody">
-                <!-- Content will be loaded here -->
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Store request data for modal
-        const requestsData = <?php echo json_encode($requests); ?>;
-
-        function viewRequest(requestId) {
-            const request = requestsData.find(r => r.id == requestId);
-            if (!request) return;
-
-            const modalBody = document.getElementById('modalBody');
-            modalBody.innerHTML = `
-                <div class="request-details">
-                    <div class="detail-row">
-                        <span class="detail-label">Name:</span>
-                        <span class="detail-value">${escapeHtml(request.name)}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Email:</span>
-                        <span class="detail-value"><a href="mailto:${escapeHtml(request.email)}">${escapeHtml(request.email)}</a></span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Subject:</span>
-                        <span class="detail-value">${escapeHtml(request.subject)}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Type:</span>
-                        <span class="detail-value">${escapeHtml(request.inquiry_type || 'General')}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Status:</span>
-                        <span class="detail-value">${escapeHtml(request.status)}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Date:</span>
-                        <span class="detail-value">${new Date(request.created_at).toLocaleString()}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Message:</span>
-                    </div>
-                    <div class="message-content">
-                        ${escapeHtml(request.message).replace(/\n/g, '<br>')}
-                    </div>
-                    ${request.admin_notes ? `
-                        <div class="detail-row">
-                            <span class="detail-label">Admin Notes:</span>
-                        </div>
-                        <div class="message-content">
-                            ${escapeHtml(request.admin_notes).replace(/\n/g, '<br>')}
-                        </div>
-                    ` : ''}
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3>Update Request</h3>
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                <input type="hidden" name="action" value="update_status">
+                <input type="hidden" id="update_request_id" name="request_id">
+                
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select name="status" id="status" required>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
                 </div>
                 
-                <form method="POST" class="update-form">
-                    <input type="hidden" name="action" value="update_status">
-                    <input type="hidden" name="request_id" value="${request.id}">
-                    
-                    <div class="form-group">
-                        <label for="status_${request.id}">Update Status:</label>
-                        <select id="status_${request.id}" name="status" required>
-                            <option value="new" ${request.status === 'new' ? 'selected' : ''}>New</option>
-                            <option value="in_progress" ${request.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="resolved" ${request.status === 'resolved' ? 'selected' : ''}>Resolved</option>
-                            <option value="closed" ${request.status === 'closed' ? 'selected' : ''}>Closed</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="admin_notes_${request.id}">Admin Notes:</label>
-                        <textarea id="admin_notes_${request.id}" name="admin_notes" placeholder="Add internal notes about this request...">${escapeHtml(request.admin_notes || '')}</textarea>
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Update Request</button>
-                    </div>
-                </form>
-            `;
-
-            document.getElementById('requestModal').style.display = 'block';
+                <div class="form-group">
+                    <label for="admin_notes">Admin Notes</label>
+                    <textarea name="admin_notes" id="admin_notes" rows="4"></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn">Update Request</button>
+                <button type="button" class="delete-btn" onclick="closeModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        function openUpdateModal(requestId, currentStatus, currentNotes) {
+            document.getElementById('update_request_id').value = requestId;
+            document.getElementById('status').value = currentStatus;
+            document.getElementById('admin_notes').value = currentNotes;
+            document.getElementById('updateModal').style.display = 'block';
         }
-
+        
         function closeModal() {
-            document.getElementById('requestModal').style.display = 'none';
+            document.getElementById('updateModal').style.display = 'none';
         }
-
-        function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-        }
-
+        
         // Close modal when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('requestModal');
-            if (event.target == modal) {
+            const modal = document.getElementById('updateModal');
+            if (event.target === modal) {
                 closeModal();
             }
         }

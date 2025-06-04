@@ -1,56 +1,225 @@
 <?php
-session_start();
+require_once '../includes/security.php';
+require_once '../includes/secure-email.php';
+require_once '../includes/database-encryption.php';
 require_once '../includes/cart-display.php';
 require_once '../includes/db.php';
 
+// Start secure session
+secure_session_start();
+
+// Set security headers
+set_security_headers();
+
 $pageTitle = "Contact Us";
 $currentPage = "contact";
+
+// Initialize security components
+$encryption = new DatabaseEncryption();
+$emailSystem = new SecureEmailSystem();
 
 // Handle form submission
 $success_message = '';
 $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $subject = trim($_POST['subject'] ?? '');
-    $message = trim($_POST['message'] ?? '');
-    $inquiry_type = $_POST['inquiry_type'] ?? '';
-    
-    // Basic validation
-    if (empty($name) || empty($email) || empty($subject) || empty($message)) {
-        $error_message = 'Please fill in all required fields.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error_message = 'Please enter a valid email address.';
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid request. Please try again.';
+        log_security_event('csrf_failure', ['page' => 'contact']);
     } else {
-        try {
-            // Save customer request to database
-            $stmt = $db->prepare("
-                INSERT INTO customer_requests (name, email, subject, message, inquiry_type, created_at) 
-                VALUES (?, ?, ?, ?, ?, NOW())
-            ");
+        // Check rate limiting
+        if (!check_rate_limit('contact_form', 5, 3600)) {
+            $error_message = 'Too many contact requests. Please try again later.';
+            log_security_event('rate_limit_exceeded', ['page' => 'contact']);
+        } else {
+            // Sanitize and validate inputs
+            $name = sanitize_input($_POST['name'] ?? '');
+            $email = validate_email($_POST['email'] ?? '');
+            $subject = sanitize_input($_POST['subject'] ?? '');
+            $message = sanitize_input($_POST['message'] ?? '');
+            $inquiry_type = sanitize_input($_POST['inquiry_type'] ?? '');
             
-            $result = $stmt->execute([$name, $email, $subject, $message, $inquiry_type]);
+            // Enhanced validation
+            $validation_errors = [];
             
-            if ($result) {
-                $success_message = 'Thank you for contacting us! We\'ll get back to you within 24 hours.';
-                // Clear form data on success
-                $_POST = [];
-            } else {
-                $error_message = 'There was an error submitting your request. Please try again.';
+            if (empty($name) || strlen($name) < 2) {
+                $validation_errors[] = 'Please enter a valid name (at least 2 characters).';
+            } elseif (strlen($name) > 100) {
+                $validation_errors[] = 'Name is too long (maximum 100 characters).';
             }
-        } catch (Exception $e) {
-            error_log("Contact form error: " . $e->getMessage());
-            $error_message = 'There was an error submitting your request. Please try again.';
+            
+            if (!$email) {
+                $validation_errors[] = 'Please enter a valid email address.';
+            }
+            
+            if (empty($subject) || strlen($subject) < 5) {
+                $validation_errors[] = 'Please enter a subject (at least 5 characters).';
+            } elseif (strlen($subject) > 200) {
+                $validation_errors[] = 'Subject is too long (maximum 200 characters).';
+            }
+            
+            if (empty($message) || strlen($message) < 10) {
+                $validation_errors[] = 'Please enter a message (at least 10 characters).';
+            } elseif (strlen($message) > 2000) {
+                $validation_errors[] = 'Message is too long (maximum 2000 characters).';
+            }
+            
+            // Check for spam patterns
+            $spam_patterns = [
+                '/\b(viagra|cialis|casino|lottery|winner|congratulations)\b/i',
+                '/\b(click here|free money|guaranteed|urgent|limited time)\b/i',
+                '/http[s]?:\/\/[^\s]{1,50}/i' // URLs (suspicious in contact forms)
+            ];
+            
+            foreach ($spam_patterns as $pattern) {
+                if (preg_match($pattern, $message) || preg_match($pattern, $subject)) {
+                    $validation_errors[] = 'Your message appears to contain spam content.';
+                    log_security_event('spam_detected', [
+                        'pattern' => $pattern,
+                        'email' => $email,
+                        'subject' => substr($subject, 0, 50)
+                    ], 'medium');
+                    break;
+                }
+            }
+            
+            if (!empty($validation_errors)) {
+                $error_message = implode(' ', $validation_errors);
+            } else {
+                try {
+                    // Encrypt sensitive data before storing
+                    $encrypted_data = $encryption->encryptFields([
+                        'name' => $name,
+                        'email' => $email,
+                        'message' => $message
+                    ], ['name', 'email', 'message']);
+                    
+                    // Create searchable hash for email (for duplicate detection)
+                    $email_hash = $encryption->createSearchHash($email, 'email');
+                    
+                    // Check for recent duplicate submissions
+                    $stmt = $db->prepare("
+                        SELECT COUNT(*) FROM customer_requests 
+                        WHERE email_hash = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
+                    ");
+                    $stmt->execute([$email_hash]);
+                    $recent_count = $stmt->fetchColumn();
+                    
+                    if ($recent_count >= 3) {
+                        $error_message = 'Too many recent submissions from this email. Please wait before submitting again.';
+                        log_security_event('duplicate_contact_submission', ['email_hash' => $email_hash]);
+                    } else {
+                        // Save encrypted customer request to database
+                        $stmt = $db->prepare("
+                            INSERT INTO customer_requests (
+                                name, email, email_hash, subject, message, 
+                                inquiry_type, ip_address, user_agent, created_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                        ");
+                        
+                        $result = $stmt->execute([
+                            $encrypted_data['name'],
+                            $encrypted_data['email'],
+                            $email_hash,
+                            $subject,
+                            $encrypted_data['message'],
+                            $inquiry_type,
+                            get_client_ip(),
+                            $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
+                        ]);
+                        
+                        if ($result) {
+                            // Send confirmation email to customer
+                            try {
+                                $emailSystem->sendEmail(
+                                    $email,
+                                    'Thank you for contacting Bort\'s Books',
+                                    "
+                                    <h2>Thank you for contacting us!</h2>
+                                    <p>Dear $name,</p>
+                                    <p>We have received your message regarding: <strong>$subject</strong></p>
+                                    <p>Our team will review your inquiry and respond within 24 hours during business days.</p>
+                                    <p>If you have an urgent matter, please call us directly.</p>
+                                    <p>Best regards,<br>The Bort's Books Team</p>
+                                    ",
+                                    ['template' => 'transactional']
+                                );
+                            } catch (Exception $e) {
+                                // Email failed but form submission succeeded
+                                error_log("Contact confirmation email failed: " . $e->getMessage());
+                            }
+                            
+                            // Send notification to admin (without sensitive data in logs)
+                            try {
+                                $adminEmail = 'admin@bortsbooks.com'; // Should come from config
+                                $emailSystem->sendEmail(
+                                    $adminEmail,
+                                    'New Contact Form Submission - ' . $subject,
+                                    "
+                                    <h2>New Contact Form Submission</h2>
+                                    <p><strong>From:</strong> $name &lt;$email&gt;</p>
+                                    <p><strong>Subject:</strong> $subject</p>
+                                    <p><strong>Inquiry Type:</strong> $inquiry_type</p>
+                                    <p><strong>Message:</strong></p>
+                                    <div style='background: #f8f9fa; padding: 15px; border-radius: 5px;'>
+                                        " . nl2br(htmlspecialchars($message)) . "
+                                    </div>
+                                    <p><strong>Submitted:</strong> " . date('Y-m-d H:i:s') . "</p>
+                                    <p><strong>IP Address:</strong> " . get_client_ip() . "</p>
+                                    ",
+                                    ['template' => 'notification']
+                                );
+                            } catch (Exception $e) {
+                                error_log("Admin notification email failed: " . $e->getMessage());
+                            }
+                            
+                            $success_message = 'Thank you for contacting us! We\'ll get back to you within 24 hours.';
+                            
+                            // Log successful contact form submission
+                            log_security_event('contact_form_success', [
+                                'email_hash' => $email_hash,
+                                'inquiry_type' => $inquiry_type,
+                                'subject_length' => strlen($subject),
+                                'message_length' => strlen($message)
+                            ]);
+                            
+                            // Clear form data on success
+                            $_POST = [];
+                        } else {
+                            $error_message = 'There was an error submitting your request. Please try again.';
+                            log_security_event('contact_form_db_error', ['email_hash' => $email_hash]);
+                        }
+                    }
+                    
+                } catch (Exception $e) {
+                    error_log("Contact form error: " . $e->getMessage());
+                    $error_message = 'There was an error submitting your request. Please try again.';
+                    log_security_event('contact_form_error', [
+                        'error' => $e->getMessage(),
+                        'email_hash' => $email_hash ?? 'unknown'
+                    ]);
+                }
+            }
         }
     }
 }
+
+// Generate CSRF token
+$csrf_token = generate_csrf_token();
+
+// Initialize cart for header
+if (!isset($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+}
+$cart_count = count($_SESSION['cart']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <title><?php echo $pageTitle; ?> - Bort's Books</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,6 +229,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body { background: #f7f7fa; font-family: 'Inter', sans-serif; }
+        
+        .security-notice {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #2e7d32;
+        }
+        
         .page-header {
             background: linear-gradient(135deg, #232946 0%, #395aa0 100%);
             color: #fff;
@@ -159,6 +339,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #fff;
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
         }
         .contact-info-section {
             display: flex;
@@ -355,6 +540,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
             
             <form class="contact-form" method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="name">Full Name *</label>

@@ -1,5 +1,10 @@
 <?php
 session_start();
+require_once '../includes/admin-auth.php';
+
+// Check admin authentication
+check_admin_auth();
+
 require_once '../includes/db.php';
 
 // Check if user is logged in as admin
