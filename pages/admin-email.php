@@ -1,8 +1,8 @@
 <?php
-require_once '../includes/security.php';
-require_once '../includes/admin-auth.php';
-require_once '../includes/db.php';
-require_once '../includes/email-system.php';
+require_once dirname(__DIR__) . '/includes/security.php';
+require_once dirname(__DIR__) . '/includes/admin-auth.php';
+require_once dirname(__DIR__) . '/includes/db.php';
+require_once dirname(__DIR__) . '/includes/email-system.php';
 
 // Start secure session
 secure_session_start();

@@ -1,11 +1,11 @@
 <?php
 session_start();
-require_once '../includes/admin-auth.php';
+require_once dirname(__DIR__) . '/includes/admin-auth.php';
 
 // Check admin authentication
 check_admin_auth();
 
-require_once '../includes/db.php';
+require_once dirname(__DIR__) . '/includes/db.php';
 
 // Check if user is logged in as admin
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
