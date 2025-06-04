@@ -88,7 +88,7 @@ try {
 echo "<h2>5. Database Tables Test</h2>";
 try {
     if (isset($pdo)) {
-        $tables = ['products', 'books', 'collections', 'customer_requests', 'sell_submissions'];
+        $tables = ['products', 'customer_requests', 'sell_submissions', 'newsletter_subscribers', 'orders'];
         foreach ($tables as $table) {
             try {
                 $stmt = $pdo->query("SHOW TABLES LIKE '$table'");

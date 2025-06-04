@@ -93,13 +93,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = 'Title, author, and price are required';
                 } else {
                     try {
-                        $stmt = $pdo->prepare("INSERT INTO books (title, author, isbn, price, condition_description, description) VALUES (?, ?, ?, ?, ?, ?)");
+                        $stmt = $pdo->prepare("INSERT INTO products (title, author, isbn, price, condition, description) VALUES (?, ?, ?, ?, ?, ?)");
                         $stmt->execute([$title, $author, $isbn, $price, $condition, $description]);
                         
-                        $message = 'Book added successfully';
-                        log_security_event('book_added', ['title' => $title, 'author' => $author]);
+                        $message = 'Product added successfully';
+                        log_security_event('product_added', ['title' => $title, 'author' => $author]);
                     } catch (PDOException $e) {
-                        $error = 'An error occurred while adding the book';
+                        $error = 'An error occurred while adding the product';
                         log_security_event('database_error', ['error' => $e->getMessage()]);
                     }
                 }
@@ -107,16 +107,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $book_id = validate_int($_POST['book_id'] ?? '');
                 
                 if (!$book_id) {
-                    $error = 'Invalid book ID';
+                    $error = 'Invalid product ID';
                 } else {
                     try {
-                        $stmt = $pdo->prepare("DELETE FROM books WHERE id = ?");
+                        $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
                         $stmt->execute([$book_id]);
                         
-                        $message = 'Book deleted successfully';
-                        log_security_event('book_deleted', ['id' => $book_id]);
+                        $message = 'Product deleted successfully';
+                        log_security_event('product_deleted', ['id' => $book_id]);
                     } catch (PDOException $e) {
-                        $error = 'An error occurred while deleting the book';
+                        $error = 'An error occurred while deleting the product';
                         log_security_event('database_error', ['error' => $e->getMessage()]);
                     }
                 }
@@ -142,30 +142,30 @@ if ($search) {
 }
 
 if ($condition_filter) {
-    $where_conditions[] = "condition_description = ?";
+    $where_conditions[] = "condition = ?";
     $params[] = $condition_filter;
 }
 
 $where_clause = $where_conditions ? "WHERE " . implode(" AND ", $where_conditions) : "";
 
-// Get books
+// Get products
 try {
-    $stmt = $pdo->prepare("SELECT * FROM books $where_clause ORDER BY title");
+    $stmt = $pdo->prepare("SELECT * FROM products $where_clause ORDER BY title");
     $stmt->execute($params);
-    $books = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    $error = 'An error occurred while fetching books';
+    $error = 'An error occurred while fetching products';
     log_security_event('database_error', ['error' => $e->getMessage()]);
-    $books = [];
+    $products = [];
 }
 
 // Get statistics
 try {
-    $total_books = $pdo->query("SELECT COUNT(*) FROM books")->fetchColumn();
-    $total_value = $pdo->query("SELECT SUM(price) FROM books")->fetchColumn() ?: 0;
-    $conditions = $pdo->query("SELECT condition_description, COUNT(*) as count FROM books WHERE condition_description IS NOT NULL GROUP BY condition_description")->fetchAll(PDO::FETCH_ASSOC);
+    $total_products = $pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
+    $total_value = $pdo->query("SELECT SUM(price) FROM products")->fetchColumn() ?: 0;
+    $conditions = $pdo->query("SELECT condition, COUNT(*) as count FROM products WHERE condition IS NOT NULL GROUP BY condition")->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    $total_books = 0;
+    $total_products = 0;
     $total_value = 0;
     $conditions = [];
 }
@@ -269,34 +269,34 @@ try {
             gap: 1rem;
             align-items: end;
         }
-        .books-grid {
+        .products-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 1.5rem;
         }
-        .book-card {
+        .product-card {
             background: white;
             padding: 1.5rem;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .book-title {
+        .product-title {
             font-size: 1.1rem;
             font-weight: 600;
             color: #232946;
             margin-bottom: 0.5rem;
         }
-        .book-author {
+        .product-author {
             color: #667eea;
             font-weight: 500;
             margin-bottom: 0.5rem;
         }
-        .book-details {
+        .product-details {
             font-size: 0.9rem;
             color: #666;
             margin-bottom: 1rem;
         }
-        .book-price {
+        .product-price {
             font-size: 1.2rem;
             font-weight: 700;
             color: #28a745;
@@ -401,8 +401,8 @@ try {
         <!-- Statistics -->
         <div class="stats-grid">
             <div class="stat-card">
-                <span class="stat-value"><?php echo $total_books; ?></span>
-                <div class="stat-label">Total Books</div>
+                <span class="stat-value"><?php echo $total_products; ?></span>
+                <div class="stat-label">Total Products</div>
             </div>
             <div class="stat-card">
                 <span class="stat-value">$<?php echo number_format($total_value, 2); ?></span>
@@ -411,14 +411,14 @@ try {
             <?php foreach ($conditions as $condition): ?>
                 <div class="stat-card">
                     <span class="stat-value"><?php echo $condition['count']; ?></span>
-                    <div class="stat-label"><?php echo ucfirst($condition['condition_description']); ?></div>
+                    <div class="stat-label"><?php echo ucfirst($condition['condition']); ?></div>
                 </div>
             <?php endforeach; ?>
         </div>
         
-        <!-- Add Book Form -->
+        <!-- Add Product Form -->
         <div class="form-container">
-            <h2>Add New Book</h2>
+            <h2>Add New Product</h2>
             <form method="POST">
                 <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <input type="hidden" name="action" value="add_book">
@@ -461,7 +461,7 @@ try {
                     <textarea name="description" id="description" rows="3"></textarea>
                 </div>
                 
-                <button type="submit" class="submit-btn">Add Book</button>
+                <button type="submit" class="submit-btn">Add Product</button>
             </form>
         </div>
         
@@ -488,39 +488,39 @@ try {
             </form>
         </div>
         
-        <!-- Books Grid -->
-        <div class="books-grid">
-            <?php foreach ($books as $book): ?>
-                <div class="book-card">
-                    <div class="book-title">
-                        <?php echo htmlspecialchars($book['title']); ?>
+        <!-- Products Grid -->
+        <div class="products-grid">
+            <?php foreach ($products as $product): ?>
+                <div class="product-card">
+                    <div class="product-title">
+                        <?php echo htmlspecialchars($product['title']); ?>
                     </div>
-                    <div class="book-author">
-                        by <?php echo htmlspecialchars($book['author']); ?>
+                    <div class="product-author">
+                        by <?php echo htmlspecialchars($product['author']); ?>
                     </div>
-                    <div class="book-details">
-                        <?php if ($book['isbn']): ?>
-                            ISBN: <?php echo htmlspecialchars($book['isbn']); ?><br>
+                    <div class="product-details">
+                        <?php if ($product['isbn']): ?>
+                            ISBN: <?php echo htmlspecialchars($product['isbn']); ?><br>
                         <?php endif; ?>
-                        <?php if ($book['condition_description']): ?>
-                            <span class="condition-badge condition-<?php echo $book['condition_description']; ?>">
-                                <?php echo ucfirst($book['condition_description']); ?>
+                        <?php if ($product['condition']): ?>
+                            <span class="condition-badge condition-<?php echo $product['condition']; ?>">
+                                <?php echo ucfirst($product['condition']); ?>
                             </span>
                         <?php endif; ?>
                     </div>
-                    <div class="book-price">
-                        $<?php echo number_format($book['price'], 2); ?>
+                    <div class="product-price">
+                        $<?php echo number_format($product['price'], 2); ?>
                     </div>
-                    <?php if ($book['description']): ?>
-                        <div class="book-details">
-                            <?php echo htmlspecialchars($book['description']); ?>
+                    <?php if ($product['description']): ?>
+                        <div class="product-details">
+                            <?php echo htmlspecialchars($product['description']); ?>
                         </div>
                     <?php endif; ?>
                     <form method="POST" style="margin-top: 1rem;">
                         <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                         <input type="hidden" name="action" value="delete_book">
-                        <input type="hidden" name="book_id" value="<?php echo $book['id']; ?>">
-                        <button type="submit" class="delete-btn" onclick="return confirm('Are you sure you want to delete this book?')">Delete</button>
+                        <input type="hidden" name="book_id" value="<?php echo $product['id']; ?>">
+                        <button type="submit" class="delete-btn" onclick="return confirm('Are you sure you want to delete this product?')">Delete</button>
                     </form>
                 </div>
             <?php endforeach; ?>

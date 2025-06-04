@@ -65,13 +65,12 @@ $stats = [
 ];
 
 try {
-    // Get total books
-    $stmt = $pdo->query("SELECT COUNT(*) FROM books");
+    // Get total products (was trying to query 'books' table that doesn't exist)
+    $stmt = $pdo->query("SELECT COUNT(*) FROM products");
     $stats['total_books'] = $stmt->fetchColumn();
     
-    // Get total collections
-    $stmt = $pdo->query("SELECT COUNT(*) FROM collections");
-    $stats['total_collections'] = $stmt->fetchColumn();
+    // Collections table doesn't exist, so set to 0
+    $stats['total_collections'] = 0;
     
     // Get pending customer requests
     $stmt = $pdo->query("SELECT COUNT(*) FROM customer_requests WHERE status = 'pending'");
@@ -210,7 +209,7 @@ try {
         
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-title">Total Books</div>
+                <div class="stat-title">Total Products</div>
                 <div class="stat-value"><?php echo number_format($stats['total_books']); ?></div>
             </div>
             <div class="stat-card">
