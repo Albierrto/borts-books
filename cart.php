@@ -1,4 +1,7 @@
 <?php
+// Define that files are being included from the app
+define('INCLUDED_FROM_APP', true);
+
 session_start();
 
 // Initialize cart if not set

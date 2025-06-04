@@ -1,4 +1,7 @@
 <?php
+// Define that files are being included from the app
+define('INCLUDED_FROM_APP', true);
+
 require_once 'includes/security.php';
 require_once 'includes/secure-email.php';
 require_once 'includes/database-encryption.php';

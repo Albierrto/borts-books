@@ -1,4 +1,7 @@
 <?php
+// Define that files are being included from the app
+define('INCLUDED_FROM_APP', true);
+
 // Security: Disable error display in production
 // Only enable detailed errors in development environment
 if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
