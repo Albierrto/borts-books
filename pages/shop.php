@@ -2,6 +2,12 @@
 require_once dirname(__DIR__) . '/includes/security.php';
 require_once dirname(__DIR__) . '/includes/db.php';
 
+// Ensure database connection is available
+global $db;
+if (!isset($db) || !($db instanceof PDO)) {
+    die('Database connection not available. Please contact support.');
+}
+
 // Start secure session
 secure_session_start();
 
