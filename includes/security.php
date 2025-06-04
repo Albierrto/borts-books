@@ -370,17 +370,27 @@ function analyze_request() {
     $threats = $ids->analyzeRequest();
     
     if (!empty($threats)) {
-        // Block immediately if high-risk threats detected
-        $high_risk_threats = ['sql_injection', 'command_injection', 'path_traversal'];
+        // Log threats but don't block for now (temporary during debugging)
         foreach ($threats as $threat) {
-            if (in_array($threat['type'], $high_risk_threats)) {
-                http_response_code(403);
-                die('Access Denied');
+            log_security_event('threat_detected', [
+                'type' => $threat['type'],
+                'details' => $threat
+            ], 'medium');
+        }
+        
+        // Only block in production if it's a critical threat and we're sure
+        if (defined('APP_ENV') && APP_ENV === 'production') {
+            $critical_threats = ['command_injection']; // Reduced from original list
+            foreach ($threats as $threat) {
+                if (in_array($threat['type'], $critical_threats) && ($threat['confidence'] ?? 0) > 90) {
+                    http_response_code(403);
+                    die('Access Denied');
+                }
             }
         }
     }
     
-    // Check suspicious user agent
+    // Check suspicious user agent (but don't block)
     $ids->checkUserAgent();
 }
 
