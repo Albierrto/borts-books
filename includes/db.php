@@ -53,7 +53,7 @@ if (empty($dbname) || empty($user)) {
 // Enhanced DSN with security options
 $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
 
-// Secure PDO options
+// Basic PDO options for security and performance
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -61,8 +61,12 @@ $options = [
     PDO::ATTR_PERSISTENT         => false, // Disable persistent connections for security
     PDO::ATTR_AUTOCOMMIT         => false, // Disable autocommit for transaction control
     PDO::MYSQL_ATTR_INIT_COMMAND => "SET sql_mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION'",
-    PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false, // Set to true in production with SSL
 ];
+
+// Add SSL verification if the constant is available (PHP 7.1+)
+if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
+    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false; // Set to true in production with SSL
+}
 
 // Add SSL configuration if available
 if (!empty($_ENV['DB_SSL_CA'])) {
