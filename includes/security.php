@@ -299,7 +299,9 @@ function check_honeypot_access() {
     if ($monitor === null) {
         try {
             if (!defined('DB_CONNECTED')) {
-                require_once dirname(__FILE__) . '/db.php';
+                // Use a more robust path resolution
+                $db_path = file_exists(__DIR__ . '/db.php') ? __DIR__ . '/db.php' : 'includes/db.php';
+                require_once $db_path;
             }
             $monitor = new SecurityMonitor($db ?? $pdo);
         } catch (Exception $e) {
@@ -320,7 +322,9 @@ function log_security_event($event_type, $data = [], $severity = 'medium') {
     if ($monitor === null) {
         try {
             if (!defined('DB_CONNECTED')) {
-                require_once dirname(__FILE__) . '/db.php';
+                // Use a more robust path resolution
+                $db_path = file_exists(__DIR__ . '/db.php') ? __DIR__ . '/db.php' : 'includes/db.php';
+                require_once $db_path;
             }
             $monitor = new SecurityMonitor($db ?? $pdo);
         } catch (Exception $e) {
@@ -352,7 +356,9 @@ function analyze_request() {
         try {
             // Ensure we include the correct db.php file
             if (!defined('DB_CONNECTED')) {
-                require_once dirname(__FILE__) . '/db.php';
+                // Use a more robust path resolution
+                $db_path = file_exists(__DIR__ . '/db.php') ? __DIR__ . '/db.php' : 'includes/db.php';
+                require_once $db_path;
             }
             $monitor = new SecurityMonitor($db ?? $pdo);
             $ids = new IntrusionDetectionSystem($monitor);
