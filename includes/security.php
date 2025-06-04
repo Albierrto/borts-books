@@ -298,7 +298,9 @@ function check_honeypot_access() {
     
     if ($monitor === null) {
         try {
-            require_once __DIR__ . '/db.php';
+            if (!defined('DB_CONNECTED')) {
+                require_once dirname(__FILE__) . '/db.php';
+            }
             $monitor = new SecurityMonitor($db ?? $pdo);
         } catch (Exception $e) {
             // If we can't initialize monitoring, just continue
@@ -317,7 +319,9 @@ function log_security_event($event_type, $data = [], $severity = 'medium') {
     
     if ($monitor === null) {
         try {
-            require_once __DIR__ . '/db.php';
+            if (!defined('DB_CONNECTED')) {
+                require_once dirname(__FILE__) . '/db.php';
+            }
             $monitor = new SecurityMonitor($db ?? $pdo);
         } catch (Exception $e) {
             // Fallback to file logging
