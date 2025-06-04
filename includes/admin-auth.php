@@ -15,8 +15,8 @@ require_once __DIR__ . '/database-encryption.php';
  * Check if admin is authenticated
  */
 function is_admin_logged_in() {
-    return isset($_SESSION['admin_authenticated']) && 
-           $_SESSION['admin_authenticated'] === true &&
+    return isset($_SESSION['admin_logged_in']) && 
+           $_SESSION['admin_logged_in'] === true &&
            isset($_SESSION['admin_login_time']) &&
            (time() - $_SESSION['admin_login_time'] < 7200); // 2 hours
 }
@@ -27,7 +27,7 @@ function is_admin_logged_in() {
 function check_admin_auth() {
     if (!is_admin_logged_in()) {
         // Clean any invalid session data
-        if (isset($_SESSION['admin_authenticated'])) {
+        if (isset($_SESSION['admin_logged_in'])) {
             session_destroy();
             session_start();
         }
@@ -93,7 +93,7 @@ function admin_login($username, $password) {
         
         // Successful login - create secure session
         session_regenerate_id(true);
-        $_SESSION['admin_authenticated'] = true;
+        $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_username'] = $username;
         $_SESSION['admin_login_time'] = time();
         $_SESSION['admin_last_activity'] = time();
