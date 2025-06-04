@@ -59,41 +59,56 @@ try {
 }
 
 // Step 3: Check admin files
-echo "<h2>3. Admin Directory Check</h2>";
-if (is_dir('admin')) {
-    $adminFiles = scandir('admin');
-    echo "Admin directory contents:<br>";
-    foreach ($adminFiles as $file) {
-        if ($file != '.' && $file != '..') {
-            echo "- $file<br>";
-        }
+echo "<h2>3. Admin Files Check</h2>";
+echo "Admin files are located in the pages/ directory:<br>";
+
+$adminFiles = [
+    'pages/admin-dashboard.php',
+    'pages/admin-login.php', 
+    'pages/admin-inventory.php',
+    'pages/admin-email.php',
+    'pages/admin-customer-requests.php',
+    'pages/admin-collections.php',
+    'pages/admin-mass-delete.php',
+    'pages/admin-quick-edit.php',
+    'pages/admin-mass-shipping.php',
+    'pages/admin-sell-submissions.php'
+];
+
+foreach ($adminFiles as $file) {
+    if (file_exists($file)) {
+        $size = filesize($file);
+        echo "✅ $file (" . round($size/1024, 1) . "KB)<br>";
+    } else {
+        echo "❌ $file missing<br>";
     }
-    
-    // Test a simple admin file
-    if (file_exists('admin/dashboard.php')) {
-        echo "<h3>Testing admin/dashboard.php</h3>";
-        try {
-            ob_start();
-            include 'admin/dashboard.php';
-            $dashOutput = ob_get_clean();
-            
-            echo "✅ Dashboard executed<br>";
-            echo "Output length: " . strlen($dashOutput) . " bytes<br>";
-            
-            if (empty($dashOutput)) {
-                echo "❌ Dashboard produced no output<br>";
-            } else {
-                echo "✅ Dashboard produced output<br>";
-            }
-            
-        } catch (Throwable $e) {
-            echo "❌ Dashboard failed: " . $e->getMessage() . "<br>";
-            echo "File: " . $e->getFile() . "<br>";
-            echo "Line: " . $e->getLine() . "<br>";
+}
+
+// Test admin dashboard specifically
+if (file_exists('pages/admin-dashboard.php')) {
+    echo "<h3>Testing pages/admin-dashboard.php</h3>";
+    try {
+        ob_start();
+        include 'pages/admin-dashboard.php';
+        $dashOutput = ob_get_clean();
+        
+        echo "✅ Dashboard executed<br>";
+        echo "Output length: " . strlen($dashOutput) . " bytes<br>";
+        
+        if (empty($dashOutput)) {
+            echo "❌ Dashboard produced no output<br>";
+        } else {
+            echo "✅ Dashboard produced output<br>";
+            echo "First 200 chars: <pre>" . htmlspecialchars(substr($dashOutput, 0, 200)) . "</pre>";
         }
+        
+    } catch (Throwable $e) {
+        echo "❌ Dashboard failed: " . $e->getMessage() . "<br>";
+        echo "File: " . $e->getFile() . "<br>";
+        echo "Line: " . $e->getLine() . "<br>";
     }
 } else {
-    echo "❌ Admin directory not found<br>";
+    echo "❌ admin-dashboard.php not found<br>";
 }
 
 // Step 4: Check for admin authentication issues
@@ -134,7 +149,7 @@ echo "<h2>6. File Existence Check</h2>";
 $criticalFiles = [
     'pages/shop.php',
     'pages/admin-login.php',
-    'admin/dashboard.php',
+    'pages/admin-dashboard.php',
     'includes/admin-auth.php',
     'includes/cart-display.php',
     'includes/reviews-system.php'
