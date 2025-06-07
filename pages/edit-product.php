@@ -28,10 +28,17 @@ if (!$product) {
     exit;
 }
 
-// Fetch product images
-$stmt = $db->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC");
-$stmt->execute([$product_id]);
-$images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Fetch product images (handle missing is_main column gracefully)
+try {
+    $stmt = $db->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC");
+    $stmt->execute([$product_id]);
+    $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Fallback if is_main column doesn't exist
+    $stmt = $db->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC");
+    $stmt->execute([$product_id]);
+    $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

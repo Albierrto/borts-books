@@ -132,14 +132,59 @@ if (isset($db) && $product_id > 0) {
         if ($table_exists) {
             echo "<p class='success'>✅ Product_images table exists</p>";
             
-            $stmt = $db->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC");
-            $stmt->execute([$product_id]);
-            $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Check table structure first
+            $stmt = $db->prepare("DESCRIBE product_images");
+            $stmt->execute();
+            $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            echo "<p class='info'>Found " . count($images) . " images for this product</p>";
-            if (!empty($images)) {
-                echo "<pre>" . htmlspecialchars(print_r($images, true)) . "</pre>";
+            echo "<h3>Product Images Table Structure:</h3>";
+            echo "<pre>";
+            $has_is_main = false;
+            foreach ($columns as $column) {
+                echo $column['Field'] . " - " . $column['Type'] . "\n";
+                if ($column['Field'] === 'is_main') {
+                    $has_is_main = true;
+                }
             }
+            echo "</pre>";
+            
+            if (!$has_is_main) {
+                echo "<p class='error'>❌ Missing 'is_main' column in product_images table</p>";
+                echo "<p><strong>Fix Available:</strong></p>";
+                echo "<p><a href='?id=$product_id&fix_table=1' class='success'>Click here to add missing is_main column</a></p>";
+            } else {
+                echo "<p class='success'>✅ is_main column exists</p>";
+            }
+            
+            // Handle the fix
+            if (isset($_GET['fix_table']) && $_GET['fix_table'] == '1') {
+                try {
+                    $db->exec("ALTER TABLE product_images ADD COLUMN is_main TINYINT(1) DEFAULT 0");
+                    echo "<p class='success'>✅ Added is_main column successfully!</p>";
+                    echo "<p><a href='?id=$product_id'>Refresh page</a></p>";
+                } catch (Exception $e) {
+                    echo "<p class='error'>❌ Error adding column: " . htmlspecialchars($e->getMessage()) . "</p>";
+                }
+            }
+            
+            // Try to get images with safe query
+            try {
+                if ($has_is_main || isset($_GET['fix_table'])) {
+                    $stmt = $db->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC");
+                } else {
+                    $stmt = $db->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC");
+                }
+                $stmt->execute([$product_id]);
+                $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                echo "<p class='info'>Found " . count($images) . " images for this product</p>";
+                if (!empty($images)) {
+                    echo "<pre>" . htmlspecialchars(print_r($images, true)) . "</pre>";
+                }
+            } catch (Exception $e) {
+                echo "<p class='error'>❌ Error fetching images: " . htmlspecialchars($e->getMessage()) . "</p>";
+            }
+            
         } else {
             echo "<p class='error'>❌ Product_images table does not exist</p>";
         }
