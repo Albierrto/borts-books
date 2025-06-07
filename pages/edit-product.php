@@ -1,5 +1,9 @@
 <?php
 session_start();
+
+// Define constant for secure database access
+define('INCLUDED_FROM_APP', true);
+
 require_once '../includes/db.php';
 
 // Check if user is logged in as admin

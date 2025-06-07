@@ -455,6 +455,17 @@ try {
             font-weight: 600;
             color: #232946;
         }
+        
+        .product-title-link {
+            color: #232946 !important;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .product-title-link:hover {
+            color: #e63946 !important;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -634,7 +645,13 @@ try {
                                 <td class="checkbox-cell">
                                     <input type="checkbox" class="product-checkbox" value="<?php echo $product['id']; ?>" onchange="updateSelection()">
                                 </td>
-                                <td><strong><?php echo htmlspecialchars($product['title']); ?></strong></td>
+                                <td>
+                                    <strong>
+                                        <a href="edit-product.php?id=<?php echo $product['id']; ?>" class="product-title-link">
+                                            <?php echo htmlspecialchars($product['title']); ?>
+                                        </a>
+                                    </strong>
+                                </td>
                                 <td><?php echo htmlspecialchars($product['author']); ?></td>
                                 <td><?php echo htmlspecialchars($product['isbn']); ?></td>
                                 <td>$<?php echo number_format($product['price'], 2); ?></td>
