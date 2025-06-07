@@ -7,9 +7,13 @@ ini_set('display_startup_errors', 1);
 echo "<h1>Product Page Debug</h1>";
 echo "<p>Testing the exact same process as pages/product.php</p>";
 
-// Step 1: Test includes
+// Step 1: Test includes (simulate being in pages/ directory)
 echo "<h2>Step 1: File Includes</h2>";
 try {
+    echo "Including config.php...<br>";
+    require_once __DIR__ . '/includes/config.php';
+    echo "✅ Config.php included<br>";
+    
     echo "Including security.php...<br>";
     require_once __DIR__ . '/includes/security.php';
     echo "✅ Security.php included<br>";
@@ -87,23 +91,87 @@ try {
     exit;
 }
 
-// Step 7: Database connection test
+// Step 7: Database connection test (use global like the actual pages)
 echo "<h2>Step 7: Database Connection</h2>";
 try {
+    global $db, $pdo;
+    
+    echo "Checking global \$db variable...<br>";
     if (isset($db) && $db instanceof PDO) {
-        echo "✅ Database connection exists<br>";
-        
-        // Test a simple query
-        $testStmt = $db->prepare('SELECT COUNT(*) FROM products');
-        $testStmt->execute();
-        $count = $testStmt->fetchColumn();
-        echo "✅ Database query works - found $count products<br>";
+        echo "✅ Global \$db connection exists<br>";
+        $conn = $db;
+    } elseif (isset($pdo) && $pdo instanceof PDO) {
+        echo "✅ Global \$pdo connection exists<br>";
+        $conn = $pdo;
     } else {
-        echo "❌ Database connection not available<br>";
-        exit;
+        echo "❌ No global database connection found<br>";
+        echo "Attempting to access database variables...<br>";
+        
+        // Check what variables are available
+        echo "Available variables: " . implode(', ', array_keys(get_defined_vars())) . "<br>";
+        
+        // Try to manually create connection like shop.php does
+        echo "Attempting manual connection...<br>";
+        $envPath = __DIR__ . '/.env';
+        if (file_exists($envPath)) {
+            echo "✅ .env file found<br>";
+            
+            $envContent = file_get_contents($envPath);
+            $lines = explode("\n", $envContent);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (empty($line) || strpos($line, '#') === 0) continue;
+                if (strpos($line, '=') !== false) {
+                    list($name, $value) = array_map('trim', explode('=', $line, 2));
+                    $value = trim($value, '"\'');
+                    $_ENV[$name] = $value;
+                }
+            }
+            
+            $host = $_ENV['DB_HOST'] ?? 'localhost';
+            $dbname = $_ENV['DB_NAME'] ?? '';
+            $user = $_ENV['DB_USER'] ?? '';
+            $pass = $_ENV['DB_PASS'] ?? '';
+            $charset = $_ENV['DB_CHARSET'] ?? 'utf8mb4';
+            $port = $_ENV['DB_PORT'] ?? 3306;
+            
+            echo "DB Config: host=$host, dbname=$dbname, user=$user<br>";
+            
+            if (empty($dbname) || empty($user)) {
+                echo "❌ Missing database credentials<br>";
+                exit;
+            }
+            
+            $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
+            $options = [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ];
+            
+            $conn = new PDO($dsn, $user, $pass, $options);
+            echo "✅ Manual database connection successful<br>";
+        } else {
+            echo "❌ .env file not found at $envPath<br>";
+            exit;
+        }
     }
+    
+    // Test a simple query
+    $testStmt = $conn->prepare('SELECT COUNT(*) FROM products');
+    $testStmt->execute();
+    $count = $testStmt->fetchColumn();
+    echo "✅ Database query works - found $count products<br>";
+    
 } catch (Throwable $e) {
     echo "❌ Database test failed: " . $e->getMessage() . "<br>";
+    echo "File: " . $e->getFile() . " Line: " . $e->getLine() . "<br>";
+    exit;
+}
+
+// Continue with remaining steps only if we have a working connection...
+if (!isset($conn)) {
+    echo "<h2>❌ Cannot continue without database connection</h2>";
     exit;
 }
 
@@ -113,7 +181,7 @@ if ($id && $id > 0) {
     try {
         echo "Fetching product with ID: $id<br>";
         
-        $stmt = $db->prepare('SELECT * FROM products WHERE id = ?');
+        $stmt = $conn->prepare('SELECT * FROM products WHERE id = ?');
         $stmt->execute([$id]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -140,7 +208,7 @@ if (isset($product) && $product) {
     try {
         echo "Fetching images for product ID: $id<br>";
         
-        $imgStmt = $db->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC');
+        $imgStmt = $conn->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC');
         $imgStmt->execute([$id]);
         $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -167,7 +235,7 @@ if ($id && $id > 0) {
     try {
         echo "Fetching recommended products...<br>";
         
-        $recStmt = $db->prepare("
+        $recStmt = $conn->prepare("
             SELECT p.*, (
                 SELECT image_url FROM product_images 
                 WHERE product_id = p.id 
@@ -238,26 +306,32 @@ try {
 }
 
 echo "<h2>Debug Summary</h2>";
-echo "<p><strong>If all steps above passed:</strong></p>";
-echo "<ul>";
-echo "<li>✅ The product page logic works fine</li>";
-echo "<li>⚠️ The issue might be in the CSS/JavaScript rendering</li>";
-echo "<li>⚠️ Or there might be a specific product causing issues</li>";
-echo "</ul>";
+echo "<p><strong>Database Connection Status:</strong></p>";
+if (isset($conn)) {
+    echo "<ul>";
+    echo "<li>✅ Database connection is working</li>";
+    echo "<li>✅ Can query products table</li>";
+    echo "</ul>";
+} else {
+    echo "<ul>";
+    echo "<li>❌ Database connection failed</li>";
+    echo "</ul>";
+}
 
 echo "<p><strong>Test with a specific product:</strong></p>";
 echo "<a href='?id=1'>Test with Product ID 1</a><br>";
 echo "<a href='?id=2'>Test with Product ID 2</a><br>";
 echo "<a href='?id=999'>Test with Invalid ID (999)</a><br>";
 
-echo "<p><strong>Direct comparison:</strong></p>";
+echo "<p><strong>Test actual pages:</strong></p>";
+echo "<a href='pages/shop.php' target='_blank'>Test Shop Page</a><br>";
 if (isset($product) && $product) {
-    echo "<a href='pages/product.php?id=" . $id . "' target='_blank'>View actual product page (may show white screen)</a><br>";
+    echo "<a href='pages/product.php?id=" . $id . "' target='_blank'>Test Product Page</a><br>";
 }
 
 echo "<h2>Available Products</h2>";
 try {
-    $allProductsStmt = $db->prepare('SELECT id, title FROM products ORDER BY id ASC LIMIT 10');
+    $allProductsStmt = $conn->prepare('SELECT id, title FROM products ORDER BY id ASC LIMIT 10');
     $allProductsStmt->execute();
     $allProducts = $allProductsStmt->fetchAll(PDO::FETCH_ASSOC);
     
