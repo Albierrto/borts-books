@@ -501,7 +501,7 @@ $num_items_in_cart = is_array($_SESSION['cart']) ? array_sum($_SESSION['cart']) 
                     <div class="carousel-card">
                         <a href="/pages/product.php?id=<?php echo $rec['id']; ?>">
                             <img class="rec-manga-img" 
-                                 src="<?php echo $rec['main_image'] ? htmlspecialchars($rec['main_image']) : '../assets/img/placeholder.png'; ?>" 
+                                 src="<?php echo isset($rec['main_image']) && $rec['main_image'] ? htmlspecialchars($rec['main_image']) : '../assets/img/placeholder.png'; ?>" 
                                  alt="<?php echo htmlspecialchars($rec['title']); ?> cover">
                         </a>
                         <div style="font-weight:600;font-size:1.05rem;margin-bottom:0.3rem;"><?php echo htmlspecialchars($rec['title']); ?></div>

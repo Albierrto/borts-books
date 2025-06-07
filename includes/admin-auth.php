@@ -71,7 +71,22 @@ function admin_login($username, $password) {
     try {
         // Initialize password security system
         require_once __DIR__ . '/db.php';
-        $passwordSecurity = new PasswordSecurity($db ?? $pdo);
+        global $db, $pdo;
+        
+        // Get the database connection
+        $connection = null;
+        if (isset($db) && $db instanceof PDO) {
+            $connection = $db;
+        } elseif (isset($pdo) && $pdo instanceof PDO) {
+            $connection = $pdo;
+        }
+        
+        if (!$connection) {
+            error_log("No database connection available for admin login");
+            return false;
+        }
+        
+        $passwordSecurity = new PasswordSecurity($connection);
         
         // Get admin credentials from secure config
         $adminCredentials = getAdminCredentials();
@@ -179,7 +194,22 @@ function getAdminCredentials() {
  */
 function updateAdminPassword($username, $password) {
     try {
-        $passwordSecurity = new PasswordSecurity($db ?? $pdo);
+        global $db, $pdo;
+        
+        // Get the database connection
+        $connection = null;
+        if (isset($db) && $db instanceof PDO) {
+            $connection = $db;
+        } elseif (isset($pdo) && $pdo instanceof PDO) {
+            $connection = $pdo;
+        }
+        
+        if (!$connection) {
+            error_log("No database connection available for password update");
+            return;
+        }
+        
+        $passwordSecurity = new PasswordSecurity($connection);
         $newHash = $passwordSecurity->hashPassword($password);
         
         // In a production system, this would update the database
@@ -197,8 +227,22 @@ function updateAdminPassword($username, $password) {
 function auditAdminLogin($username, $status) {
     try {
         require_once __DIR__ . '/db.php';
+        global $db, $pdo;
         
-        $stmt = ($db ?? $pdo)->prepare("
+        // Get the database connection
+        $connection = null;
+        if (isset($db) && $db instanceof PDO) {
+            $connection = $db;
+        } elseif (isset($pdo) && $pdo instanceof PDO) {
+            $connection = $pdo;
+        }
+        
+        if (!$connection) {
+            error_log("No database connection available for admin audit");
+            return;
+        }
+        
+        $stmt = $connection->prepare("
             INSERT INTO admin_login_audit (
                 username, 
                 status, 
@@ -218,7 +262,15 @@ function auditAdminLogin($username, $status) {
     } catch (Exception $e) {
         // Create table if it doesn't exist
         try {
-            ($db ?? $pdo)->exec("
+            global $db, $pdo;
+            $connection = $db ?? $pdo;
+            
+            if (!$connection) {
+                error_log("No database connection for creating admin audit table");
+                return;
+            }
+            
+            $connection->exec("
                 CREATE TABLE IF NOT EXISTS admin_login_audit (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     username VARCHAR(255) NOT NULL,

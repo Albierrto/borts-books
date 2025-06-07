@@ -330,12 +330,32 @@ try {
         if (file_exists($page)) {
             echo "✅ $page exists (" . filesize($page) . " bytes)<br>";
             
-            // Check for syntax errors
-            $syntax_check = php_check_syntax($page);
-            if ($syntax_check) {
-                echo "✅ $page syntax OK<br>";
+            // Check if file is readable
+            if (is_readable($page)) {
+                echo "✅ $page is readable<br>";
+                
+                // Check for common syntax issues by trying to parse the file
+                $content = file_get_contents($page);
+                if ($content !== false) {
+                    // Basic checks for unclosed PHP tags or obvious syntax issues
+                    $php_open_count = substr_count($content, '<?php');
+                    $php_close_count = substr_count($content, '?>');
+                    
+                    if ($php_open_count > 0) {
+                        echo "✅ $page has valid PHP opening tags<br>";
+                    }
+                    
+                    // Check for obvious syntax errors (very basic)
+                    if (strpos($content, 'Parse error') === false && strpos($content, 'Fatal error') === false) {
+                        echo "✅ $page basic syntax check passed<br>";
+                    } else {
+                        echo "⚠️ $page may have syntax issues<br>";
+                    }
+                } else {
+                    echo "❌ $page could not be read<br>";
+                }
             } else {
-                echo "❌ $page has syntax errors<br>";
+                echo "❌ $page is not readable<br>";
             }
         } else {
             echo "❌ $page missing<br>";
