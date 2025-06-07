@@ -3,8 +3,10 @@ require_once dirname(__DIR__) . '/includes/config.php';
 require_once dirname(__DIR__) . '/includes/security.php';
 require_once dirname(__DIR__) . '/includes/admin-auth.php';
 
-// Ensure database connections are available
+// Ensure global database access
 global $db, $pdo;
+
+// Ensure database connections are available
 if (!isset($db) || !($db instanceof PDO)) {
     // Re-establish database connection if needed
     try {

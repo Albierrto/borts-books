@@ -5,8 +5,10 @@ require_once dirname(__DIR__) . '/includes/admin-auth.php';
 require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/inventory-manager.php';
 
-// Ensure database connections are available
+// Ensure global database access
 global $db, $pdo;
+
+// Ensure database connections are available
 if (!isset($pdo) || !($pdo instanceof PDO)) {
     if (isset($db) && ($db instanceof PDO)) {
         $pdo = $db; // Use existing $db connection

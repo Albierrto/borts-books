@@ -208,7 +208,7 @@ if (isset($product) && $product) {
     try {
         echo "Fetching images for product ID: $id<br>";
         
-        $imgStmt = $conn->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC');
+        $imgStmt = $conn->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC');
         $imgStmt->execute([$id]);
         $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
         

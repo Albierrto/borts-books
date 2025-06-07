@@ -8,6 +8,9 @@ check_admin_auth();
 
 require_once dirname(__DIR__) . '/includes/db.php';
 
+// Ensure global database access
+global $db, $pdo;
+
 // Check if user is logged in as admin
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     header('Location: admin-login.php');

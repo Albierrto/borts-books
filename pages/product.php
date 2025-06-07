@@ -3,6 +3,9 @@ require_once '../includes/config.php';
 require_once '../includes/security.php';
 require_once '../includes/db.php';
 
+// Ensure global database access
+global $db, $pdo;
+
 // Start secure session
 secure_session_start();
 
@@ -45,7 +48,7 @@ try {
     }
     
     // Fetch all images for this product
-    $imgStmt = $db->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC');
+    $imgStmt = $db->prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY id ASC');
     $imgStmt->execute([$id]);
     $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
     

@@ -80,6 +80,9 @@ if (!empty($_ENV['DB_SSL_KEY'])) {
 }
 
 try {
+    // Make database connections globally accessible
+    global $db, $pdo;
+    
     $db = new PDO($dsn, $user, $pass, $options);
     $pdo = $db; // Alias for compatibility
     
