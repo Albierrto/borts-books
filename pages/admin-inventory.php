@@ -1,136 +1,60 @@
 <?php
-require_once dirname(__DIR__) . '/includes/config.php';
-require_once dirname(__DIR__) . '/includes/security.php';
-require_once dirname(__DIR__) . '/includes/admin-auth.php';
-require_once dirname(__DIR__) . '/includes/db.php';
-require_once dirname(__DIR__) . '/includes/inventory-manager.php';
+session_start();
 
-// Ensure global database access
-global $db, $pdo;
-
-// Ensure database connections are available
-if (!isset($pdo) || !($pdo instanceof PDO)) {
-    if (isset($db) && ($db instanceof PDO)) {
-        $pdo = $db; // Use existing $db connection
-    } else {
-        // Re-establish database connection if needed
-        try {
-            $envPath = dirname(__DIR__) . '/.env';
-            if (file_exists($envPath)) {
-                $envContent = file_get_contents($envPath);
-                $lines = explode("\n", $envContent);
-                foreach ($lines as $line) {
-                    $line = trim($line);
-                    if (empty($line) || strpos($line, '#') === 0) continue;
-                    if (strpos($line, '=') !== false) {
-                        list($name, $value) = array_map('trim', explode('=', $line, 2));
-                        $value = trim($value, '"\'');
-                        $_ENV[$name] = $value;
-                    }
-                }
-            }
-            
-            $host = $_ENV['DB_HOST'] ?? 'localhost';
-            $dbname = $_ENV['DB_NAME'] ?? '';
-            $user = $_ENV['DB_USER'] ?? '';
-            $pass = $_ENV['DB_PASS'] ?? '';
-            $charset = $_ENV['DB_CHARSET'] ?? 'utf8mb4';
-            $port = $_ENV['DB_PORT'] ?? 3306;
-            
-            $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
-            $options = [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ];
-            
-            $db = new PDO($dsn, $user, $pass, $options);
-            $pdo = $db;
-        } catch (Exception $e) {
-            die('Database connection error. Please contact support.');
-        }
-    }
+// Simple admin check
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: admin-login.php');
+    exit;
 }
 
-// Start secure session
-secure_session_start();
+require_once dirname(__DIR__) . '/includes/db.php';
 
-// Set security headers
-set_security_headers();
-
-// Check admin authentication
-check_admin_auth();
-
-// Generate CSRF token for forms
-$csrf_token = generate_csrf_token();
-
-// Initialize inventory manager
-$inventoryManager = new InventoryManager($db);
-
-// Handle form submissions
 $message = '';
 $error = '';
 
+// Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verify CSRF token
-    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
-        $error = 'Invalid request';
-        log_security_event('csrf_failure', ['page' => 'admin-inventory']);
-    } else {
-        // Check rate limiting
-        if (!check_rate_limit('inventory_update', 20, 300)) {
-            $error = 'Too many update attempts. Please try again later.';
-            log_security_event('rate_limit_exceeded', ['page' => 'admin-inventory']);
+    $action = $_POST['action'] ?? '';
+    
+    if ($action === 'add_book') {
+        $title = trim($_POST['title'] ?? '');
+        $author = trim($_POST['author'] ?? '');
+        $isbn = trim($_POST['isbn'] ?? '');
+        $price = floatval($_POST['price'] ?? 0);
+        $condition = $_POST['condition'] ?? '';
+        $description = trim($_POST['description'] ?? '');
+        
+        if (empty($title) || empty($author) || $price <= 0) {
+            $error = 'Title, author, and price are required';
         } else {
-            $action = sanitize_input($_POST['action'] ?? '');
-            
-            if ($action === 'add_book') {
-                $title = sanitize_input($_POST['title'] ?? '');
-                $author = sanitize_input($_POST['author'] ?? '');
-                $isbn = sanitize_input($_POST['isbn'] ?? '');
-                $price = validate_float($_POST['price'] ?? '');
-                $condition = sanitize_input($_POST['condition'] ?? '');
-                $description = sanitize_input($_POST['description'] ?? '');
-                
-                if (empty($title) || empty($author) || !$price) {
-                    $error = 'Title, author, and price are required';
-                } else {
-                    try {
-                        $stmt = $pdo->prepare("INSERT INTO products (title, author, isbn, price, condition, description) VALUES (?, ?, ?, ?, ?, ?)");
-                        $stmt->execute([$title, $author, $isbn, $price, $condition, $description]);
-                        
-                        $message = 'Product added successfully';
-                        log_security_event('product_added', ['title' => $title, 'author' => $author]);
-                    } catch (PDOException $e) {
-                        $error = 'An error occurred while adding the product';
-                        log_security_event('database_error', ['error' => $e->getMessage()]);
-                    }
-                }
-            } elseif ($action === 'delete_book') {
-                $book_id = validate_int($_POST['book_id'] ?? '');
-                
-                if (!$book_id) {
-                    $error = 'Invalid product ID';
-                } else {
-                    try {
-                        $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
-                        $stmt->execute([$book_id]);
-                        
-                        $message = 'Product deleted successfully';
-                        log_security_event('product_deleted', ['id' => $book_id]);
-                    } catch (PDOException $e) {
-                        $error = 'An error occurred while deleting the product';
-                        log_security_event('database_error', ['error' => $e->getMessage()]);
-                    }
-                }
+            try {
+                $stmt = $db->prepare("INSERT INTO products (title, author, isbn, price, `condition`, description) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$title, $author, $isbn, $price, $condition, $description]);
+                $message = 'Product added successfully';
+            } catch (PDOException $e) {
+                $error = 'Error adding product: ' . $e->getMessage();
             }
+        }
+    } elseif ($action === 'delete_book') {
+        $book_id = intval($_POST['book_id'] ?? 0);
+        
+        if ($book_id > 0) {
+            try {
+                $stmt = $db->prepare("DELETE FROM products WHERE id = ?");
+                $stmt->execute([$book_id]);
+                $message = 'Product deleted successfully';
+            } catch (PDOException $e) {
+                $error = 'Error deleting product: ' . $e->getMessage();
+            }
+        } else {
+            $error = 'Invalid product ID';
         }
     }
 }
 
 // Get search parameters
-$search = sanitize_input($_GET['search'] ?? '');
-$condition_filter = sanitize_input($_GET['condition'] ?? '');
+$search = trim($_GET['search'] ?? '');
+$condition_filter = $_GET['condition'] ?? '';
 
 // Build query
 $where_conditions = [];
@@ -145,7 +69,7 @@ if ($search) {
 }
 
 if ($condition_filter) {
-    $where_conditions[] = "condition = ?";
+    $where_conditions[] = "`condition` = ?";
     $params[] = $condition_filter;
 }
 
@@ -153,24 +77,21 @@ $where_clause = $where_conditions ? "WHERE " . implode(" AND ", $where_condition
 
 // Get products
 try {
-    $stmt = $pdo->prepare("SELECT * FROM products $where_clause ORDER BY title");
+    $stmt = $db->prepare("SELECT * FROM products $where_clause ORDER BY title");
     $stmt->execute($params);
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    $error = 'An error occurred while fetching products';
-    log_security_event('database_error', ['error' => $e->getMessage()]);
+    $error = 'Error fetching products: ' . $e->getMessage();
     $products = [];
 }
 
 // Get statistics
 try {
-    $total_products = $pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
-    $total_value = $pdo->query("SELECT SUM(price) FROM products")->fetchColumn() ?: 0;
-    $conditions = $pdo->query("SELECT condition, COUNT(*) as count FROM products WHERE condition IS NOT NULL GROUP BY condition")->fetchAll(PDO::FETCH_ASSOC);
+    $total_products = $db->query("SELECT COUNT(*) FROM products")->fetchColumn();
+    $total_value = $db->query("SELECT SUM(price) FROM products")->fetchColumn() ?: 0;
 } catch (PDOException $e) {
     $total_products = 0;
     $total_value = 0;
-    $conditions = [];
 }
 ?>
 
@@ -183,27 +104,48 @@ try {
     <link rel="stylesheet" href="../assets/css/styles.css">
     <style>
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 2rem auto;
             padding: 0 1rem;
         }
+        
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
+        
         .title {
             font-size: 2rem;
             font-weight: 800;
             color: #232946;
+            margin: 0;
         }
+        
+        .back-link {
+            display: inline-block;
+            color: #e63946;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .back-link:hover {
+            color: #232946;
+        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
+        
         .stat-card {
             background: white;
             padding: 1.5rem;
@@ -211,173 +153,176 @@ try {
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             text-align: center;
         }
+        
         .stat-value {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #667eea;
             display: block;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #232946;
+            margin-bottom: 0.5rem;
         }
+        
         .stat-label {
             color: #666;
-            margin-top: 0.5rem;
+            font-weight: 600;
         }
-        .form-container {
+        
+        .search-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .search-form {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        .search-form input,
+        .search-form select {
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .add-form {
             background: white;
             padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }
+        
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
             margin-bottom: 1rem;
         }
+        
         .form-group {
-            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
         }
+        
         .form-group label {
-            display: block;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #333;
+            color: #232946;
         }
+        
         .form-group input,
         .form-group select,
         .form-group textarea {
-            width: 100%;
             padding: 0.75rem;
-            border: 2px solid #ddd;
-            border-radius: 6px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
             font-size: 1rem;
         }
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            border-color: #667eea;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        
+        .form-group textarea {
+            grid-column: 1 / -1;
+            min-height: 80px;
+            resize: vertical;
         }
-        .filters {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        .filter-row {
-            display: grid;
-            grid-template-columns: 1fr 200px auto;
-            gap: 1rem;
-            align-items: end;
-        }
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-        .product-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        .product-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #232946;
-            margin-bottom: 0.5rem;
-        }
-        .product-author {
-            color: #667eea;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-        .product-details {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 1rem;
-        }
-        .product-price {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #28a745;
-            margin-bottom: 1rem;
-        }
-        .submit-btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
+        
+        .btn {
             padding: 0.75rem 1.5rem;
-            border-radius: 6px;
+            background: #eebbc3;
+            color: #232946;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             transition: all 0.3s ease;
         }
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+        
+        .btn:hover {
+            background: #232946;
+            color: white;
         }
-        .delete-btn {
+        
+        .btn-danger {
             background: #dc3545;
             color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
         }
-        .delete-btn:hover {
+        
+        .btn-danger:hover {
             background: #c82333;
-            transform: translateY(-2px);
         }
+        
+        .products-table {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: #232946;
+            color: white;
+            padding: 1rem 1.5rem;
+            font-weight: 700;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #232946;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
         .message {
             padding: 1rem;
-            border-radius: 6px;
             margin-bottom: 1rem;
+            border-radius: 8px;
             font-weight: 600;
         }
-        .success {
+        
+        .message.success {
             background: #d4edda;
             color: #155724;
+            border: 1px solid #c3e6cb;
         }
-        .error {
+        
+        .message.error {
             background: #f8d7da;
             color: #721c24;
+            border: 1px solid #f5c6cb;
         }
-        .back-link {
-            display: inline-block;
-            margin-bottom: 1rem;
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
+        
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
         }
-        .back-link:hover {
-            text-decoration: underline;
-        }
-        .condition-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        .condition-excellent {
-            background: #d4edda;
-            color: #155724;
-        }
-        .condition-good {
-            background: #cce5ff;
-            color: #004085;
-        }
-        .condition-fair {
-            background: #fff3cd;
-            color: #856404;
-        }
-        .condition-poor {
-            background: #f8d7da;
-            color: #721c24;
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
         }
     </style>
 </head>
@@ -411,122 +356,112 @@ try {
                 <span class="stat-value">$<?php echo number_format($total_value, 2); ?></span>
                 <div class="stat-label">Total Value</div>
             </div>
-            <?php foreach ($conditions as $condition): ?>
-                <div class="stat-card">
-                    <span class="stat-value"><?php echo $condition['count']; ?></span>
-                    <div class="stat-label"><?php echo ucfirst($condition['condition']); ?></div>
-                </div>
-            <?php endforeach; ?>
+        </div>
+        
+        <!-- Search -->
+        <div class="search-section">
+            <form class="search-form" method="GET">
+                <input type="text" name="search" placeholder="Search by title, author, or ISBN..." value="<?php echo htmlspecialchars($search); ?>">
+                <select name="condition">
+                    <option value="">All Conditions</option>
+                    <option value="New" <?php if($condition_filter=='New') echo 'selected'; ?>>New</option>
+                    <option value="Like New" <?php if($condition_filter=='Like New') echo 'selected'; ?>>Like New</option>
+                    <option value="Very Good" <?php if($condition_filter=='Very Good') echo 'selected'; ?>>Very Good</option>
+                    <option value="Good" <?php if($condition_filter=='Good') echo 'selected'; ?>>Good</option>
+                    <option value="Acceptable" <?php if($condition_filter=='Acceptable') echo 'selected'; ?>>Acceptable</option>
+                </select>
+                <button type="submit" class="btn">Search</button>
+            </form>
         </div>
         
         <!-- Add Product Form -->
-        <div class="form-container">
-            <h2>Add New Product</h2>
+        <div class="add-form">
+            <h3 style="margin-bottom: 1rem; color: #232946;">Add New Product</h3>
             <form method="POST">
-                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <input type="hidden" name="action" value="add_book">
-                
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="title">Title</label>
-                        <input type="text" name="title" id="title" required>
+                        <label for="title">Title *</label>
+                        <input type="text" id="title" name="title" required>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="author">Author</label>
-                        <input type="text" name="author" id="author" required>
+                        <label for="author">Author *</label>
+                        <input type="text" id="author" name="author" required>
                     </div>
-                    
                     <div class="form-group">
                         <label for="isbn">ISBN</label>
-                        <input type="text" name="isbn" id="isbn">
+                        <input type="text" id="isbn" name="isbn">
                     </div>
-                    
                     <div class="form-group">
-                        <label for="price">Price ($)</label>
-                        <input type="number" name="price" id="price" step="0.01" min="0" required>
+                        <label for="price">Price *</label>
+                        <input type="number" id="price" name="price" step="0.01" min="0" required>
                     </div>
-                    
                     <div class="form-group">
                         <label for="condition">Condition</label>
-                        <select name="condition" id="condition">
-                            <option value="">Select condition</option>
-                            <option value="excellent">Excellent</option>
-                            <option value="good">Good</option>
-                            <option value="fair">Fair</option>
-                            <option value="poor">Poor</option>
+                        <select id="condition" name="condition">
+                            <option value="New">New</option>
+                            <option value="Like New">Like New</option>
+                            <option value="Very Good">Very Good</option>
+                            <option value="Good">Good</option>
+                            <option value="Acceptable">Acceptable</option>
                         </select>
                     </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" placeholder="Optional description..."></textarea>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea name="description" id="description" rows="3"></textarea>
-                </div>
-                
-                <button type="submit" class="submit-btn">Add Product</button>
+                <button type="submit" class="btn">Add Product</button>
             </form>
         </div>
         
-        <!-- Filters -->
-        <div class="filters">
-            <form method="GET">
-                <div class="filter-row">
-                    <div class="form-group">
-                        <label for="search">Search</label>
-                        <input type="text" name="search" id="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Title, author, or ISBN...">
-                    </div>
-                    <div class="form-group">
-                        <label for="condition_filter">Condition</label>
-                        <select name="condition" id="condition_filter">
-                            <option value="">All Conditions</option>
-                            <option value="excellent" <?php echo $condition_filter === 'excellent' ? 'selected' : ''; ?>>Excellent</option>
-                            <option value="good" <?php echo $condition_filter === 'good' ? 'selected' : ''; ?>>Good</option>
-                            <option value="fair" <?php echo $condition_filter === 'fair' ? 'selected' : ''; ?>>Fair</option>
-                            <option value="poor" <?php echo $condition_filter === 'poor' ? 'selected' : ''; ?>>Poor</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="submit-btn">Filter</button>
-                </div>
-            </form>
-        </div>
-        
-        <!-- Products Grid -->
-        <div class="products-grid">
-            <?php foreach ($products as $product): ?>
-                <div class="product-card">
-                    <div class="product-title">
-                        <?php echo htmlspecialchars($product['title']); ?>
-                    </div>
-                    <div class="product-author">
-                        by <?php echo htmlspecialchars($product['author']); ?>
-                    </div>
-                    <div class="product-details">
-                        <?php if ($product['isbn']): ?>
-                            ISBN: <?php echo htmlspecialchars($product['isbn']); ?><br>
-                        <?php endif; ?>
-                        <?php if ($product['condition']): ?>
-                            <span class="condition-badge condition-<?php echo $product['condition']; ?>">
-                                <?php echo ucfirst($product['condition']); ?>
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="product-price">
-                        $<?php echo number_format($product['price'], 2); ?>
-                    </div>
-                    <?php if ($product['description']): ?>
-                        <div class="product-details">
-                            <?php echo htmlspecialchars($product['description']); ?>
-                        </div>
+        <!-- Products Table -->
+        <div class="products-table">
+            <div class="table-header">
+                Products (<?php echo count($products); ?>)
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>ISBN</th>
+                        <th>Price</th>
+                        <th>Condition</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($products)): ?>
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 3rem; color: #666;">
+                                No products found.
+                            </td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($products as $product): ?>
+                            <tr>
+                                <td><strong><?php echo htmlspecialchars($product['title']); ?></strong></td>
+                                <td><?php echo htmlspecialchars($product['author']); ?></td>
+                                <td><?php echo htmlspecialchars($product['isbn']); ?></td>
+                                <td>$<?php echo number_format($product['price'], 2); ?></td>
+                                <td><?php echo htmlspecialchars($product['condition']); ?></td>
+                                <td>
+                                    <div class="product-actions">
+                                        <a href="edit-product.php?id=<?php echo $product['id']; ?>" class="btn btn-sm">Edit</a>
+                                        <form method="POST" style="display: inline;">
+                                            <input type="hidden" name="action" value="delete_book">
+                                            <input type="hidden" name="book_id" value="<?php echo $product['id']; ?>">
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this product?')">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
                     <?php endif; ?>
-                    <form method="POST" style="margin-top: 1rem;">
-                        <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-                        <input type="hidden" name="action" value="delete_book">
-                        <input type="hidden" name="book_id" value="<?php echo $product['id']; ?>">
-                        <button type="submit" class="delete-btn" onclick="return confirm('Are you sure you want to delete this product?')">Delete</button>
-                    </form>
-                </div>
-            <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </body>
