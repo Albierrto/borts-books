@@ -52,6 +52,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $error = 'Invalid product ID';
         }
+    } elseif ($action === 'bulk_delete') {
+        $selected_ids = $_POST['selected_products'] ?? [];
+        
+        if (!empty($selected_ids)) {
+            try {
+                $placeholders = str_repeat('?,', count($selected_ids) - 1) . '?';
+                $stmt = $db->prepare("DELETE FROM products WHERE id IN ($placeholders)");
+                $stmt->execute($selected_ids);
+                $message = count($selected_ids) . ' products deleted successfully';
+            } catch (PDOException $e) {
+                $error = 'Error deleting products: ' . $e->getMessage();
+            }
+        } else {
+            $error = 'No products selected';
+        }
+    } elseif ($action === 'bulk_update_price') {
+        $selected_ids = $_POST['selected_products'] ?? [];
+        $price_adjustment = floatval($_POST['price_adjustment'] ?? 0);
+        $adjustment_type = $_POST['adjustment_type'] ?? 'add';
+        
+        if (!empty($selected_ids) && $price_adjustment != 0) {
+            try {
+                $placeholders = str_repeat('?,', count($selected_ids) - 1) . '?';
+                if ($adjustment_type === 'multiply') {
+                    $stmt = $db->prepare("UPDATE products SET price = price * ? WHERE id IN ($placeholders)");
+                    $params = array_merge([$price_adjustment], $selected_ids);
+                } else {
+                    $operator = $adjustment_type === 'subtract' ? '-' : '+';
+                    $stmt = $db->prepare("UPDATE products SET price = price $operator ? WHERE id IN ($placeholders)");
+                    $params = array_merge([$price_adjustment], $selected_ids);
+                }
+                $stmt->execute($params);
+                $message = count($selected_ids) . ' products updated successfully';
+            } catch (PDOException $e) {
+                $error = 'Error updating prices: ' . $e->getMessage();
+            }
+        } else {
+            $error = 'No products selected or invalid price adjustment';
+        }
+    } elseif ($action === 'bulk_update_condition') {
+        $selected_ids = $_POST['selected_products'] ?? [];
+        $new_condition = $_POST['new_condition'] ?? '';
+        
+        if (!empty($selected_ids) && !empty($new_condition)) {
+            try {
+                $placeholders = str_repeat('?,', count($selected_ids) - 1) . '?';
+                $stmt = $db->prepare("UPDATE products SET `condition` = ? WHERE id IN ($placeholders)");
+                $params = array_merge([$new_condition], $selected_ids);
+                $stmt->execute($params);
+                $message = count($selected_ids) . ' products updated successfully';
+            } catch (PDOException $e) {
+                $error = 'Error updating condition: ' . $e->getMessage();
+            }
+        } else {
+            $error = 'No products selected or condition not specified';
+        }
     }
 }
 
@@ -327,6 +383,78 @@ try {
             padding: 0.5rem 1rem;
             font-size: 0.875rem;
         }
+        
+        .bulk-actions {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: none;
+        }
+        
+        .bulk-actions.show {
+            display: block;
+        }
+        
+        .bulk-actions h3 {
+            margin: 0 0 1rem 0;
+            color: #232946;
+        }
+        
+        .bulk-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .bulk-action-group {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .bulk-action-group h4 {
+            margin: 0 0 1rem 0;
+            color: #232946;
+            font-size: 1rem;
+        }
+        
+        .bulk-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .bulk-form input,
+        .bulk-form select {
+            padding: 0.5rem;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .checkbox-cell {
+            width: 40px;
+            text-align: center;
+        }
+        
+        .select-info {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .select-info.show {
+            display: block;
+        }
+        
+        .selected-count {
+            font-weight: 600;
+            color: #232946;
+        }
     </style>
 </head>
 <body>
@@ -375,6 +503,61 @@ try {
                 </select>
                 <button type="submit" class="btn">Search</button>
             </form>
+        </div>
+        
+        <!-- Bulk Actions -->
+        <div class="bulk-actions" id="bulkActions">
+            <div class="select-info" id="selectInfo">
+                <span class="selected-count" id="selectedCount">0</span> products selected
+                <button type="button" class="btn btn-sm" onclick="clearSelection()" style="margin-left: 1rem;">Clear Selection</button>
+            </div>
+            
+            <h3>Bulk Actions</h3>
+            <div class="bulk-actions-grid">
+                <!-- Bulk Delete -->
+                <div class="bulk-action-group">
+                    <h4>Delete Selected</h4>
+                    <form method="POST" class="bulk-form" onsubmit="return confirmBulkDelete()">
+                        <input type="hidden" name="action" value="bulk_delete">
+                        <input type="hidden" name="selected_products" id="deleteSelectedProducts">
+                        <button type="submit" class="btn btn-danger">Delete Selected Products</button>
+                    </form>
+                </div>
+                
+                <!-- Bulk Price Update -->
+                <div class="bulk-action-group">
+                    <h4>Update Prices</h4>
+                    <form method="POST" class="bulk-form">
+                        <input type="hidden" name="action" value="bulk_update_price">
+                        <input type="hidden" name="selected_products" id="priceSelectedProducts">
+                        <select name="adjustment_type" required>
+                            <option value="add">Add to price</option>
+                            <option value="subtract">Subtract from price</option>
+                            <option value="multiply">Multiply price by</option>
+                        </select>
+                        <input type="number" name="price_adjustment" step="0.01" placeholder="Amount" required>
+                        <button type="submit" class="btn">Update Prices</button>
+                    </form>
+                </div>
+                
+                <!-- Bulk Condition Update -->
+                <div class="bulk-action-group">
+                    <h4>Update Condition</h4>
+                    <form method="POST" class="bulk-form">
+                        <input type="hidden" name="action" value="bulk_update_condition">
+                        <input type="hidden" name="selected_products" id="conditionSelectedProducts">
+                        <select name="new_condition" required>
+                            <option value="">Select condition</option>
+                            <option value="New">New</option>
+                            <option value="Like New">Like New</option>
+                            <option value="Very Good">Very Good</option>
+                            <option value="Good">Good</option>
+                            <option value="Acceptable">Acceptable</option>
+                        </select>
+                        <button type="submit" class="btn">Update Condition</button>
+                    </form>
+                </div>
+            </div>
         </div>
         
         <!-- Add Product Form -->
@@ -427,6 +610,9 @@ try {
             <table>
                 <thead>
                     <tr>
+                        <th class="checkbox-cell">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                        </th>
                         <th>Title</th>
                         <th>Author</th>
                         <th>ISBN</th>
@@ -438,13 +624,16 @@ try {
                 <tbody>
                     <?php if (empty($products)): ?>
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 3rem; color: #666;">
+                            <td colspan="7" style="text-align: center; padding: 3rem; color: #666;">
                                 No products found.
                             </td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($products as $product): ?>
                             <tr>
+                                <td class="checkbox-cell">
+                                    <input type="checkbox" class="product-checkbox" value="<?php echo $product['id']; ?>" onchange="updateSelection()">
+                                </td>
                                 <td><strong><?php echo htmlspecialchars($product['title']); ?></strong></td>
                                 <td><?php echo htmlspecialchars($product['author']); ?></td>
                                 <td><?php echo htmlspecialchars($product['isbn']); ?></td>
@@ -467,5 +656,99 @@ try {
             </table>
         </div>
     </div>
+    
+    <script>
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const productCheckboxes = document.querySelectorAll('.product-checkbox');
+            
+            productCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            
+            updateSelection();
+        }
+        
+        function updateSelection() {
+            const productCheckboxes = document.querySelectorAll('.product-checkbox');
+            const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const bulkActions = document.getElementById('bulkActions');
+            const selectInfo = document.getElementById('selectInfo');
+            const selectedCount = document.getElementById('selectedCount');
+            
+            // Update select all checkbox state
+            if (checkedBoxes.length === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedBoxes.length === productCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+            
+            // Show/hide bulk actions
+            if (checkedBoxes.length > 0) {
+                bulkActions.classList.add('show');
+                selectInfo.classList.add('show');
+                selectedCount.textContent = checkedBoxes.length;
+                
+                // Update hidden inputs with selected product IDs
+                const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+                document.getElementById('deleteSelectedProducts').value = selectedIds.join(',');
+                document.getElementById('priceSelectedProducts').value = selectedIds.join(',');
+                document.getElementById('conditionSelectedProducts').value = selectedIds.join(',');
+            } else {
+                bulkActions.classList.remove('show');
+                selectInfo.classList.remove('show');
+            }
+        }
+        
+        function clearSelection() {
+            const productCheckboxes = document.querySelectorAll('.product-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAll');
+            
+            productCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            
+            updateSelection();
+        }
+        
+        function confirmBulkDelete() {
+            const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+            const count = checkedBoxes.length;
+            
+            if (count === 0) {
+                alert('Please select products to delete.');
+                return false;
+            }
+            
+            return confirm(`Are you sure you want to delete ${count} selected product${count > 1 ? 's' : ''}? This action cannot be undone.`);
+        }
+        
+        // Handle bulk action form submissions
+        document.querySelectorAll('.bulk-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+                
+                if (checkedBoxes.length === 0) {
+                    e.preventDefault();
+                    alert('Please select products first.');
+                    return false;
+                }
+                
+                // Update the hidden input for this specific form
+                const hiddenInput = this.querySelector('input[name="selected_products"]');
+                if (hiddenInput) {
+                    const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+                    hiddenInput.value = selectedIds.join(',');
+                }
+            });
+        });
+    </script>
 </body>
 </html> 
