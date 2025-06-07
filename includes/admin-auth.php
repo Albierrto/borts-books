@@ -229,12 +229,39 @@ function auditAdminLogin($username, $status) {
         require_once __DIR__ . '/db.php';
         global $db, $pdo;
         
-        // Get the database connection
+        // Get the database connection with better error handling
         $connection = null;
         if (isset($db) && $db instanceof PDO) {
             $connection = $db;
         } elseif (isset($pdo) && $pdo instanceof PDO) {
             $connection = $pdo;
+        } else {
+            // Try to establish connection manually if globals aren't set
+            $envPath = __DIR__ . '/../.env';
+            if (file_exists($envPath)) {
+                $envContent = file_get_contents($envPath);
+                $lines = explode("\n", $envContent);
+                $env = [];
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line) || strpos($line, '#') === 0) continue;
+                    if (strpos($line, '=') !== false) {
+                        list($name, $value) = array_map('trim', explode('=', $line, 2));
+                        $value = trim($value, '"\'');
+                        $env[$name] = $value;
+                    }
+                }
+                
+                if (isset($env['DB_HOST'], $env['DB_NAME'], $env['DB_USER'], $env['DB_PASS'])) {
+                    $dsn = "mysql:host={$env['DB_HOST']};port=" . ($env['DB_PORT'] ?? 3306) . ";dbname={$env['DB_NAME']};charset=" . ($env['DB_CHARSET'] ?? 'utf8mb4');
+                    $options = [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                    ];
+                    $connection = new PDO($dsn, $env['DB_USER'], $env['DB_PASS'], $options);
+                }
+            }
         }
         
         if (!$connection) {
@@ -262,10 +289,8 @@ function auditAdminLogin($username, $status) {
     } catch (Exception $e) {
         // Create table if it doesn't exist
         try {
-            global $db, $pdo;
-            $connection = $db ?? $pdo;
-            
-            if (!$connection) {
+            // Ensure we have a valid connection for table creation
+            if (!isset($connection) || !$connection) {
                 error_log("No database connection for creating admin audit table");
                 return;
             }
@@ -283,7 +308,7 @@ function auditAdminLogin($username, $status) {
                 )
             ");
             
-            // Try again
+            // Try the insert again
             auditAdminLogin($username, $status);
             
         } catch (Exception $e2) {
