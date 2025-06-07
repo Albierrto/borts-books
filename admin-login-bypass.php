@@ -9,8 +9,8 @@ echo "<p>This version shows the login form regardless of session state</p>";
 
 // Include required files but catch any errors
 try {
-    require_once dirname(__DIR__) . '/includes/security.php';
-    require_once dirname(__DIR__) . '/includes/admin-auth.php';
+    require_once __DIR__ . '/includes/security.php';
+    require_once __DIR__ . '/includes/admin-auth.php';
     echo "✅ Files included successfully<br>";
 } catch (Exception $e) {
     die("Include error: " . $e->getMessage());

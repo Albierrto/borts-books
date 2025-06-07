@@ -12,11 +12,11 @@ echo "<p>This will execute the EXACT same code path as admin-login.php</p>";
 echo "<h2>Step 1: File Includes (Same as admin-login.php)</h2>";
 try {
     echo "Including security.php...<br>";
-    require_once dirname(__DIR__) . '/includes/security.php';
+    require_once __DIR__ . '/includes/security.php';
     echo "✅ Security.php included<br>";
     
     echo "Including admin-auth.php...<br>";
-    require_once dirname(__DIR__) . '/includes/admin-auth.php';
+    require_once __DIR__ . '/includes/admin-auth.php';
     echo "✅ Admin-auth.php included<br>";
     
 } catch (Throwable $e) {
