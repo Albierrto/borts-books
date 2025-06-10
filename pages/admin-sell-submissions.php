@@ -46,6 +46,17 @@ try {
         $db->exec($sample_sql);
         $message = 'Sell submissions table created with sample data!';
     }
+    
+    // NEW: Ensure required columns exist (backward compatibility)
+    $columnsRes = $db->query("SHOW COLUMNS FROM sell_submissions");
+    $existingColumns = $columnsRes->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('created_at', $existingColumns)) {
+        // Add created_at column if missing
+        $db->exec("ALTER TABLE sell_submissions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER admin_notes");
+    }
+    if (!in_array('updated_at', $existingColumns)) {
+        $db->exec("ALTER TABLE sell_submissions ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at");
+    }
 } catch (PDOException $e) {
     $error = 'Error setting up database: ' . $e->getMessage();
 }

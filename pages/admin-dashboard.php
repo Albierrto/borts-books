@@ -272,6 +272,9 @@ try {
                     <li class="action-item">
                         <a href="admin-mass-delete.php" class="action-link">Mass Delete</a>
                     </li>
+                    <li class="action-item">
+                        <a href="ebay-single-import.php" class="action-link">📦 Import eBay Listing</a>
+                    </li>
                 </ul>
             </div>
         </div>
