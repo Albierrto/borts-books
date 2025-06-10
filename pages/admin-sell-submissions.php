@@ -128,8 +128,24 @@ try {
     $stmt->execute($params);
     $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    $error = 'Error fetching submissions: ' . $e->getMessage();
-    $submissions = [];
+    // If created_at column is missing, add it dynamically and retry once
+    if ($e->errorInfo[1] == 1054) { // Unknown column
+        try {
+            $db->exec("ALTER TABLE sell_submissions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+            $db->exec("ALTER TABLE sell_submissions ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+            // Retry the query
+            $stmt = $db->prepare("SELECT * FROM sell_submissions $where_clause ORDER BY created_at DESC");
+            $stmt->execute($params);
+            $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $error = '';
+        } catch (PDOException $inner) {
+            $error = 'Error fixing schema: ' . $inner->getMessage();
+            $submissions = [];
+        }
+    } else {
+        $error = 'Error fetching submissions: ' . $e->getMessage();
+        $submissions = [];
+    }
 }
 
 // Get statistics
