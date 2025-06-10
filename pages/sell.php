@@ -24,6 +24,87 @@ $currentPage = "sell";
 $successMsg = '';
 $errorMsg = '';
 
+// Initialize security components and constants
+$encryption = new DatabaseEncryption();
+$emailSystem = new SecureEmailSystem();
+
+// Ensure sell_submissions table has required columns for public submissions
+try {
+    $res = $pdo->query("SHOW TABLES LIKE 'sell_submissions'");
+    if ($res->rowCount() == 0) {
+        // Create new table with secure columns
+        $pdo->exec("CREATE TABLE sell_submissions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            full_name VARBINARY(1024) NOT NULL,
+            email VARBINARY(1024) NOT NULL,
+            email_hash CHAR(64) NOT NULL,
+            phone VARBINARY(1024),
+            num_items INT DEFAULT 0,
+            overall_condition VARCHAR(50),
+            item_details JSON,
+            photo_paths JSON,
+            description VARBINARY(8192),
+            status ENUM('pending','quoted','completed','rejected') DEFAULT 'pending',
+            quote_amount DECIMAL(10,2),
+            admin_notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_email_hash (email_hash),
+            INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    } else {
+        $cols = $pdo->query("SHOW COLUMNS FROM sell_submissions")->fetchAll(PDO::FETCH_COLUMN);
+        $required = [
+            'full_name','email','email_hash','phone','num_items','overall_condition',
+            'item_details','photo_paths','description','status','quote_amount','admin_notes','created_at','updated_at'
+        ];
+        foreach ($required as $col) {
+            if (!in_array($col, $cols)) {
+                switch ($col) {
+                    case 'full_name':
+                    case 'email':
+                    case 'phone':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN $col VARBINARY(1024)");
+                        break;
+                    case 'email_hash':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN email_hash CHAR(64)");
+                        break;
+                    case 'num_items':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN num_items INT DEFAULT 0");
+                        break;
+                    case 'overall_condition':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN overall_condition VARCHAR(50)");
+                        break;
+                    case 'item_details':
+                    case 'photo_paths':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN $col JSON");
+                        break;
+                    case 'description':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN description VARBINARY(8192)");
+                        break;
+                    case 'status':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN status ENUM('pending','quoted','completed','rejected') DEFAULT 'pending'");
+                        break;
+                    case 'quote_amount':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN quote_amount DECIMAL(10,2)");
+                        break;
+                    case 'admin_notes':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN admin_notes TEXT");
+                        break;
+                    case 'created_at':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+                        break;
+                    case 'updated_at':
+                        $pdo->exec("ALTER TABLE sell_submissions ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                        break;
+                }
+            }
+        }
+    }
+} catch (PDOException $e) {
+    error_log('sell_submissions schema check error: ' . $e->getMessage());
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
