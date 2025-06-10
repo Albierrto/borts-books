@@ -534,7 +534,7 @@ try {
                         </tr>
                     <?php else: ?>
                         <?php foreach ($submissions as $submission): ?>
-                            <tr>
+                            <tr class="summary-row" onclick="toggleDetails(<?php echo $submission['id']; ?>)">
                                 <td>
                                     <strong><?php echo htmlspecialchars($submission['seller_name']); ?></strong><br>
                                     <small><?php echo htmlspecialchars($submission['seller_email']); ?></small>
@@ -558,14 +558,25 @@ try {
                                 <td><?php echo date('M j, Y', strtotime($submission['created_at'])); ?></td>
                                 <td>
                                     <div class="submission-actions">
-                                        <button onclick="editSubmission(<?php echo $submission['id']; ?>, '<?php echo htmlspecialchars($submission['status']); ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', '<?php echo $submission['quote_amount']; ?>')" class="btn btn-sm">
+                                        <button onclick="event.stopPropagation();editSubmission(<?php echo $submission['id']; ?>, '<?php echo htmlspecialchars($submission['status']); ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', '<?php echo $submission['quote_amount']; ?>')" class="btn btn-sm">
                                             Edit
                                         </button>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="action" value="delete_submission">
-                                            <input type="hidden" name="submission_id" value="<?php echo $submission['id']; ?>">
-                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this submission?')">Delete</button>
-                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Detail row -->
+                            <tr id="details-<?php echo $submission['id']; ?>" class="details-row" style="display:none;background:#f8f9fa;">
+                                <td colspan="6">
+                                    <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                                        <div><strong>Description:</strong> <?php echo nl2br(htmlspecialchars($submission['description'] ?? 'N/A')); ?></div>
+                                        <div><strong>Item Details:</strong> <pre style="white-space:pre-wrap;background:#fff;padding:0.5rem;border:1px solid #e9ecef;border-radius:4px;overflow:auto;max-height:200px;"><?php echo htmlspecialchars($submission['item_details'] ?? '{}'); ?></pre></div>
+                                        <?php if(!empty($submission['photo_paths'])): ?>
+                                            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                                                <?php foreach (json_decode($submission['photo_paths'], true) ?? [] as $p): ?>
+                                                    <img src="<?php echo htmlspecialchars($p['filename'] ?? $p); ?>" alt="photo" style="width:100px;height:auto;border-radius:4px;object-fit:cover;">
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -633,6 +644,15 @@ try {
             const modal = document.getElementById('editModal');
             if (event.target === modal) {
                 closeModal();
+            }
+        }
+
+        function toggleDetails(id) {
+            const row = document.getElementById('details-' + id);
+            if (row.style.display === 'none') {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
             }
         }
     </script>

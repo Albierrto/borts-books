@@ -37,10 +37,19 @@ try {
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     } else {
-        // Ensure created_at exists (legacy deployments)
+        // Ensure all required columns exist (legacy deployments)
         $cols = $db->query("SHOW COLUMNS FROM customer_requests")->fetchAll(PDO::FETCH_COLUMN);
-        if (!in_array('created_at', $cols)) {
-            $db->exec("ALTER TABLE customer_requests ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+        $required = [
+            'email_hash' => "CHAR(64)",
+            'ip_address' => "VARCHAR(45)",
+            'user_agent' => "TEXT",
+            'created_at' => "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            'updated_at' => "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+        ];
+        foreach ($required as $col => $definition) {
+            if (!in_array($col, $cols)) {
+                $db->exec("ALTER TABLE customer_requests ADD COLUMN $col $definition");
+            }
         }
     }
 } catch (PDOException $e) {
