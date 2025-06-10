@@ -237,6 +237,9 @@ try {
                         <a href="admin-inventory.php" class="action-link">Manage Books</a>
                     </li>
                     <li class="action-item">
+                        <a href="ebay-single-import.php" class="action-link">📦 Import eBay Listing</a>
+                    </li>
+                    <li class="action-item">
                         <a href="admin-collections.php" class="action-link">Manage Collections</a>
                     </li>
                     <li class="action-item">

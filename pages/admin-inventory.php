@@ -474,6 +474,11 @@ try {
         
         <div class="header">
             <h1 class="title">Inventory Management</h1>
+            <div style="display: flex; gap: 1rem;">
+                <a href="ebay-single-import.php" class="btn" style="background: #28a745;">
+                    📦 Import eBay Listing
+                </a>
+            </div>
         </div>
         
         <?php if ($message): ?>
