@@ -18,6 +18,35 @@ $currentPage = "contact";
 $encryption = new DatabaseEncryption();
 $emailSystem = new SecureEmailSystem();
 
+// Ensure customer_requests table exists with required columns
+try {
+    $res = $db->query("SHOW TABLES LIKE 'customer_requests'");
+    if ($res->rowCount() == 0) {
+        $db->exec("CREATE TABLE customer_requests (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARBINARY(512) NOT NULL,
+            email VARBINARY(512) NOT NULL,
+            email_hash CHAR(64) NOT NULL,
+            subject VARCHAR(255) NOT NULL,
+            message VARBINARY(4096) NOT NULL,
+            inquiry_type VARCHAR(100) DEFAULT 'General',
+            ip_address VARCHAR(45),
+            user_agent TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_email_hash (email_hash),
+            INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    } else {
+        // Ensure created_at exists (legacy deployments)
+        $cols = $db->query("SHOW COLUMNS FROM customer_requests")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('created_at', $cols)) {
+            $db->exec("ALTER TABLE customer_requests ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+        }
+    }
+} catch (PDOException $e) {
+    error_log('customer_requests table check error: ' . $e->getMessage());
+}
+
 // Handle form submission
 $success_message = '';
 $error_message = '';

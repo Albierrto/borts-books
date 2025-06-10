@@ -1526,72 +1526,22 @@ $cart_count = count($_SESSION['cart']);
 
         // Enhanced form submission with photo validation
         document.getElementById('sellForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Validate photos are uploaded
+            // Basic front-end validation: ensure at least one photo
             if (uploadedPhotos.length === 0) {
+                e.preventDefault();
                 document.getElementById('errorMessage').textContent = 'Please upload at least one photo of your manga collection.';
                 document.getElementById('errorMessage').style.display = 'block';
                 document.getElementById('errorMessage').scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-            
+
+            // Ensure the file input actually contains the selected photos
+            updateFileInput();
+
             const submitBtn = document.getElementById('submitBtn');
-            const successMessage = document.getElementById('successMessage');
-            const errorMessage = document.getElementById('errorMessage');
-            
-            // Hide previous messages
-            successMessage.style.display = 'none';
-            errorMessage.style.display = 'none';
-            
-            // Show loading state
             submitBtn.disabled = true;
             submitBtn.classList.add('loading');
-            
-            // Create FormData for actual submission (replace simulation)
-            const formData = new FormData(this);
-            
-            // Add photos to form data
-            uploadedPhotos.forEach((photo, index) => {
-                formData.append(`collection_photos[${index}]`, photo.file);
-            });
-            
-            // Simulate form submission (replace with actual AJAX call)
-            setTimeout(() => {
-                // Reset button
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('loading');
-                
-                // Show success message
-                successMessage.style.display = 'block';
-                successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-                // Reset form
-                this.reset();
-                
-                // Reset photos
-                uploadedPhotos = [];
-                photoIdCounter = 0;
-                previewContainer.innerHTML = '';
-                updatePhotoCount();
-                addMoreBtn.style.display = 'none';
-                
-                // Reset to single set
-                const mangaSetsContainer = document.getElementById('mangaSets');
-                const sets = mangaSetsContainer.querySelectorAll('.manga-set');
-                for (let i = 1; i < sets.length; i++) {
-                    sets[i].remove();
-                }
-                
-                // Hide remove button on first set
-                const firstSetRemoveBtn = document.querySelector('[data-set="1"] .remove-set-btn');
-                if (firstSetRemoveBtn) {
-                    firstSetRemoveBtn.style.display = 'none';
-                }
-                
-                setCounter = 1;
-                
-            }, 2000);
+            // Allow native form submission to server (no preventDefault)
         });
 
         // Make removePhoto function global
