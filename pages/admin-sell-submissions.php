@@ -959,11 +959,10 @@ if ($debug) {
     </div>
     
     <script>
-        // Modal logic for editing submissions
+        // Robust edit modal logic for submissions
         let currentEditId = null;
         function editSubmission(id, status, adminNotes, quoteAmount) {
             currentEditId = id;
-            // Create modal if not exists
             let modal = document.getElementById('crmEditModal');
             if (!modal) {
                 modal = document.createElement('div');
@@ -984,9 +983,11 @@ if ($debug) {
                             <input type="number" id="editQuote" name="quote_amount" step="0.01" min="0">
                             <label for="editNotes">Admin Notes</label>
                             <textarea id="editNotes" name="admin_notes" rows="3"></textarea>
+                            <div id="crmEditFeedback" style="margin-bottom:0.7em;font-size:0.97em;"></div>
                             <div class="crm-edit-modal-actions">
                                 <button type="button" class="cancel" onclick="closeEditModal()">Cancel</button>
                                 <button type="submit">Save</button>
+                                <button type="button" class="btn btn-danger" id="deleteSubmissionBtn" style="margin-left:auto;">Delete</button>
                             </div>
                             <input type="hidden" name="action" value="update_submission">
                             <input type="hidden" name="submission_id" id="editSubmissionId">
@@ -994,25 +995,42 @@ if ($debug) {
                     </div>
                 `;
                 document.body.appendChild(modal);
-            } else {
-                // Clear previous form values
-                document.getElementById('editStatus').value = status;
-                document.getElementById('editQuote').value = quoteAmount || '';
-                document.getElementById('editNotes').value = adminNotes || '';
-                document.getElementById('editSubmissionId').value = id;
-                modal.classList.add('active');
             }
+            // Always update values
+            document.getElementById('editStatus').value = status;
+            document.getElementById('editQuote').value = quoteAmount || '';
+            document.getElementById('editNotes').value = adminNotes || '';
+            document.getElementById('editSubmissionId').value = id;
+            document.getElementById('crmEditFeedback').innerHTML = '';
+            modal.classList.add('active');
             // Submit handler
             document.getElementById('crmEditForm').onsubmit = function(e) {
                 e.preventDefault();
-                // Submit via POST
                 const formData = new FormData(this);
                 fetch(window.location.pathname, {
                     method: 'POST',
                     body: formData,
                 }).then(r => r.text()).then(html => {
-                    modal.classList.remove('active');
-                    window.location.reload();
+                    document.getElementById('crmEditFeedback').innerHTML = '<span style="color:green;">Saved!</span>';
+                    setTimeout(() => { modal.classList.remove('active'); window.location.reload(); }, 700);
+                }).catch(() => {
+                    document.getElementById('crmEditFeedback').innerHTML = '<span style="color:red;">Error saving changes.</span>';
+                });
+            };
+            // Delete handler
+            document.getElementById('deleteSubmissionBtn').onclick = function() {
+                if (!confirm('Are you sure you want to delete this submission?')) return;
+                const formData = new FormData();
+                formData.append('action', 'delete_submission');
+                formData.append('submission_id', id);
+                fetch(window.location.pathname, {
+                    method: 'POST',
+                    body: formData,
+                }).then(r => r.text()).then(html => {
+                    document.getElementById('crmEditFeedback').innerHTML = '<span style="color:green;">Deleted!</span>';
+                    setTimeout(() => { modal.classList.remove('active'); window.location.reload(); }, 700);
+                }).catch(() => {
+                    document.getElementById('crmEditFeedback').innerHTML = '<span style="color:red;">Error deleting submission.</span>';
                 });
             };
         }
