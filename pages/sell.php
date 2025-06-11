@@ -128,8 +128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .note { background: #e0f2fe; color: #0369a1; border-left: 5px solid #22c55e; padding: 0.7rem 1.2rem; margin: 1.2rem 2rem; border-radius: 8px; font-size: 0.98rem; }
         .section { background: #f9fafb; border-radius: 12px; margin: 1.5rem 2rem; padding: 1.5rem 1.5rem 1rem 1.5rem; box-shadow: 0 1px 4px #0001; }
         .section-title { font-size: 1.2rem; font-weight: 600; color: #7c3aed; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-        .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
-        .form-group { flex: 1; display: flex; flex-direction: column; }
+        .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .form-group { flex: 1 1 180px; min-width: 140px; display: flex; flex-direction: column; }
         label { font-weight: 600; margin-bottom: 0.3rem; }
         input, select, textarea { padding: 0.7rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
         textarea { min-height: 60px; }
