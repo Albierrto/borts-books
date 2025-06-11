@@ -4,11 +4,6 @@
  * Centralized configuration with enhanced security measures
  */
 
-// Define that files are being included from the app (conditional)
-if (!defined('INCLUDED_FROM_APP')) {
-    define('INCLUDED_FROM_APP', true);
-}
-
 // Load environment variables first
 $envPath = dirname(__DIR__) . '/.env';
 if (file_exists($envPath)) {
