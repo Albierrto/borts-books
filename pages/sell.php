@@ -21,8 +21,8 @@ $csrf_token = generate_csrf_token();
 $pageTitle = "Sell Your Manga Sets";
 $currentPage = "sell";
 
-$successMsg = '';
-$errorMsg = '';
+$message = '';
+$error = '';
 
 // Initialize security components and constants
 $encryption = new DatabaseEncryption();
@@ -140,13 +140,13 @@ if ($debug) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
-        $errorMsg = 'Invalid request. Please try again.';
+        $error = 'Invalid request. Please try again.';
         log_security_event('csrf_failure', ['page' => 'sell']);
     } else {
         // Check rate limiting
         $clientId = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         if (!check_rate_limit('sell_submission', 3, 3600)) {
-            $errorMsg = 'Too many submissions. Please try again later.';
+            $error = 'Too many submissions. Please try again later.';
             log_security_event('rate_limit_exceeded', ['page' => 'sell', 'ip' => $clientId]);
         } else {
             try {
@@ -293,13 +293,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'files_uploaded' => count($uploaded_files)
                 ]);
                 
-        $successMsg = 'Thank you for your submission! We will review your manga sets and contact you soon.';
+        $message = 'Thank you for your submission! We will review your manga sets and contact you soon.';
                 
                 // Clear form data on success
                 $_POST = [];
                 
             } catch (Exception $e) {
-                $errorMsg = htmlspecialchars($e->getMessage());
+                $error = htmlspecialchars($e->getMessage());
                 log_security_event('sell_submission_error', [
                     'error' => $e->getMessage(),
                     'ip' => $clientId
@@ -1162,17 +1162,17 @@ $cart_count = count($_SESSION['cart']);
                 File uploads are scanned for security and only image files (JPG, PNG, WebP) are accepted.
             </div>
 
-            <?php if ($successMsg): ?>
+            <?php if ($message): ?>
                 <div class="success-message">
                     <i class="fas fa-check-circle"></i>
-                    <?php echo htmlspecialchars($successMsg); ?>
+                    <?php echo htmlspecialchars($message); ?>
             </div>
             <?php endif; ?>
             
-            <?php if ($errorMsg): ?>
+            <?php if ($error): ?>
                 <div class="error-message">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <?php echo htmlspecialchars($errorMsg); ?>
+                    <?php echo htmlspecialchars($error); ?>
                 </div>
             <?php endif; ?>
 
