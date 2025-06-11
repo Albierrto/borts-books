@@ -112,9 +112,8 @@ if ($status_filter) {
 }
 
 if ($search) {
-    $where_conditions[] = "(seller_name LIKE ? OR seller_email LIKE ? OR book_title LIKE ?)";
+    $where_conditions[] = "(full_name LIKE ? OR email LIKE ?)";
     $search_param = "%$search%";
-    $params[] = $search_param;
     $params[] = $search_param;
     $params[] = $search_param;
 }
@@ -538,8 +537,9 @@ $encryption = new DatabaseEncryption();
             <?php else: ?>
                 <?php foreach ($submissions as $submission): ?>
                     <?php
-                        $seller_name = decrypt_field($submission['seller_name'], $encryption);
-                        $seller_email = decrypt_field($submission['seller_email'], $encryption);
+                        $full_name = decrypt_field($submission['full_name'], $encryption);
+                        $email = decrypt_field($submission['email'], $encryption);
+                        $phone = decrypt_field($submission['phone'], $encryption);
                         $description = decrypt_field($submission['description'], $encryption);
                         $photos = json_decode($submission['photo_paths'] ?? '[]', true);
                     ?>
@@ -549,8 +549,11 @@ $encryption = new DatabaseEncryption();
                                 <span class="crm-badge <?php echo $submission['status']; ?>">
                                     <?php echo ucfirst(str_replace('_', ' ', $submission['status'])); ?>
                                 </span>
-                                <strong style="font-size: 1.1em;"><?php echo htmlspecialchars($seller_name); ?></strong>
-                                <span style="color: var(--gray-400);">(<?php echo htmlspecialchars($seller_email); ?>)</span>
+                                <strong style="font-size: 1.1em;"><?php echo htmlspecialchars($full_name); ?></strong>
+                                <span style="color: var(--gray-400);">(<?php echo htmlspecialchars($email); ?>)</span>
+                                <?php if ($phone): ?>
+                                    <span style="color: var(--gray-400); margin-left: 0.5em;"><i class="fa fa-phone"></i> <?php echo htmlspecialchars($phone); ?></span>
+                                <?php endif; ?>
                             </div>
                             <div style="text-align: right;">
                                 <span style="color: var(--gray-500);">Submitted</span><br>

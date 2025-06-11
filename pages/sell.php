@@ -118,9 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<?php if ($message): ?><div class="message success"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
-<?php if ($error): ?><div class="message error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 <div class="container">
+    <div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.7);z-index:9999;align-items:center;justify-content:center;flex-direction:column;">
+        <div style="border:6px solid #eee;border-top:6px solid #7c3aed;border-radius:50%;width:48px;height:48px;animation:spin 1s linear infinite;"></div>
+        <div style="margin-top:1rem;font-weight:600;color:#7c3aed;">Submitting...</div>
+    </div>
+    <style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>
+    <?php if ($message): ?><div class="message success"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
+    <?php if ($error): ?><div class="message error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
     <div class="header">
         <h1><i class="fa fa-book-open"></i> Sell Your Manga Sets</h1>
         <p>Turn your manga collection into cash! We buy complete sets in good condition.</p>
@@ -194,4 +199,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit" class="submit-btn"><i class="fa fa-paper-plane"></i> Submit for Review</button>
     </form>
 </div>
+<script>
+    document.querySelector('form').addEventListener('submit', function() {
+        document.getElementById('loading-overlay').style.display = 'flex';
+    });
+</script>
 <?php include dirname(__DIR__) . '/includes/mobile-nav-footer.php'; ?>
