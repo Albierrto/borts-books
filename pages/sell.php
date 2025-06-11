@@ -1,4 +1,7 @@
 <?php
+$pageTitle = "Sell Your Manga Sets";
+$currentPage = "sell";
+include dirname(__DIR__) . '/includes/mobile-nav-header.php';
 require_once dirname(__DIR__) . '/includes/db.php';
 
 function log_debug($msg) {
@@ -25,6 +28,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             log_debug('Invalid email: ' . $_POST['email']);
             throw new Exception('Please enter a valid email address.');
         }
+        // Encrypt sensitive fields
+        require_once dirname(__DIR__) . '/includes/database-encryption.php';
+        $encryption = new DatabaseEncryption();
+        $encrypted_data = $encryption->encryptFields([
+            'full_name' => $_POST['full_name'],
+            'email' => $_POST['email'],
+            'phone' => $_POST['phone'] ?? '',
+            'description' => $_POST['description'] ?? ''
+        ], ['full_name', 'email', 'phone', 'description']);
         // Handle multiple manga sets
         $sets = [];
         if (!empty($_POST['set_title']) && is_array($_POST['set_title'])) {
@@ -89,11 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             full_name, email, phone, overall_condition, description, photo_paths, item_details
         ) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
-            $_POST['full_name'],
-            $_POST['email'],
-            $_POST['phone'] ?? null,
+            $encrypted_data['full_name'],
+            $encrypted_data['email'],
+            $encrypted_data['phone'],
             $_POST['overall_condition'] ?? null,
-            $_POST['description'] ?? null,
+            $encrypted_data['description'],
             $photo_json,
             $item_details
         ]);
@@ -106,120 +118,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sell Your Manga Sets</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif; color: #222; }
-        .container { max-width: 650px; margin: 2rem auto; background: #fff; border-radius: 16px; box-shadow: 0 2px 16px #0002; padding: 0 0 2rem 0; }
-        .header { background: #7c3aed; color: #fff; border-radius: 16px 16px 0 0; padding: 2rem 2rem 1rem 2rem; text-align: center; }
-        .header h1 { margin: 0; font-size: 2.2rem; font-weight: 700; }
-        .header p { margin: 0.5rem 0 0 0; font-size: 1.1rem; }
-        .guarantee { background: #22c55e; color: #fff; font-weight: 600; text-align: center; padding: 0.7rem 1rem; border-radius: 0 0 0 0; margin-bottom: 1.2rem; font-size: 1.1rem; }
-        .info-box { background: #f1f5f9; border-left: 5px solid #7c3aed; padding: 1rem 1.5rem; margin: 1.2rem 2rem; border-radius: 8px; }
-        .info-box ul { margin: 0.5rem 0 0 1.2rem; }
-        .payment-methods { display: flex; justify-content: center; gap: 2rem; margin: 1.2rem 0; }
-        .payment-method { background: #f3f4f6; border-radius: 8px; padding: 1rem 1.5rem; text-align: center; box-shadow: 0 1px 4px #0001; font-size: 1.1rem; }
-        .payment-method i { font-size: 2rem; margin-bottom: 0.3rem; color: #7c3aed; }
-        .note { background: #e0f2fe; color: #0369a1; border-left: 5px solid #22c55e; padding: 0.7rem 1.2rem; margin: 1.2rem 2rem; border-radius: 8px; font-size: 0.98rem; }
-        .section { background: #f9fafb; border-radius: 12px; margin: 1.5rem 2rem; padding: 1.5rem 1.5rem 1rem 1.5rem; box-shadow: 0 1px 4px #0001; }
-        .section-title { font-size: 1.2rem; font-weight: 600; color: #7c3aed; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-        .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
-        .form-group { flex: 1 1 180px; min-width: 140px; display: flex; flex-direction: column; }
-        label { font-weight: 600; margin-bottom: 0.3rem; }
-        input, select, textarea { padding: 0.7rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
-        textarea { min-height: 60px; }
-        .add-set-btn { background: #7c3aed; color: #fff; border: none; border-radius: 6px; padding: 0.6rem 1.5rem; font-size: 1rem; margin-top: 0.5rem; cursor: pointer; }
-        .remove-set-btn { background: #dc2626; color: #fff; border: none; border-radius: 6px; padding: 0.4rem 1rem; font-size: 0.95rem; margin-left: 0.5rem; cursor: pointer; }
-        .photo-upload-box { border: 2px dashed #7c3aed; background: #f3f4f6; border-radius: 10px; padding: 2rem; text-align: center; margin-bottom: 1rem; transition: border-color 0.2s; }
-        .photo-upload-box.dragover { border-color: #22c55e; }
-        .photo-upload-box input[type="file"] { display: none; }
-        .photo-upload-label { display: block; color: #7c3aed; font-weight: 600; cursor: pointer; }
-        .photo-list { margin-top: 0.7rem; font-size: 0.98rem; color: #444; }
-        .submit-btn { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 1rem 2.5rem; font-size: 1.1rem; font-weight: 600; margin: 1.5rem auto 0 auto; display: block; cursor: pointer; box-shadow: 0 2px 8px #0001; transition: background 0.2s; }
-        .submit-btn:hover { background: #1d4ed8; }
-        .message { padding: 1rem; border-radius: 8px; margin: 1.5rem 2rem 0.5rem 2rem; text-align: center; font-size: 1.1rem; }
-        .success { background: #dcfce7; color: #166534; }
-        .error { background: #fee2e2; color: #991b1b; }
-        @media (max-width: 700px) {
-            .container { max-width: 98vw; margin: 0.5rem; padding: 0; }
-            .header, .guarantee, .info-box, .note, .section { margin: 0.5rem; }
-            .form-row { flex-direction: column; gap: 0.5rem; }
-        }
-    </style>
-    <script>
-        // Dynamic manga set fields
-        function addSetRow(title = '', volumes = '', condition = '', price = '') {
-            const setsDiv = document.getElementById('sets-list');
-            const div = document.createElement('div');
-            div.className = 'form-row';
-            div.innerHTML = `
-                <div class="form-group">
-                    <label>Series Title *</label>
-                    <input type="text" name="set_title[]" placeholder="e.g. Naruto, One Piece" value="${title.replace(/"/g, '&quot;')}">
-                </div>
-                <div class="form-group">
-                    <label>Volumes *</label>
-                    <input type="text" name="set_volumes[]" placeholder="e.g. 1-12, 1-5, 5-20" value="${volumes.replace(/"/g, '&quot;')}">
-                </div>
-                <div class="form-group">
-                    <label>Condition</label>
-                    <select name="set_condition[]">
-                        <option value="">Select...</option>
-                        <option value="new" ${condition==='new'?'selected':''}>New</option>
-                        <option value="like_new" ${condition==='like_new'?'selected':''}>Like New</option>
-                        <option value="very_good" ${condition==='very_good'?'selected':''}>Very Good</option>
-                        <option value="good" ${condition==='good'?'selected':''}>Good</option>
-                        <option value="fair" ${condition==='fair'?'selected':''}>Fair</option>
-                        <option value="poor" ${condition==='poor'?'selected':''}>Poor</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Asking Price</label>
-                    <input type="text" name="set_expected_price[]" placeholder="Optional - your asking price" value="${price.replace(/"/g, '&quot;')}">
-                </div>
-                <button type="button" class="remove-set-btn" onclick="this.parentNode.remove()">Remove</button>
-            `;
-            setsDiv.appendChild(div);
-        }
-        window.onload = function() {
-            // Manga sets
-            const sets = <?php echo json_encode($_POST['set_title'] ?? ['']); ?>;
-            const vols = <?php echo json_encode($_POST['set_volumes'] ?? ['']); ?>;
-            const conds = <?php echo json_encode($_POST['set_condition'] ?? ['']); ?>;
-            const prices = <?php echo json_encode($_POST['set_expected_price'] ?? ['']); ?>;
-            if (sets.length === 0) addSetRow();
-            else for (let i = 0; i < sets.length; i++) addSetRow(sets[i], vols[i]||'', conds[i]||'', prices[i]||'');
-            document.getElementById('add-set-btn').onclick = function(e) {
-                e.preventDefault();
-                addSetRow();
-            };
-            // Photo upload drag-and-drop
-            const box = document.getElementById('photo-upload-box');
-            const input = document.getElementById('photos');
-            box.addEventListener('dragover', function(e) { e.preventDefault(); box.classList.add('dragover'); });
-            box.addEventListener('dragleave', function(e) { e.preventDefault(); box.classList.remove('dragover'); });
-            box.addEventListener('drop', function(e) {
-                e.preventDefault(); box.classList.remove('dragover');
-                input.files = e.dataTransfer.files;
-                updatePhotoList();
-            });
-            input.addEventListener('change', updatePhotoList);
-            function updatePhotoList() {
-                const list = document.getElementById('photo-list');
-                list.innerHTML = '';
-                for (let i = 0; i < input.files.length; i++) {
-                    list.innerHTML += `<div>${input.files[i].name}</div>`;
-                }
-            }
-        };
-    </script>
-</head>
-<body>
+<?php if ($message): ?><div class="message success"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
+<?php if ($error): ?><div class="message error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 <div class="container">
     <div class="header">
         <h1><i class="fa fa-book-open"></i> Sell Your Manga Sets</h1>
@@ -247,8 +147,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="note">
         <b>Note:</b> Your personal information is encrypted and stored securely. Payouts are covered for security and safety via PayPal, Venmo, Zelle, and major US banks only.
     </div>
-    <?php if ($message): ?><div class="message success"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
-    <?php if ($error): ?><div class="message error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
     <form method="POST" enctype="multipart/form-data">
         <div class="section">
             <div class="section-title"><i class="fa fa-user"></i> Contact Information</div>
@@ -296,5 +194,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit" class="submit-btn"><i class="fa fa-paper-plane"></i> Submit for Review</button>
     </form>
 </div>
-</body>
-</html>
+<?php include dirname(__DIR__) . '/includes/mobile-nav-footer.php'; ?>
