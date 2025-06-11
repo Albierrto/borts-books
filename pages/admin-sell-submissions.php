@@ -165,11 +165,15 @@ try {
 // Decrypt helper
 function decrypt_field($encrypted, $encryption) {
     if (!$encrypted) return '';
-    try {
-        return $encryption->decrypt($encrypted);
-    } catch (Exception $e) {
-        return '[Encrypted]';
+    // Only decrypt if it looks encrypted (base64 or long binary)
+    if (strlen($encrypted) > 100 || preg_match('/[^\x20-\x7E]/', $encrypted)) {
+        try {
+            return $encryption->decrypt($encrypted);
+        } catch (Exception $e) {
+            return $encrypted; // fallback to raw value
+        }
     }
+    return $encrypted;
 }
 
 $encryption = new DatabaseEncryption();
@@ -831,11 +835,12 @@ $encryption = new DatabaseEncryption();
                                                 <div class="crm-photo-grid">
                                                     <?php if (!empty($photos)): ?>
                                                         <?php foreach ($photos as $p): ?>
-                                                            <?php if (!empty($p['filename'])): ?>
-                                                                <img src="/uploads/sell-submissions/<?php echo htmlspecialchars($p['filename']); ?><?php echo !empty($p['access_token']) ? '?token=' . urlencode($p['access_token']) : ''; ?>" alt="Submission photo" loading="lazy" onerror="this.src='/assets/img/photo-placeholder.png'">
-                                                            <?php else: ?>
-                                                                <img src="/assets/img/photo-placeholder.png" alt="No photo" loading="lazy">
-                                                            <?php endif; ?>
+                                                            <?php
+                                                                // If photo path is encrypted, decrypt it
+                                                                $photoFilename = !empty($p['filename']) ? decrypt_field($p['filename'], $encryption) : '';
+                                                                $photoToken = !empty($p['access_token']) ? decrypt_field($p['access_token'], $encryption) : '';
+                                                            ?>
+                                                            <img src="/uploads/sell-submissions/<?php echo htmlspecialchars($photoFilename); ?><?php echo $photoToken ? '?token=' . urlencode($photoToken) : ''; ?>" alt="Submission photo" loading="lazy" onerror="this.src='/assets/img/photo-placeholder.png'">
                                                         <?php endforeach; ?>
                                                     <?php else: ?>
                                                         <span style="color:var(--gray-400);">No photos</span>
@@ -906,12 +911,65 @@ $encryption = new DatabaseEncryption();
     </div>
     
     <script>
-        function editSubmission(id, status, notes, quote) {
-            document.getElementById('edit_submission_id').value = id;
-            document.getElementById('edit_status').value = status;
-            document.getElementById('edit_admin_notes').value = notes;
-            document.getElementById('edit_quote_amount').value = quote || '';
-            document.getElementById('editModal').style.display = 'block';
+        // Modal logic for editing submissions
+        let currentEditId = null;
+        function editSubmission(id, status, adminNotes, quoteAmount) {
+            currentEditId = id;
+            // Create modal if not exists
+            let modal = document.getElementById('crmEditModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'crmEditModal';
+                modal.className = 'crm-edit-modal';
+                modal.innerHTML = `
+                    <div class="crm-edit-modal-content">
+                        <h3>Edit Submission</h3>
+                        <form id="crmEditForm">
+                            <label for="editStatus">Status</label>
+                            <select id="editStatus" name="status" required>
+                                <option value="pending">Pending</option>
+                                <option value="quoted">Quoted</option>
+                                <option value="completed">Completed</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                            <label for="editQuote">Quote Amount ($)</label>
+                            <input type="number" id="editQuote" name="quote_amount" step="0.01" min="0">
+                            <label for="editNotes">Admin Notes</label>
+                            <textarea id="editNotes" name="admin_notes" rows="3"></textarea>
+                            <div class="crm-edit-modal-actions">
+                                <button type="button" class="cancel" onclick="closeEditModal()">Cancel</button>
+                                <button type="submit">Save</button>
+                            </div>
+                            <input type="hidden" name="action" value="update_submission">
+                            <input type="hidden" name="submission_id" id="editSubmissionId">
+                        </form>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            // Set values
+            document.getElementById('editStatus').value = status;
+            document.getElementById('editQuote').value = quoteAmount || '';
+            document.getElementById('editNotes').value = adminNotes || '';
+            document.getElementById('editSubmissionId').value = id;
+            modal.classList.add('active');
+            // Submit handler
+            document.getElementById('crmEditForm').onsubmit = function(e) {
+                e.preventDefault();
+                // Submit via POST
+                const formData = new FormData(this);
+                fetch(window.location.pathname, {
+                    method: 'POST',
+                    body: formData,
+                }).then(r => r.text()).then(html => {
+                    modal.classList.remove('active');
+                    window.location.reload();
+                });
+            };
+        }
+        function closeEditModal() {
+            let modal = document.getElementById('crmEditModal');
+            if (modal) modal.classList.remove('active');
         }
         
         function closeModal() {
