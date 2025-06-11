@@ -1610,15 +1610,95 @@ $cart_count = count($_SESSION['cart']);
             // Basic front-end validation: ensure at least one photo
             if (uploadedPhotos.length === 0) {
                 e.preventDefault();
-                document.getElementById('errorMessage').textContent = 'Please upload at least one photo of your manga collection.';
-                document.getElementById('errorMessage').style.display = 'block';
-                document.getElementById('errorMessage').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                let err = document.getElementById('errorMessage');
+                if (!err) {
+                    err = document.createElement('div');
+                    err.id = 'errorMessage';
+                    err.className = 'error-message';
+                    this.parentNode.insertBefore(err, this);
+                }
+                err.textContent = 'Please upload at least one photo of your manga collection.';
+                err.style.display = 'block';
+                err.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
 
             // Ensure the file input actually contains the selected photos
             updateFileInput();
 
+            // --- Fix: Add hidden fields for backend compatibility ---
+            // Remove any previous hidden fields
+            this.querySelectorAll('.auto-hidden').forEach(el => el.remove());
+
+            // Gather all manga sets
+            const sets = document.querySelectorAll('.manga-set');
+            let numItems = sets.length;
+            let setTitles = [], setVolumes = [], setConditions = [], setExpectedPrices = [];
+            let overallCondition = '';
+            sets.forEach((set, idx) => {
+                const n = idx + 1;
+                const title = set.querySelector(`[name="sets[${n}][title]"]`)?.value || '';
+                const volumes = set.querySelector(`[name="sets[${n}][volumes]"]`)?.value || '';
+                const condition = set.querySelector(`[name="sets[${n}][condition]"]`)?.value || '';
+                const price = set.querySelector(`[name="sets[${n}][asking_price]"]`)?.value || '';
+                setTitles.push(title);
+                setVolumes.push(volumes);
+                setConditions.push(condition);
+                setExpectedPrices.push(price);
+                if (idx === 0) overallCondition = condition;
+            });
+            // Add num_items
+            const numItemsInput = document.createElement('input');
+            numItemsInput.type = 'hidden';
+            numItemsInput.name = 'num_items';
+            numItemsInput.value = numItems;
+            numItemsInput.className = 'auto-hidden';
+            this.appendChild(numItemsInput);
+            // Add overall_condition
+            const overallCondInput = document.createElement('input');
+            overallCondInput.type = 'hidden';
+            overallCondInput.name = 'overall_condition';
+            overallCondInput.value = overallCondition;
+            overallCondInput.className = 'auto-hidden';
+            this.appendChild(overallCondInput);
+            // Add set_title[]
+            setTitles.forEach(val => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'set_title[]';
+                input.value = val;
+                input.className = 'auto-hidden';
+                this.appendChild(input);
+            });
+            // Add set_volumes[]
+            setVolumes.forEach(val => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'set_volumes[]';
+                input.value = val;
+                input.className = 'auto-hidden';
+                this.appendChild(input);
+            });
+            // Add set_condition[]
+            setConditions.forEach(val => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'set_condition[]';
+                input.value = val;
+                input.className = 'auto-hidden';
+                this.appendChild(input);
+            });
+            // Add set_expected_price[]
+            setExpectedPrices.forEach(val => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'set_expected_price[]';
+                input.value = val;
+                input.className = 'auto-hidden';
+                this.appendChild(input);
+            });
+
+            // Show loading state
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.classList.add('loading');

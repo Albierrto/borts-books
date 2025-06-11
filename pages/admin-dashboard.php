@@ -96,65 +96,103 @@ try {
     <title>Admin Dashboard - Bort's Books</title>
     <link rel="stylesheet" href="../assets/css/styles.css">
     <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --info: #0284c7;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --spacing-1: 0.25rem;
+            --spacing-2: 0.5rem;
+            --spacing-3: 0.75rem;
+            --spacing-4: 1rem;
+            --spacing-6: 1.5rem;
+            --spacing-8: 2rem;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        body {
+            background: var(--gray-50);
+            color: var(--gray-900);
+        }
         .dashboard-container {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 1rem;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: var(--spacing-4);
         }
         .dashboard-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: var(--spacing-8);
+            padding: var(--spacing-6);
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
         }
         .dashboard-title {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #232946;
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--gray-900);
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--spacing-6);
+            margin-bottom: var(--spacing-8);
         }
         .stat-card {
             background: white;
-            padding: 1.5rem;
+            padding: var(--spacing-6);
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.2s ease;
         }
         .stat-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-2px);
         }
         .stat-title {
-            font-size: 0.9rem;
+            font-size: 0.875rem;
             text-transform: uppercase;
-            color: #666;
-            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+            color: var(--gray-500);
+            font-weight: 600;
+            margin-bottom: var(--spacing-2);
         }
         .stat-value {
             font-size: 2rem;
             font-weight: 700;
-            color: #232946;
+            color: var(--gray-900);
         }
         .action-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: var(--spacing-6);
         }
         .action-card {
             background: white;
-            padding: 1.5rem;
+            padding: var(--spacing-6);
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow-md);
         }
         .action-title {
             font-size: 1.2rem;
             font-weight: 600;
-            color: #232946;
-            margin-bottom: 1rem;
+            color: var(--gray-900);
+            margin-bottom: var(--spacing-4);
         }
         .action-list {
             list-style: none;
@@ -162,35 +200,85 @@ try {
             margin: 0;
         }
         .action-item {
-            margin-bottom: 0.75rem;
+            margin-bottom: var(--spacing-3);
         }
         .action-link {
             display: block;
-            padding: 0.75rem;
-            background: #f8f9fa;
+            padding: var(--spacing-3);
+            background: var(--gray-100);
             border-radius: 8px;
-            color: #232946;
+            color: var(--gray-900);
             text-decoration: none;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            font-weight: 500;
         }
         .action-link:hover {
-            background: #667eea;
+            background: var(--primary);
             color: white;
             transform: translateX(5px);
         }
         .logout-btn {
-            padding: 0.75rem 1.5rem;
-            background: #dc3545;
+            padding: var(--spacing-3) var(--spacing-6);
+            background: var(--danger);
             color: white;
             border: none;
             border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
         .logout-btn:hover {
-            background: #c82333;
+            background: #b91c1c;
             transform: translateY(-2px);
+        }
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            padding: var(--spacing-4);
+            border-radius: 8px;
+            margin-bottom: var(--spacing-4);
+        }
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-4);
+            }
+            .stats-grid, .action-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --gray-50: #111827;
+                --gray-100: #1f2937;
+                --gray-200: #374151;
+                --gray-300: #4b5563;
+                --gray-400: #6b7280;
+                --gray-500: #9ca3af;
+                --gray-600: #d1d5db;
+                --gray-700: #e5e7eb;
+                --gray-800: #f3f4f6;
+                --gray-900: #f9fafb;
+            }
+            body {
+                background: var(--gray-50);
+                color: var(--gray-900);
+            }
+            .dashboard-header,
+            .stat-card,
+            .action-card {
+                background: var(--gray-100);
+            }
+            .action-link {
+                background: var(--gray-200);
+                color: var(--gray-700);
+            }
+            .action-link:hover {
+                background: var(--primary);
+                color: white;
+            }
         }
     </style>
 </head>

@@ -169,287 +169,347 @@ try {
     <title>Sell Submissions - Bort's Books</title>
     <link rel="stylesheet" href="../assets/css/styles.css">
     <style>
-        .container {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 1rem;
+        :root {
+            /* Color System */
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --info: #0284c7;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            
+            /* Spacing */
+            --spacing-1: 0.25rem;
+            --spacing-2: 0.5rem;
+            --spacing-3: 0.75rem;
+            --spacing-4: 1rem;
+            --spacing-6: 1.5rem;
+            --spacing-8: 2rem;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
-        
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: var(--spacing-4);
+        }
+
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: var(--spacing-8);
+            padding: var(--spacing-6);
             background: white;
-            padding: 2rem;
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow-md);
         }
-        
+
         .title {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #232946;
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--gray-900);
             margin: 0;
         }
-        
-        .back-link {
-            display: inline-block;
-            color: #e63946;
-            text-decoration: none;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-        
-        .back-link:hover {
-            color: #232946;
-        }
-        
+
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--spacing-6);
+            margin-bottom: var(--spacing-8);
         }
-        
+
         .stat-card {
             background: white;
-            padding: 1.5rem;
+            padding: var(--spacing-6);
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            text-align: center;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.2s ease;
         }
-        
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
         .stat-value {
             display: block;
             font-size: 2rem;
             font-weight: 700;
-            color: #232946;
-            margin-bottom: 0.5rem;
+            color: var(--gray-900);
+            margin-bottom: var(--spacing-2);
         }
-        
+
         .stat-label {
-            color: #666;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--gray-500);
             font-weight: 600;
         }
-        
+
         .search-section {
             background: white;
-            padding: 1.5rem;
+            padding: var(--spacing-6);
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-8);
         }
-        
+
         .search-form {
             display: grid;
             grid-template-columns: 2fr 1fr auto;
-            gap: 1rem;
+            gap: var(--spacing-4);
             align-items: end;
         }
-        
+
         .search-form input,
         .search-form select {
-            padding: 0.75rem;
-            border: 2px solid #e9ecef;
+            padding: var(--spacing-3);
+            border: 1px solid var(--gray-200);
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 0.875rem;
+            transition: border-color 0.2s ease;
         }
-        
+
+        .search-form input:focus,
+        .search-form select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
         .btn {
-            padding: 0.75rem 1.5rem;
-            background: #eebbc3;
-            color: #232946;
+            padding: var(--spacing-3) var(--spacing-6);
+            background: var(--primary);
+            color: white;
             border: none;
             border-radius: 8px;
-            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
-        
+
         .btn:hover {
-            background: #232946;
-            color: white;
+            background: var(--primary-dark);
+            transform: translateY(-1px);
         }
-        
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            background: #c82333;
-        }
-        
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-        
-        .btn-success:hover {
-            background: #218838;
-        }
-        
+
         .submissions-table {
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow-md);
             overflow: hidden;
         }
-        
+
         .table-header {
-            background: #232946;
-            color: white;
-            padding: 1rem 1.5rem;
-            font-weight: 700;
+            padding: var(--spacing-4);
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            font-weight: 600;
+            color: var(--gray-700);
         }
-        
+
         table {
             width: 100%;
             border-collapse: collapse;
         }
-        
-        th, td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
+
         th {
-            background: #f8f9fa;
+            text-align: left;
+            padding: var(--spacing-4);
+            background: var(--gray-50);
             font-weight: 600;
-            color: #232946;
+            color: var(--gray-700);
+            border-bottom: 1px solid var(--gray-200);
         }
-        
-        tr:hover {
-            background: #f8f9fa;
+
+        td {
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-600);
         }
-        
-        .message {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 8px;
-            font-weight: 600;
-        }
-        
-        .message.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .message.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .status-quoted {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .status-completed {
-            background: #cce5ff;
-            color: #004085;
-        }
-        
-        .status-rejected {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        
-        .submission-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .btn-sm {
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-        
-        .modal-content {
-            background: white;
-            margin: 5% auto;
-            padding: 2rem;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 90%;
-        }
-        
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .modal-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #232946;
-        }
-        
-        .close {
-            font-size: 1.5rem;
+
+        .summary-row {
             cursor: pointer;
-            color: #666;
+            transition: background-color 0.2s ease;
         }
-        
-        .form-group {
-            margin-bottom: 1rem;
+
+        .summary-row:hover {
+            background: var(--gray-50);
         }
-        
-        .form-group label {
-            display: block;
+
+        .summary-row td {
+            position: relative;
+        }
+
+        .summary-row td:first-child::before {
+            content: '▸';
+            position: absolute;
+            left: -20px;
+            color: var(--gray-400);
+            transition: transform 0.2s ease;
+        }
+
+        .summary-row.expanded td:first-child::before {
+            transform: rotate(90deg);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--spacing-1) var(--spacing-3);
+            border-radius: 9999px;
+            font-size: 0.75rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #232946;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
-        
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #e9ecef;
+
+        .badge i {
+            margin-right: var(--spacing-1);
+        }
+
+        .badge.status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge.status-quoted {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge.status-completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge.status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .details-row {
+            background: var(--gray-50);
+        }
+
+        .details-row td {
+            padding: var(--spacing-6);
+        }
+
+        .details-content {
+            display: grid;
+            gap: var(--spacing-4);
+        }
+
+        .details-section {
+            background: white;
+            padding: var(--spacing-4);
             border-radius: 8px;
-            font-size: 1rem;
-            box-sizing: border-box;
+            border: 1px solid var(--gray-200);
         }
-        
-        .form-group textarea {
-            min-height: 80px;
-            resize: vertical;
+
+        .details-section h4 {
+            margin: 0 0 var(--spacing-2);
+            color: var(--gray-700);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: var(--spacing-2);
+        }
+
+        .photo-grid img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--gray-200);
+        }
+
+        @media (max-width: 768px) {
+            .search-form {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .submissions-table {
+                display: block;
+                overflow-x: auto;
+            }
+
+            .photo-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --gray-50: #111827;
+                --gray-100: #1f2937;
+                --gray-200: #374151;
+                --gray-300: #4b5563;
+                --gray-400: #6b7280;
+                --gray-500: #9ca3af;
+                --gray-600: #d1d5db;
+                --gray-700: #e5e7eb;
+                --gray-800: #f3f4f6;
+                --gray-900: #f9fafb;
+            }
+
+            body {
+                background: var(--gray-50);
+                color: var(--gray-900);
+            }
+
+            .header,
+            .stat-card,
+            .search-section,
+            .submissions-table {
+                background: var(--gray-100);
+            }
+
+            .table-header,
+            th {
+                background: var(--gray-200);
+                color: var(--gray-700);
+            }
+
+            .summary-row:hover {
+                background: var(--gray-200);
+            }
+
+            .details-row {
+                background: var(--gray-200);
+            }
+
+            .details-section {
+                background: var(--gray-100);
+                border-color: var(--gray-300);
+            }
         }
     </style>
 </head>
@@ -517,64 +577,79 @@ try {
             <table>
                 <thead>
                     <tr>
-                        <th>Seller</th>
-                        <th>Book Title</th>
-                        <th>Status</th>
-                        <th>Quote</th>
-                        <th>Submitted</th>
-                        <th>Actions</th>
+                        <th scope="col">Seller</th>
+                        <th scope="col">Book Title</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Quote</th>
+                        <th scope="col">Submitted</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($submissions)): ?>
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 3rem; color: #666;">
+                            <td colspan="6" style="text-align: center; padding: var(--spacing-8); color: var(--gray-500);">
                                 No submissions found.
                             </td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($submissions as $submission): ?>
-                            <tr class="summary-row" onclick="toggleDetails(<?php echo $submission['id']; ?>)">
+                            <tr class="summary-row" onclick="toggleDetails(<?php echo $submission['id']; ?>)" role="button" tabindex="0" aria-expanded="false">
                                 <td>
                                     <strong><?php echo htmlspecialchars($submission['seller_name']); ?></strong><br>
-                                    <small><?php echo htmlspecialchars($submission['seller_email']); ?></small>
+                                    <small style="color: var(--gray-500);"><?php echo htmlspecialchars($submission['seller_email']); ?></small>
                                 </td>
                                 <td>
                                     <strong><?php echo htmlspecialchars($submission['book_title']); ?></strong><br>
-                                    <small>by <?php echo htmlspecialchars($submission['book_author']); ?></small>
+                                    <small style="color: var(--gray-500);">by <?php echo htmlspecialchars($submission['book_author']); ?></small>
                                 </td>
                                 <td>
-                                    <span class="status-badge status-<?php echo $submission['status']; ?>">
+                                    <span class="badge status-<?php echo $submission['status']; ?>" role="status">
+                                        <i class="fas fa-<?php 
+                                            echo $submission['status'] === 'pending' ? 'clock' : 
+                                                ($submission['status'] === 'quoted' ? 'dollar-sign' : 
+                                                ($submission['status'] === 'completed' ? 'check' : 'times')); 
+                                        ?>"></i>
                                         <?php echo ucfirst($submission['status']); ?>
                                     </span>
                                 </td>
                                 <td>
                                     <?php if ($submission['quote_amount']): ?>
-                                        $<?php echo number_format($submission['quote_amount'], 2); ?>
+                                        <span class="quote-amount">$<?php echo number_format($submission['quote_amount'], 2); ?></span>
                                     <?php else: ?>
-                                        <span style="color: #666;">-</span>
+                                        <span style="color: var(--gray-400);">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo date('M j, Y', strtotime($submission['created_at'])); ?></td>
                                 <td>
                                     <div class="submission-actions">
-                                        <button onclick="event.stopPropagation();editSubmission(<?php echo $submission['id']; ?>, '<?php echo htmlspecialchars($submission['status']); ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', '<?php echo $submission['quote_amount']; ?>')" class="btn btn-sm">
-                                            Edit
+                                        <button onclick="event.stopPropagation();editSubmission(<?php echo $submission['id']; ?>, '<?php echo htmlspecialchars($submission['status']); ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', '<?php echo $submission['quote_amount']; ?>')" class="btn btn-sm" aria-label="Edit submission">
+                                            <i class="fas fa-edit"></i> Edit
                                         </button>
                                     </div>
                                 </td>
                             </tr>
-                            <!-- Detail row -->
-                            <tr id="details-<?php echo $submission['id']; ?>" class="details-row" style="display:none;background:#f8f9fa;">
+                            <tr id="details-<?php echo $submission['id']; ?>" class="details-row" style="display:none;">
                                 <td colspan="6">
-                                    <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                                        <div><strong>Description:</strong> <?php echo nl2br(htmlspecialchars($submission['description'] ?? 'N/A')); ?></div>
-                                        <div><strong>Item Details:</strong> <pre style="white-space:pre-wrap;background:#fff;padding:0.5rem;border:1px solid #e9ecef;border-radius:4px;overflow:auto;max-height:200px;"><?php echo htmlspecialchars($submission['item_details'] ?? '{}'); ?></pre></div>
+                                    <div class="details-content">
+                                        <div class="details-section">
+                                            <h4>Description</h4>
+                                            <p><?php echo nl2br(htmlspecialchars($submission['description'] ?? 'N/A')); ?></p>
+                                        </div>
+                                        
+                                        <div class="details-section">
+                                            <h4>Item Details</h4>
+                                            <pre style="white-space:pre-wrap;background:var(--gray-100);padding:var(--spacing-3);border-radius:8px;overflow:auto;max-height:200px;"><?php echo htmlspecialchars($submission['item_details'] ?? '{}'); ?></pre>
+                                        </div>
+                                        
                                         <?php if(!empty($submission['photo_paths'])): ?>
-                                            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
-                                                <?php foreach (json_decode($submission['photo_paths'], true) ?? [] as $p): ?>
-                                                    <img src="<?php echo htmlspecialchars($p['filename'] ?? $p); ?>" alt="photo" style="width:100px;height:auto;border-radius:4px;object-fit:cover;">
-                                                <?php endforeach; ?>
+                                            <div class="details-section">
+                                                <h4>Photos</h4>
+                                                <div class="photo-grid">
+                                                    <?php foreach (json_decode($submission['photo_paths'], true) ?? [] as $p): ?>
+                                                        <img src="<?php echo htmlspecialchars($p['filename'] ?? $p); ?>" alt="Submission photo" loading="lazy">
+                                                    <?php endforeach; ?>
+                                                </div>
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -649,12 +724,47 @@ try {
 
         function toggleDetails(id) {
             const row = document.getElementById('details-' + id);
-            if (row.style.display === 'none') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
+            const summaryRow = row.previousElementSibling;
+            const isExpanded = row.style.display !== 'none';
+            
+            // Close all other expanded rows
+            document.querySelectorAll('.details-row').forEach(detailRow => {
+                if (detailRow.id !== 'details-' + id) {
+                    detailRow.style.display = 'none';
+                    detailRow.previousElementSibling.classList.remove('expanded');
+                    detailRow.previousElementSibling.setAttribute('aria-expanded', 'false');
+                }
+            });
+            
+            // Toggle current row
+            row.style.display = isExpanded ? 'none' : '';
+            summaryRow.classList.toggle('expanded');
+            summaryRow.setAttribute('aria-expanded', !isExpanded);
+            
+            // Add animation
+            if (!isExpanded) {
+                row.style.opacity = '0';
+                row.style.transform = 'translateY(-10px)';
+                row.style.transition = 'all 0.2s ease';
+                
+                requestAnimationFrame(() => {
+                    row.style.opacity = '1';
+                    row.style.transform = 'translateY(0)';
+                });
             }
         }
+
+        // Add keyboard navigation
+        document.querySelectorAll('.summary-row').forEach(row => {
+            row.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const id = row.getAttribute('onclick').match(/\d+/)[0];
+                    toggleDetails(id);
+                }
+            });
+        });
     </script>
 </body>
+</html> 
 </html> 
