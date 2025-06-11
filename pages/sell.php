@@ -105,6 +105,38 @@ try {
     error_log('sell_submissions schema check error: ' . $e->getMessage());
 }
 
+$debug = true; // Set to false to hide debug info
+if ($debug) {
+    $keyFile = __DIR__ . '/../includes/config/encryption.key';
+    $saltFile = __DIR__ . '/../includes/config/encryption.salt';
+    $key = file_exists($keyFile) ? file_get_contents($keyFile) : '[missing]';
+    $salt = file_exists($saltFile) ? file_get_contents($saltFile) : '[missing]';
+    echo '<div style="background:#fffbe6;border:2px solid #ffe58f;padding:1em 2em;margin-bottom:2em;border-radius:10px;font-size:0.95em;">';
+    echo '<strong>DEBUG PANEL</strong><br>';
+    echo 'Encryption Key Hash: <code>' . htmlspecialchars(substr(hash('sha256', $key),0,16)) . '</code><br>';
+    echo 'Salt Hash: <code>' . htmlspecialchars(substr(hash('sha256', $salt),0,16)) . '</code><br>';
+    if ($key === '[missing]' || $salt === '[missing]') {
+        echo '<span style="color:red;font-weight:bold;">WARNING: Encryption key or salt is missing!</span><br>';
+    }
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        echo '<hr style="margin:0.7em 0;">';
+        echo '<b>Raw Name:</b> <code>' . htmlspecialchars($_POST['full_name'] ?? '') . '</code><br>';
+        echo '<b>Raw Email:</b> <code>' . htmlspecialchars($_POST['email'] ?? '') . '</code><br>';
+        echo '<b>Raw Desc:</b> <code>' . htmlspecialchars($_POST['description'] ?? '') . '</code><br>';
+        if (!empty($uploaded_files)) {
+            foreach ($uploaded_files as $uf) {
+                echo '<span style="font-size:0.95em;">Photo: <code>' . htmlspecialchars($uf['filename']) . '</code> | Token: <code>' . htmlspecialchars($uf['access_token']) . '</code></span><br>';
+            }
+        }
+        if (!empty($encrypted_data)) {
+            echo '<b>Encrypted Name:</b> <code>' . htmlspecialchars($encrypted_data['full_name'] ?? '') . '</code><br>';
+            echo '<b>Encrypted Email:</b> <code>' . htmlspecialchars($encrypted_data['email'] ?? '') . '</code><br>';
+            echo '<b>Encrypted Desc:</b> <code>' . htmlspecialchars($encrypted_data['description'] ?? '') . '</code><br>';
+        }
+    }
+    echo '</div>';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {

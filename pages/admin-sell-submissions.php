@@ -177,6 +177,49 @@ function decrypt_field($encrypted, $encryption) {
 }
 
 $encryption = new DatabaseEncryption();
+
+// --- DEBUG PANEL ---
+$debug = true; // Set to false to hide debug info
+if ($debug) {
+    $keyFile = __DIR__ . '/../includes/config/encryption.key';
+    $saltFile = __DIR__ . '/../includes/config/encryption.salt';
+    $key = file_exists($keyFile) ? file_get_contents($keyFile) : '[missing]';
+    $salt = file_exists($saltFile) ? file_get_contents($saltFile) : '[missing]';
+    echo '<div style="background:#fffbe6;border:2px solid #ffe58f;padding:1em 2em;margin-bottom:2em;border-radius:10px;font-size:0.95em;">';
+    echo '<strong>DEBUG PANEL</strong><br>';
+    echo 'Encryption Key Hash: <code>' . htmlspecialchars(substr(hash('sha256', $key),0,16)) . '</code><br>';
+    echo 'Salt Hash: <code>' . htmlspecialchars(substr(hash('sha256', $salt),0,16)) . '</code><br>';
+    if ($key === '[missing]' || $salt === '[missing]') {
+        echo '<span style="color:red;font-weight:bold;">WARNING: Encryption key or salt is missing!</span><br>';
+    }
+    echo '<hr style="margin:0.7em 0;">';
+    foreach ($submissions as $submission) {
+        echo '<div style="margin-bottom:1em;">';
+        $raw_name = $submission['full_name'] ?? $submission['seller_name'] ?? '';
+        $raw_email = $submission['email'] ?? $submission['seller_email'] ?? '';
+        $raw_desc = $submission['description'] ?? '';
+        $decrypted_name = decrypt_field($raw_name, $encryption);
+        $decrypted_email = decrypt_field($raw_email, $encryption);
+        $decrypted_desc = decrypt_field($raw_desc, $encryption);
+        echo '<b>ID:</b> ' . $submission['id'] . ' | <b>Raw Name:</b> <code>' . htmlspecialchars($raw_name) . '</code> | <b>Decrypted:</b> <code>' . htmlspecialchars($decrypted_name) . '</code><br>';
+        echo '<b>Raw Email:</b> <code>' . htmlspecialchars($raw_email) . '</code> | <b>Decrypted:</b> <code>' . htmlspecialchars($decrypted_email) . '</code><br>';
+        echo '<b>Raw Desc:</b> <code>' . htmlspecialchars($raw_desc) . '</code> | <b>Decrypted:</b> <code>' . htmlspecialchars($decrypted_desc) . '</code><br>';
+        if (!empty($submission['photo_paths'])) {
+            $photos = json_decode($submission['photo_paths'], true);
+            if (is_array($photos)) {
+                foreach ($photos as $p) {
+                    $raw_fn = $p['filename'] ?? '';
+                    $raw_tok = $p['access_token'] ?? '';
+                    $dec_fn = decrypt_field($raw_fn, $encryption);
+                    $dec_tok = decrypt_field($raw_tok, $encryption);
+                    echo '<span style="font-size:0.95em;">Photo: <code>' . htmlspecialchars($raw_fn) . '</code> → <code>' . htmlspecialchars($dec_fn) . '</code></span><br>';
+                }
+            }
+        }
+        echo '</div>';
+    }
+    echo '</div>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
