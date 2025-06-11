@@ -4,12 +4,6 @@
  * Enhanced database connectivity with security measures and monitoring
  */
 
-// Prevent direct access
-if (!defined('INCLUDED_FROM_APP')) {
-    http_response_code(403);
-    die('Direct access not allowed');
-}
-
 // Load environment variables securely
 $envPath = dirname(__DIR__) . '/.env';
 if (!file_exists($envPath)) {
