@@ -836,11 +836,11 @@ $encryption = new DatabaseEncryption();
                                                     <?php if (!empty($photos)): ?>
                                                         <?php foreach ($photos as $p): ?>
                                                             <?php
-                                                                // If photo path is encrypted, decrypt it
                                                                 $photoFilename = !empty($p['filename']) ? decrypt_field($p['filename'], $encryption) : '';
                                                                 $photoToken = !empty($p['access_token']) ? decrypt_field($p['access_token'], $encryption) : '';
                                                             ?>
                                                             <img src="/uploads/sell-submissions/<?php echo htmlspecialchars($photoFilename); ?><?php echo $photoToken ? '?token=' . urlencode($photoToken) : ''; ?>" alt="Submission photo" loading="lazy" onerror="this.src='/assets/img/photo-placeholder.png'">
+                                                            <div style="font-size:10px;color:#888;word-break:break-all;">[<?php echo htmlspecialchars($photoFilename); ?>]</div>
                                                         <?php endforeach; ?>
                                                     <?php else: ?>
                                                         <span style="color:var(--gray-400);">No photos</span>
@@ -857,8 +857,13 @@ $encryption = new DatabaseEncryption();
                                                     <span style="color: var(--gray-400);">-</span>
                                                 <?php endif; ?>
                                             </div>
-                                            <div>
+                                            <div style="display:flex;gap:0.5em;">
                                                 <button onclick="editSubmission(<?php echo $submission['id']; ?>, '<?php echo htmlspecialchars($submission['status']); ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', '<?php echo $submission['quote_amount']; ?>')" class="btn btn-sm" aria-label="Edit submission" style="min-width:100px;"> <i class="fas fa-edit"></i> Edit </button>
+                                                <form method="POST" onsubmit="return confirm('Are you sure you want to delete this submission?');" style="display:inline;">
+                                                    <input type="hidden" name="action" value="delete_submission">
+                                                    <input type="hidden" name="submission_id" value="<?php echo $submission['id']; ?>">
+                                                    <button type="submit" class="btn btn-sm btn-danger" style="min-width:80px;">Delete</button>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
@@ -946,13 +951,14 @@ $encryption = new DatabaseEncryption();
                     </div>
                 `;
                 document.body.appendChild(modal);
+            } else {
+                // Clear previous form values
+                document.getElementById('editStatus').value = status;
+                document.getElementById('editQuote').value = quoteAmount || '';
+                document.getElementById('editNotes').value = adminNotes || '';
+                document.getElementById('editSubmissionId').value = id;
+                modal.classList.add('active');
             }
-            // Set values
-            document.getElementById('editStatus').value = status;
-            document.getElementById('editQuote').value = quoteAmount || '';
-            document.getElementById('editNotes').value = adminNotes || '';
-            document.getElementById('editSubmissionId').value = id;
-            modal.classList.add('active');
             // Submit handler
             document.getElementById('crmEditForm').onsubmit = function(e) {
                 e.preventDefault();
