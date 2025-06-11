@@ -1,12 +1,6 @@
 <?php
-session_start();
 require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/database-encryption.php';
-
-// Simple admin check (optional, comment out if not needed)
-// if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-//     die('Admin only');
-// }
 
 $error = '';
 $rows = [];
@@ -64,12 +58,12 @@ function decrypt_field($val, $encryption) {
         <?php foreach ($rows as $row): ?>
             <tr>
                 <td><?php echo $row['id']; ?></td>
-                <td><span class="decrypted"><?php echo htmlspecialchars(decrypt_field($row['seller_name'], $encryption)); ?></span></td>
-                <td><span class="decrypted"><?php echo htmlspecialchars(decrypt_field($row['seller_email'], $encryption)); ?></span></td>
-                <td><?php echo htmlspecialchars($row['book_title']); ?></td>
-                <td><?php echo htmlspecialchars($row['status']); ?></td>
-                <td><?php echo htmlspecialchars($row['created_at']); ?></td>
-                <td><span class="decrypted"><?php echo htmlspecialchars(decrypt_field($row['description'], $encryption)); ?></span></td>
+                <td><span class="decrypted"><?php echo htmlspecialchars(decrypt_field($row['seller_name'] ?? $row['full_name'] ?? '', $encryption)); ?></span></td>
+                <td><span class="decrypted"><?php echo htmlspecialchars(decrypt_field($row['seller_email'] ?? $row['email'] ?? '', $encryption)); ?></span></td>
+                <td><?php echo htmlspecialchars($row['book_title'] ?? ($row['item_details'] ?? '')); ?></td>
+                <td><?php echo htmlspecialchars($row['status'] ?? ''); ?></td>
+                <td><?php echo htmlspecialchars($row['created_at'] ?? ''); ?></td>
+                <td><span class="decrypted"><?php echo htmlspecialchars(decrypt_field($row['description'] ?? '', $encryption)); ?></span></td>
             </tr>
         <?php endforeach; ?>
     </table>
