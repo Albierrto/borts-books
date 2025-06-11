@@ -9,6 +9,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
 define('INCLUDED_FROM_APP', true);
 require_once dirname(__DIR__) . '/includes/db.php';
+require_once dirname(__DIR__) . '/includes/database-encryption.php';
 
 $message = '';
 $error = '';
@@ -160,6 +161,18 @@ try {
     $quoted_submissions = 0;
     $total_quoted_value = 0;
 }
+
+// Decrypt helper
+function decrypt_field($encrypted, $encryption) {
+    if (!$encrypted) return '';
+    try {
+        return $encryption->decrypt($encrypted);
+    } catch (Exception $e) {
+        return '[Encrypted]';
+    }
+}
+
+$encryption = new DatabaseEncryption();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -511,6 +524,166 @@ try {
                 border-color: var(--gray-300);
             }
         }
+
+        /* CRM Card Layout */
+        .crm-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(37, 99, 235, 0.07), 0 1.5px 4px rgba(0,0,0,0.04);
+            margin-bottom: 2.5rem;
+            padding: 2rem 2.5rem;
+            transition: box-shadow 0.2s;
+            position: relative;
+        }
+        .crm-card:hover {
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12), 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .crm-section-header {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.03em;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+        }
+        .crm-details-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 900px) {
+            .crm-details-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        .crm-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.3em 1em;
+            border-radius: 999px;
+            font-size: 0.85em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-right: 0.5em;
+        }
+        .crm-badge.pending { background: #fef3c7; color: #92400e; }
+        .crm-badge.quoted { background: #dbeafe; color: #1e40af; }
+        .crm-badge.completed { background: #dcfce7; color: #166534; }
+        .crm-badge.rejected { background: #fee2e2; color: #991b1b; }
+        .crm-photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        .crm-photo-grid img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--gray-200);
+            background: #f3f4f6;
+            transition: box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .crm-photo-grid img:hover {
+            box-shadow: 0 4px 16px rgba(37,99,235,0.13);
+        }
+        .crm-item-list {
+            list-style: disc inside;
+            margin: 0;
+            padding-left: 1.2em;
+            color: #374151;
+        }
+        .crm-item-list li {
+            margin-bottom: 0.5em;
+            font-size: 1em;
+        }
+        .crm-edit-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.18);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s;
+        }
+        .crm-edit-modal.active {
+            display: flex;
+        }
+        .crm-edit-modal-content {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 8px 32px rgba(37,99,235,0.13);
+            padding: 2rem 2.5rem;
+            min-width: 320px;
+            max-width: 95vw;
+            width: 400px;
+            animation: slideUp 0.2s;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+        .crm-edit-modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        .crm-edit-modal-content label {
+            font-weight: 600;
+            margin-bottom: 0.3em;
+            display: block;
+        }
+        .crm-edit-modal-content input,
+        .crm-edit-modal-content select,
+        .crm-edit-modal-content textarea {
+            width: 100%;
+            padding: 0.7em 1em;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 7px;
+            margin-bottom: 1em;
+            font-size: 1em;
+            background: #f9fafb;
+            transition: border 0.2s;
+        }
+        .crm-edit-modal-content input:focus,
+        .crm-edit-modal-content select:focus,
+        .crm-edit-modal-content textarea:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+        .crm-edit-modal-actions {
+            display: flex;
+            gap: 1em;
+            justify-content: flex-end;
+        }
+        .crm-edit-modal-actions button {
+            padding: 0.7em 1.5em;
+            border-radius: 7px;
+            border: none;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            background: var(--primary);
+            color: white;
+            transition: background 0.2s;
+        }
+        .crm-edit-modal-actions .cancel {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .crm-edit-modal-actions button:hover {
+            background: var(--primary-dark);
+        }
+        .crm-edit-modal-actions .cancel:hover {
+            background: #d1d5db;
+        }
     </style>
 </head>
 <body>
@@ -594,64 +767,95 @@ try {
                         </tr>
                     <?php else: ?>
                         <?php foreach ($submissions as $submission): ?>
-                            <tr class="summary-row" onclick="toggleDetails(<?php echo $submission['id']; ?>)" role="button" tabindex="0" aria-expanded="false">
-                                <td>
-                                    <strong><?php echo htmlspecialchars($submission['seller_name']); ?></strong><br>
-                                    <small style="color: var(--gray-500);"><?php echo htmlspecialchars($submission['seller_email']); ?></small>
-                                </td>
-                                <td>
-                                    <strong><?php echo htmlspecialchars($submission['book_title']); ?></strong><br>
-                                    <small style="color: var(--gray-500);">by <?php echo htmlspecialchars($submission['book_author']); ?></small>
-                                </td>
-                                <td>
-                                    <span class="badge status-<?php echo $submission['status']; ?>" role="status">
-                                        <i class="fas fa-<?php 
-                                            echo $submission['status'] === 'pending' ? 'clock' : 
-                                                ($submission['status'] === 'quoted' ? 'dollar-sign' : 
-                                                ($submission['status'] === 'completed' ? 'check' : 'times')); 
-                                        ?>"></i>
-                                        <?php echo ucfirst($submission['status']); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <?php if ($submission['quote_amount']): ?>
-                                        <span class="quote-amount">$<?php echo number_format($submission['quote_amount'], 2); ?></span>
-                                    <?php else: ?>
-                                        <span style="color: var(--gray-400);">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?php echo date('M j, Y', strtotime($submission['created_at'])); ?></td>
-                                <td>
-                                    <div class="submission-actions">
-                                        <button onclick="event.stopPropagation();editSubmission(<?php echo $submission['id']; ?>, '<?php echo htmlspecialchars($submission['status']); ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', '<?php echo $submission['quote_amount']; ?>')" class="btn btn-sm" aria-label="Edit submission">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr id="details-<?php echo $submission['id']; ?>" class="details-row" style="display:none;">
-                                <td colspan="6">
-                                    <div class="details-content">
-                                        <div class="details-section">
-                                            <h4>Description</h4>
-                                            <p><?php echo nl2br(htmlspecialchars($submission['description'] ?? 'N/A')); ?></p>
+                            <?php
+                                // Decrypt fields if needed
+                                $seller_name = isset($submission['seller_name']) ? $submission['seller_name'] : decrypt_field($submission['full_name'] ?? '', $encryption);
+                                $seller_email = isset($submission['seller_email']) ? $submission['seller_email'] : decrypt_field($submission['email'] ?? '', $encryption);
+                                $description = isset($submission['description']) ? $submission['description'] : decrypt_field($submission['description'] ?? '', $encryption);
+                                $item_details = $submission['item_details'] ?? '';
+                                $item_details_fmt = '';
+                                if ($item_details) {
+                                    $arr = json_decode($item_details, true);
+                                    if (json_last_error() === JSON_ERROR_NONE && is_array($arr)) {
+                                        $item_details_fmt = '<ul class="crm-item-list">';
+                                        foreach ($arr as $item) {
+                                            $item_details_fmt .= '<li>';
+                                            $item_details_fmt .= '<strong>' . htmlspecialchars($item['title'] ?? 'N/A') . '</strong> - Volumes: ' . htmlspecialchars($item['volumes'] ?? 'N/A') . ', Condition: ' . htmlspecialchars($item['condition'] ?? 'N/A');
+                                            if (!empty($item['expected_price'])) $item_details_fmt .= ', Asking: $' . htmlspecialchars($item['expected_price']);
+                                            $item_details_fmt .= '</li>';
+                                        }
+                                        $item_details_fmt .= '</ul>';
+                                    } else {
+                                        $item_details_fmt = '[Unreadable]';
+                                    }
+                                } else {
+                                    $item_details_fmt = 'N/A';
+                                }
+                                // Photos
+                                $photos = [];
+                                if (!empty($submission['photo_paths'])) {
+                                    $photos = json_decode($submission['photo_paths'], true);
+                                    if (!is_array($photos)) $photos = [];
+                                }
+                            ?>
+                            <tr>
+                                <td colspan="6" style="padding:0; border:none;">
+                                    <div class="crm-card">
+                                        <div style="display:flex;justify-content:space-between;align-items:center;gap:1.5em;flex-wrap:wrap;">
+                                            <div>
+                                                <span class="crm-badge <?php echo htmlspecialchars($submission['status']); ?>">
+                                                    <i class="fas fa-<?php 
+                                                        echo $submission['status'] === 'pending' ? 'clock' : 
+                                                            ($submission['status'] === 'quoted' ? 'dollar-sign' : 
+                                                            ($submission['status'] === 'completed' ? 'check' : 'times')); 
+                                                    ?>"></i>
+                                                    <?php echo ucfirst($submission['status']); ?>
+                                                </span>
+                                                <strong style="font-size:1.1em;"> <?php echo htmlspecialchars($seller_name ?: 'N/A'); ?> </strong>
+                                                <span style="color:var(--gray-400);font-size:0.95em;">(<?php echo htmlspecialchars($seller_email ?: 'N/A'); ?>)</span>
+                                            </div>
+                                            <div style="text-align:right;min-width:120px;">
+                                                <span style="color:var(--gray-500);font-size:0.95em;">Submitted</span><br>
+                                                <span style="font-weight:600;"> <?php echo date('M j, Y', strtotime($submission['created_at'])); ?> </span>
+                                            </div>
                                         </div>
-                                        
-                                        <div class="details-section">
-                                            <h4>Item Details</h4>
-                                            <pre style="white-space:pre-wrap;background:var(--gray-100);padding:var(--spacing-3);border-radius:8px;overflow:auto;max-height:200px;"><?php echo htmlspecialchars($submission['item_details'] ?? '{}'); ?></pre>
-                                        </div>
-                                        
-                                        <?php if(!empty($submission['photo_paths'])): ?>
-                                            <div class="details-section">
-                                                <h4>Photos</h4>
-                                                <div class="photo-grid">
-                                                    <?php foreach (json_decode($submission['photo_paths'], true) ?? [] as $p): ?>
-                                                        <img src="<?php echo htmlspecialchars($p['filename'] ?? $p); ?>" alt="Submission photo" loading="lazy">
-                                                    <?php endforeach; ?>
+                                        <div class="crm-details-row">
+                                            <div>
+                                                <div class="crm-section-header"><i class="fas fa-align-left"></i> Description</div>
+                                                <div style="background:var(--gray-100);padding:1em;border-radius:8px;min-height:48px;"> <?php echo nl2br(htmlspecialchars($description ?: 'N/A')); ?> </div>
+                                                <div class="crm-section-header" style="margin-top:1.5em;"><i class="fas fa-list"></i> Item Details</div>
+                                                <div style="background:var(--gray-100);padding:1em;border-radius:8px;min-height:48px;"> <?php echo $item_details_fmt; ?> </div>
+                                            </div>
+                                            <div>
+                                                <div class="crm-section-header"><i class="fas fa-images"></i> Photos</div>
+                                                <div class="crm-photo-grid">
+                                                    <?php if (!empty($photos)): ?>
+                                                        <?php foreach ($photos as $p): ?>
+                                                            <?php if (!empty($p['filename'])): ?>
+                                                                <img src="/uploads/sell-submissions/<?php echo htmlspecialchars($p['filename']); ?><?php echo !empty($p['access_token']) ? '?token=' . urlencode($p['access_token']) : ''; ?>" alt="Submission photo" loading="lazy" onerror="this.src='/assets/img/photo-placeholder.png'">
+                                                            <?php else: ?>
+                                                                <img src="/assets/img/photo-placeholder.png" alt="No photo" loading="lazy">
+                                                            <?php endif; ?>
+                                                        <?php endforeach; ?>
+                                                    <?php else: ?>
+                                                        <span style="color:var(--gray-400);">No photos</span>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
-                                        <?php endif; ?>
+                                        </div>
+                                        <div style="display:flex;justify-content:space-between;align-items:center;gap:1.5em;flex-wrap:wrap;margin-top:1.5em;">
+                                            <div>
+                                                <span style="color:var(--gray-500);font-size:0.95em;">Quote:</span>
+                                                <?php if ($submission['quote_amount']): ?>
+                                                    <span class="quote-amount">$<?php echo number_format($submission['quote_amount'], 2); ?></span>
+                                                <?php else: ?>
+                                                    <span style="color: var(--gray-400);">-</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div>
+                                                <button onclick="editSubmission(<?php echo $submission['id']; ?>, '<?php echo htmlspecialchars($submission['status']); ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', '<?php echo $submission['quote_amount']; ?>')" class="btn btn-sm" aria-label="Edit submission" style="min-width:100px;"> <i class="fas fa-edit"></i> Edit </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -766,5 +970,4 @@ try {
         });
     </script>
 </body>
-</html> 
 </html> 

@@ -1698,11 +1698,24 @@ $cart_count = count($_SESSION['cart']);
                 this.appendChild(input);
             });
 
-            // Show loading state
+            // Show processing message
+            let processingMsg = document.getElementById('processingMessage');
+            if (!processingMsg) {
+                processingMsg = document.createElement('div');
+                processingMsg.id = 'processingMessage';
+                processingMsg.className = 'success-message';
+                processingMsg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Thank you! Your submission is being processed. This may take a moment if you uploaded photos.';
+                this.parentNode.insertBefore(processingMsg, this);
+            } else {
+                processingMsg.style.display = 'block';
+            }
+            // Fade/disable the form
+            this.style.opacity = '0.5';
+            Array.from(this.elements).forEach(el => el.disabled = true);
+            // Allow native form submission
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.classList.add('loading');
-            // Allow native form submission to server (no preventDefault)
         });
 
         // Make removePhoto function global
