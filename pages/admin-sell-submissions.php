@@ -148,14 +148,11 @@ try {
 // Decrypt helper
 function decrypt_field($encrypted, $encryption) {
     if (!$encrypted) return '';
-    if (strlen($encrypted) > 100 || preg_match('/[^\x20-\x7E]/', $encrypted)) {
-        try {
-            return $encryption->decrypt($encrypted);
-        } catch (Exception $e) {
-            return $encrypted;
-        }
+    try {
+        return $encryption->decrypt($encrypted);
+    } catch (Exception $e) {
+        return $encrypted;
     }
-    return $encrypted;
 }
 
 $encryption = new DatabaseEncryption();

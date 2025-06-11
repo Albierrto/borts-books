@@ -123,7 +123,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div style="border:6px solid #eee;border-top:6px solid #7c3aed;border-radius:50%;width:48px;height:48px;animation:spin 1s linear infinite;"></div>
         <div style="margin-top:1rem;font-weight:600;color:#7c3aed;">Submitting...</div>
     </div>
-    <style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>
+    <style>
+    body { background: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif; }
+    .container { max-width: 700px; margin: 2rem auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(37,99,235,0.07); padding: 2rem; }
+    .header { border-bottom: 2px solid #e0e7ef; margin-bottom: 1.5rem; padding-bottom: 1rem; }
+    .header h1 { color: #1d4ed8; font-size: 2rem; margin-bottom: 0.5rem; }
+    .guarantee, .note { background: #f1f5fd; color: #2563eb; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 1rem; }
+    .info-box { background: #f9fafb; border-left: 4px solid #2563eb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .payment-methods { display: flex; gap: 2rem; margin-bottom: 1rem; }
+    .payment-method { text-align: center; font-size: 1rem; color: #374151; }
+    .section { background: #f9fafb; border-radius: 8px; padding: 1.2rem 1rem; margin-bottom: 1.5rem; }
+    .section-title { font-weight: 700; color: #2563eb; margin-bottom: 0.7rem; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5em; }
+    .form-row { display: flex; gap: 1rem; }
+    .form-group { flex: 1; display: flex; flex-direction: column; margin-bottom: 1rem; }
+    .form-group label { font-weight: 600; margin-bottom: 0.3rem; }
+    input[type="text"], input[type="email"], textarea { border: 1px solid #d1d5db; border-radius: 6px; padding: 0.6em; font-size: 1em; }
+    input[type="text"]:focus, input[type="email"]:focus, textarea:focus { outline: 2px solid #2563eb; border-color: #2563eb; }
+    textarea { min-height: 60px; resize: vertical; }
+    .add-set-btn { background: #e0e7ef; color: #2563eb; border: none; border-radius: 6px; padding: 0.5em 1em; font-weight: 600; cursor: pointer; margin-top: 0.5em; }
+    .add-set-btn:hover { background: #2563eb; color: #fff; }
+    #sets-list .manga-set { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1em; margin-bottom: 0.7em; display: flex; gap: 1em; align-items: flex-end; flex-wrap: wrap; }
+    #sets-list .manga-set input { margin-bottom: 0; }
+    .remove-set-btn { background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; padding: 0.3em 0.7em; font-weight: 600; cursor: pointer; margin-left: 0.5em; }
+    .remove-set-btn:hover { background: #dc2626; color: #fff; }
+    .photo-upload-box { border: 2px dashed #2563eb; border-radius: 8px; padding: 1.5em; text-align: center; background: #f1f5fd; margin-bottom: 1em; position: relative; }
+    .photo-upload-label { cursor: pointer; display: block; font-weight: 600; color: #2563eb; }
+    input[type="file"] { display: none; }
+    .photo-list { display: flex; flex-wrap: wrap; gap: 0.7em; margin-top: 0.7em; }
+    .photo-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; }
+    .submit-btn { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 0.8em 2em; font-size: 1.1em; font-weight: 700; cursor: pointer; margin-top: 1em; transition: background 0.2s; }
+    .submit-btn:hover { background: #1d4ed8; }
+    .message.success { background: #dcfce7; color: #166534; border-radius: 8px; padding: 1em; margin-bottom: 1em; }
+    .message.error { background: #fee2e2; color: #991b1b; border-radius: 8px; padding: 1em; margin-bottom: 1em; }
+    @media (max-width: 700px) { .container { padding: 1rem; } .form-row { flex-direction: column; gap: 0; } .payment-methods { flex-direction: column; gap: 0.5rem; } }
+    </style>
     <?php if ($message): ?><div class="message success"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
     <?php if ($error): ?><div class="message error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
     <div class="header">
@@ -200,6 +233,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 </div>
 <script>
+// Dynamic manga set entry
+function renderSets() {
+    const setsList = document.getElementById('sets-list');
+    setsList.innerHTML = '';
+    window.mangaSets.forEach((set, idx) => {
+        const div = document.createElement('div');
+        div.className = 'manga-set';
+        div.innerHTML = `
+            <input type="text" name="set_title[]" placeholder="Series Title" required value="${set.title || ''}" style="flex:2;">
+            <input type="text" name="set_volumes[]" placeholder="Volumes (e.g. 1-12)" required value="${set.volumes || ''}" style="flex:1;">
+            <input type="text" name="set_condition[]" placeholder="Condition" required value="${set.condition || ''}" style="flex:1;">
+            <input type="text" name="set_expected_price[]" placeholder="Asking $ (optional)" value="${set.expected_price || ''}" style="flex:1;">
+            <button type="button" class="remove-set-btn" onclick="removeSet(${idx})">&times;</button>
+        `;
+        setsList.appendChild(div);
+    });
+}
+window.mangaSets = window.mangaSets || [{title:'',volumes:'',condition:'',expected_price:''}];
+function addSet(e) {
+    e.preventDefault();
+    window.mangaSets.push({title:'',volumes:'',condition:'',expected_price:''});
+    renderSets();
+}
+function removeSet(idx) {
+    window.mangaSets.splice(idx,1);
+    if(window.mangaSets.length===0) window.mangaSets.push({title:'',volumes:'',condition:'',expected_price:''});
+    renderSets();
+}
+document.getElementById('add-set-btn').addEventListener('click', addSet);
+document.addEventListener('DOMContentLoaded', renderSets);
+// Drag-and-drop photo upload
+const photoBox = document.getElementById('photo-upload-box');
+const photoInput = document.getElementById('photos');
+const photoList = document.getElementById('photo-list');
+photoBox.addEventListener('dragover', e => { e.preventDefault(); photoBox.style.background='#e0e7ef'; });
+photoBox.addEventListener('dragleave', e => { e.preventDefault(); photoBox.style.background=''; });
+photoBox.addEventListener('drop', e => {
+    e.preventDefault();
+    photoBox.style.background='';
+    const files = Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/'));
+    if(files.length) {
+        photoInput.files = new DataTransfer();
+        files.forEach(f=>photoInput.files.items.add(f));
+        updatePhotoList();
+    }
+});
+photoInput.addEventListener('change', updatePhotoList);
+function updatePhotoList() {
+    photoList.innerHTML = '';
+    Array.from(photoInput.files).forEach(f => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'photo-thumb';
+            photoList.appendChild(img);
+        };
+        reader.readAsDataURL(f);
+    });
+}
+// Loading overlay on submit
     document.querySelector('form').addEventListener('submit', function() {
         document.getElementById('loading-overlay').style.display = 'flex';
     });
