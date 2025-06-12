@@ -223,35 +223,52 @@ echo '</div>';
 // Decrypt helper function
 function decrypt_field($encrypted, $encryption) {
     if (empty($encrypted)) {
-        debug_log("Empty field to decrypt");
+        error_log("Empty field to decrypt");
         return '';
     }
+
     try {
         // Get the field name from the array key
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+        $line = '';
         $fieldName = '';
         
         if (isset($trace[1]['file']) && isset($trace[1]['line'])) {
             $file = file_get_contents($trace[1]['file']);
             $lines = explode("\n", $file);
             $line = $lines[$trace[1]['line'] - 1];
+            error_log("Decrypting line: " . $line);
             
-            // Look for array key in the form: $submission['field_name']
-            if (preg_match('/\$submission\[\'([^\']+)\'\]/', $line, $matches)) {
-                $fieldName = $matches[1];
+            // Map variable names to field names
+            $fieldMap = [
+                'full_name' => 'full_name',
+                'email' => 'email',
+                'phone' => 'phone',
+                'description' => 'description'
+            ];
+            
+            foreach ($fieldMap as $key => $field) {
+                if (strpos($line, "['$key']") !== false) {
+                    $fieldName = $field;
+                    break;
+                }
             }
         }
         
         if (empty($fieldName)) {
+            error_log("Could not determine field name from line: " . $line);
             throw new Exception('Could not determine field name for decryption');
         }
-        
+
+        error_log("Attempting to decrypt field: " . $fieldName);
         $decrypted = $encryption->decrypt($encrypted, $fieldName);
-        debug_log("Successfully decrypted field: " . $fieldName);
+        error_log("Successfully decrypted field: " . $fieldName);
+        
         return htmlspecialchars($decrypted);
     } catch (Exception $e) {
-        debug_log("Decryption error:", ['error' => $e->getMessage()]);
-        return '[Decryption Error]';
+        error_log("Decryption error for field: " . ($fieldName ?? 'unknown') . ", Error: " . $e->getMessage());
+        error_log("Raw encrypted data: " . bin2hex(substr($encrypted, 0, 32)) . "...");
+        return '[Decryption Error: ' . $e->getMessage() . ']';
     }
 }
 
@@ -786,17 +803,45 @@ Number of submissions to display: <?php echo count($submissions); ?>
                     <?php foreach ($submissions as $submission): ?>
                         <?php
                             try {
-                                // Decrypt sensitive data with explicit field names
+                                // Add debug output
+                                error_log("Processing submission ID: " . $submission['id']);
+                                
+                                // Decrypt sensitive data
                                 $decrypted_name = decrypt_field($submission['full_name'], $encryption);
+                                error_log("Name decrypted: " . ($decrypted_name === '[Decryption Error]' ? 'Failed' : 'Success'));
+                                
                                 $decrypted_email = decrypt_field($submission['email'], $encryption);
-                                $decrypted_phone = decrypt_field($submission['phone'], $encryption);
-                                $decrypted_description = decrypt_field($submission['description'], $encryption);
+                                error_log("Email decrypted: " . ($decrypted_email === '[Decryption Error]' ? 'Failed' : 'Success'));
                                 
-                                // Parse manga sets
-                                $manga_sets = json_decode($submission['item_details'], true) ?: [];
+                                $decrypted_phone = !empty($submission['phone']) ? decrypt_field($submission['phone'], $encryption) : '';
+                                error_log("Phone decrypted: " . ($decrypted_phone === '[Decryption Error]' ? 'Failed' : 'Success'));
                                 
-                                // Get photos
-                                $photos = json_decode($submission['photo_paths'], true) ?: [];
+                                $decrypted_description = !empty($submission['description']) ? decrypt_field($submission['description'], $encryption) : '';
+                                error_log("Description decrypted: " . ($decrypted_description === '[Decryption Error]' ? 'Failed' : 'Success'));
+                                
+                                // Parse manga sets with error handling
+                                try {
+                                    $manga_sets = json_decode($submission['item_details'], true);
+                                    if (json_last_error() !== JSON_ERROR_NONE) {
+                                        error_log("JSON decode error for manga sets: " . json_last_error_msg());
+                                        $manga_sets = [];
+                                    }
+                                } catch (Exception $e) {
+                                    error_log("Error parsing manga sets: " . $e->getMessage());
+                                    $manga_sets = [];
+                                }
+                                
+                                // Parse photos with error handling
+                                try {
+                                    $photos = json_decode($submission['photo_paths'], true);
+                                    if (json_last_error() !== JSON_ERROR_NONE) {
+                                        error_log("JSON decode error for photos: " . json_last_error_msg());
+                                        $photos = [];
+                                    }
+                                } catch (Exception $e) {
+                                    error_log("Error parsing photos: " . $e->getMessage());
+                                    $photos = [];
+                                }
                         ?>
                             <tr>
                                 <td style="border: 1px solid #ccc; padding: 8px;"><?php echo $submission['id']; ?></td>
