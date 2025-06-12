@@ -722,6 +722,18 @@ function decrypt_field($encrypted, $encryption) {
         </div>
 
         <div class="submissions">
+            <!-- Debug: Start of submissions loop -->
+            <div style="background: #f0f0f0; padding: 10px; margin: 10px; border: 1px solid #ccc;">
+                <pre>
+Number of submissions to display: <?php echo count($submissions); ?>
+
+<?php foreach ($submissions as $index => $submission): ?>
+    Submission <?php echo $index + 1; ?>: ID <?php echo $submission['id']; ?>
+<?php endforeach; ?>
+                </pre>
+            </div>
+            <!-- Debug: End of debug output -->
+
             <?php foreach ($submissions as $submission): ?>
                 <?php
                     // Decrypt sensitive data
