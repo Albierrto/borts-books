@@ -183,24 +183,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* Payment Methods */
     .payment-methods { 
-        display: flex; 
-        gap: 2rem; 
-        margin-bottom: 1.5rem;
-        justify-content: center;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin: 2rem auto;
+        max-width: 600px;
+        padding: 0 1rem;
     }
     .payment-method { 
         text-align: center; 
         font-size: 1.1rem; 
         color: #374151;
-        padding: 1rem;
+        padding: 1.5rem;
         background: #f9fafb;
         border-radius: 8px;
-        min-width: 100px;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .payment-method:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .payment-method i {
-        font-size: 1.5rem;
-        margin-bottom: 0.5rem;
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
         color: #2563eb;
+        display: block;
     }
 
     /* Form Sections */
@@ -415,8 +423,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             gap: 1rem;
         }
         .payment-methods { 
-            flex-direction: column; 
-            gap: 0.5rem;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin: 1.5rem auto;
         }
         .manga-set {
             grid-template-columns: 1fr !important;
@@ -425,7 +434,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-<?php include dirname(__DIR__) . '/includes/mobile-nav-header.php'; ?>
 <div class="container">
     <div id="loading-overlay">
         <div class="spinner"></div>
@@ -465,9 +473,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </ul>
     </div>
     <div class="payment-methods">
-        <div class="payment-method"><i class="fab fa-cc-paypal"></i><br>PayPal</div>
-        <div class="payment-method"><i class="fa fa-money-bill-wave"></i><br>Venmo</div>
-        <div class="payment-method"><i class="fa fa-university"></i><br>Zelle</div>
+        <div class="payment-method">
+            <i class="fab fa-paypal"></i>
+            PayPal
+        </div>
+        <div class="payment-method">
+            <i class="fa fa-money-bill-wave"></i>
+            Venmo
+        </div>
+        <div class="payment-method">
+            <i class="fa fa-university"></i>
+            Zelle
+        </div>
     </div>
     <div class="note">
         <b>Note:</b> Your personal information is encrypted and stored securely. Payouts are covered for security and safety via PayPal, Venmo, Zelle, and major US banks only.
