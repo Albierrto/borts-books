@@ -118,11 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<div class="container">
-    <div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.7);z-index:9999;align-items:center;justify-content:center;flex-direction:column;">
-        <div style="border:6px solid #eee;border-top:6px solid #7c3aed;border-radius:50%;width:48px;height:48px;animation:spin 1s linear infinite;"></div>
-        <div style="margin-top:1rem;font-weight:600;color:#7c3aed;">Submitting...</div>
-    </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sell Your Manga Sets - Bort's Books</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
     body { background: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif; }
     .container { max-width: 700px; margin: 2rem auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(37,99,235,0.07); padding: 2rem; }
@@ -156,7 +158,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .message.success { background: #dcfce7; color: #166534; border-radius: 8px; padding: 1em; margin-bottom: 1em; }
     .message.error { background: #fee2e2; color: #991b1b; border-radius: 8px; padding: 1em; margin-bottom: 1em; }
     @media (max-width: 700px) { .container { padding: 1rem; } .form-row { flex-direction: column; gap: 0; } .payment-methods { flex-direction: column; gap: 0.5rem; } }
+    @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
     </style>
+</head>
+<body>
+<?php include dirname(__DIR__) . '/includes/mobile-nav-header.php'; ?>
+<div class="container">
+    <div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.7);z-index:9999;align-items:center;justify-content:center;flex-direction:column;">
+        <div style="border:6px solid #eee;border-top:6px solid #7c3aed;border-radius:50%;width:48px;height:48px;animation:spin 1s linear infinite;"></div>
+        <div style="margin-top:1rem;font-weight:600;color:#7c3aed;">Submitting...</div>
+    </div>
     <?php if ($message): ?><div class="message success"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
     <?php if ($error): ?><div class="message error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
     <div class="header">
@@ -233,69 +244,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 </div>
 <script>
-// Dynamic manga set entry
-function renderSets() {
-    const setsList = document.getElementById('sets-list');
-    setsList.innerHTML = '';
-    window.mangaSets.forEach((set, idx) => {
-        const div = document.createElement('div');
-        div.className = 'manga-set';
-        div.innerHTML = `
-            <input type="text" name="set_title[]" placeholder="Series Title" required value="${set.title || ''}" style="flex:2;">
-            <input type="text" name="set_volumes[]" placeholder="Volumes (e.g. 1-12)" required value="${set.volumes || ''}" style="flex:1;">
-            <input type="text" name="set_condition[]" placeholder="Condition" required value="${set.condition || ''}" style="flex:1;">
-            <input type="text" name="set_expected_price[]" placeholder="Asking $ (optional)" value="${set.expected_price || ''}" style="flex:1;">
-            <button type="button" class="remove-set-btn" onclick="removeSet(${idx})">&times;</button>
-        `;
-        setsList.appendChild(div);
-    });
-}
-window.mangaSets = window.mangaSets || [{title:'',volumes:'',condition:'',expected_price:''}];
-function addSet(e) {
-    e.preventDefault();
-    window.mangaSets.push({title:'',volumes:'',condition:'',expected_price:''});
-    renderSets();
-}
-function removeSet(idx) {
-    window.mangaSets.splice(idx,1);
-    if(window.mangaSets.length===0) window.mangaSets.push({title:'',volumes:'',condition:'',expected_price:''});
-    renderSets();
-}
-document.getElementById('add-set-btn').addEventListener('click', addSet);
-document.addEventListener('DOMContentLoaded', renderSets);
-// Drag-and-drop photo upload
-const photoBox = document.getElementById('photo-upload-box');
-const photoInput = document.getElementById('photos');
-const photoList = document.getElementById('photo-list');
-photoBox.addEventListener('dragover', e => { e.preventDefault(); photoBox.style.background='#e0e7ef'; });
-photoBox.addEventListener('dragleave', e => { e.preventDefault(); photoBox.style.background=''; });
-photoBox.addEventListener('drop', e => {
-    e.preventDefault();
-    photoBox.style.background='';
-    const files = Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/'));
-    if(files.length) {
-        photoInput.files = new DataTransfer();
-        files.forEach(f=>photoInput.files.items.add(f));
-        updatePhotoList();
+document.addEventListener('DOMContentLoaded', function() {
+    // Dynamic manga set entry
+    function renderSets() {
+        const setsList = document.getElementById('sets-list');
+        setsList.innerHTML = '';
+        window.mangaSets.forEach((set, idx) => {
+            const div = document.createElement('div');
+            div.className = 'manga-set';
+            div.innerHTML = `
+                <input type="text" name="set_title[]" placeholder="Series Title" required value="${set.title || ''}" style="flex:2;">
+                <input type="text" name="set_volumes[]" placeholder="Volumes (e.g. 1-12)" required value="${set.volumes || ''}" style="flex:1;">
+                <input type="text" name="set_condition[]" placeholder="Condition" required value="${set.condition || ''}" style="flex:1;">
+                <input type="text" name="set_expected_price[]" placeholder="Asking $ (optional)" value="${set.expected_price || ''}" style="flex:1;">
+                <button type="button" class="remove-set-btn" onclick="removeSet(${idx})">&times;</button>
+            `;
+            setsList.appendChild(div);
+        });
     }
-});
-photoInput.addEventListener('change', updatePhotoList);
-function updatePhotoList() {
-    photoList.innerHTML = '';
-    Array.from(photoInput.files).forEach(f => {
-        const reader = new FileReader();
-        reader.onload = e => {
-            const img = document.createElement('img');
-            img.src = e.target.result;
-            img.className = 'photo-thumb';
-            photoList.appendChild(img);
-        };
-        reader.readAsDataURL(f);
+    window.mangaSets = window.mangaSets || [{title:'',volumes:'',condition:'',expected_price:''}];
+    function addSet(e) {
+        e.preventDefault();
+        window.mangaSets.push({title:'',volumes:'',condition:'',expected_price:''});
+        renderSets();
+    }
+    function removeSet(idx) {
+        window.mangaSets.splice(idx,1);
+        if(window.mangaSets.length===0) window.mangaSets.push({title:'',volumes:'',condition:'',expected_price:''});
+        renderSets();
+    }
+    document.getElementById('add-set-btn').addEventListener('click', addSet);
+    renderSets();
+    // Drag-and-drop photo upload
+    const photoBox = document.getElementById('photo-upload-box');
+    const photoInput = document.getElementById('photos');
+    const photoList = document.getElementById('photo-list');
+    photoBox.addEventListener('dragover', e => { e.preventDefault(); photoBox.style.background='#e0e7ef'; });
+    photoBox.addEventListener('dragleave', e => { e.preventDefault(); photoBox.style.background=''; });
+    photoBox.addEventListener('drop', e => {
+        e.preventDefault();
+        photoBox.style.background='';
+        const files = Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/'));
+        if(files.length) {
+            const dt = new DataTransfer();
+            files.forEach(f=>dt.items.add(f));
+            photoInput.files = dt.files;
+            updatePhotoList();
+        }
     });
-}
-// Loading overlay on submit
+    photoInput.addEventListener('change', updatePhotoList);
+    function updatePhotoList() {
+        photoList.innerHTML = '';
+        Array.from(photoInput.files).forEach(f => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'photo-thumb';
+                photoList.appendChild(img);
+            };
+            reader.readAsDataURL(f);
+        });
+    }
+    // Loading overlay on submit
     document.querySelector('form').addEventListener('submit', function() {
         document.getElementById('loading-overlay').style.display = 'flex';
     });
+});
 </script>
 <?php include dirname(__DIR__) . '/includes/mobile-nav-footer.php'; ?>

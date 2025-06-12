@@ -38,3 +38,15 @@ access_log
 # Uploads
 /uploads/ 
 /uploads/sell-photos
+
+# Security and sensitive files
+includes/encryption.key
+secure/encryption.key
+*.key
+config/*.key
+
+# Build and compiled files
+dist/
+build/
+*.min.js
+*.min.css

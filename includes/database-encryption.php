@@ -23,40 +23,25 @@ class DatabaseEncryption {
      * Get encryption key from secure storage
      */
     private function getEncryptionKey() {
-        // Priority: Environment variable > Key file > Generate new
+        // Priority: Environment variable > Key file
         if (isset($_ENV['DB_ENCRYPTION_KEY'])) {
-            return base64_decode($_ENV['DB_ENCRYPTION_KEY']);
+            return hex2bin($_ENV['DB_ENCRYPTION_KEY']);
         }
         
-        $keyFile = __DIR__ . '/../config/encryption.key';
+        $keyFile = __DIR__ . '/encryption.key';
         
         if (file_exists($keyFile)) {
-            return base64_decode(file_get_contents($keyFile));
+            return hex2bin(file_get_contents($keyFile));
         }
         
-        // Generate new key if none exists
-        $key = random_bytes(32); // 256-bit key
-        file_put_contents($keyFile, base64_encode($key));
-        chmod($keyFile, 0600);
-        
-        return $key;
+        throw new Exception('Encryption key not found');
     }
     
     /**
      * Get key derivation salt
      */
     private function getKeySalt() {
-        $saltFile = __DIR__ . '/../config/encryption.salt';
-        
-        if (file_exists($saltFile)) {
-            return base64_decode(file_get_contents($saltFile));
-        }
-        
-        $salt = random_bytes(16);
-        file_put_contents($saltFile, base64_encode($salt));
-        chmod($saltFile, 0600);
-        
-        return $salt;
+        return random_bytes(16); // Generate a new salt for each instance
     }
     
     /**
