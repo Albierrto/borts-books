@@ -126,50 +126,326 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Sell Your Manga Sets - Bort's Books</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-    body { background: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif; }
-    .container { max-width: 700px; margin: 2rem auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(37,99,235,0.07); padding: 2rem; }
-    .header { border-bottom: 2px solid #e0e7ef; margin-bottom: 1.5rem; padding-bottom: 1rem; }
-    .header h1 { color: #1d4ed8; font-size: 2rem; margin-bottom: 0.5rem; }
-    .guarantee, .note { background: #f1f5fd; color: #2563eb; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 1rem; }
-    .info-box { background: #f9fafb; border-left: 4px solid #2563eb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
-    .payment-methods { display: flex; gap: 2rem; margin-bottom: 1rem; }
-    .payment-method { text-align: center; font-size: 1rem; color: #374151; }
-    .section { background: #f9fafb; border-radius: 8px; padding: 1.2rem 1rem; margin-bottom: 1.5rem; }
-    .section-title { font-weight: 700; color: #2563eb; margin-bottom: 0.7rem; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5em; }
-    .form-row { display: flex; gap: 1rem; }
-    .form-group { flex: 1; display: flex; flex-direction: column; margin-bottom: 1rem; }
-    .form-group label { font-weight: 600; margin-bottom: 0.3rem; }
-    input[type="text"], input[type="email"], textarea { border: 1px solid #d1d5db; border-radius: 6px; padding: 0.6em; font-size: 1em; }
-    input[type="text"]:focus, input[type="email"]:focus, textarea:focus { outline: 2px solid #2563eb; border-color: #2563eb; }
-    textarea { min-height: 60px; resize: vertical; }
-    .add-set-btn { background: #e0e7ef; color: #2563eb; border: none; border-radius: 6px; padding: 0.5em 1em; font-weight: 600; cursor: pointer; margin-top: 0.5em; }
-    .add-set-btn:hover { background: #2563eb; color: #fff; }
-    #sets-list .manga-set { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1em; margin-bottom: 0.7em; display: flex; gap: 1em; align-items: flex-end; flex-wrap: wrap; }
-    #sets-list .manga-set input { margin-bottom: 0; }
-    .remove-set-btn { background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; padding: 0.3em 0.7em; font-weight: 600; cursor: pointer; margin-left: 0.5em; }
-    .remove-set-btn:hover { background: #dc2626; color: #fff; }
-    .photo-upload-box { border: 2px dashed #2563eb; border-radius: 8px; padding: 1.5em; text-align: center; background: #f1f5fd; margin-bottom: 1em; position: relative; }
-    .photo-upload-label { cursor: pointer; display: block; font-weight: 600; color: #2563eb; }
-    input[type="file"] { display: none; }
-    .photo-list { display: flex; flex-wrap: wrap; gap: 0.7em; margin-top: 0.7em; }
-    .photo-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; }
-    .submit-btn { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 0.8em 2em; font-size: 1.1em; font-weight: 700; cursor: pointer; margin-top: 1em; transition: background 0.2s; }
-    .submit-btn:hover { background: #1d4ed8; }
-    .message.success { background: #dcfce7; color: #166534; border-radius: 8px; padding: 1em; margin-bottom: 1em; }
-    .message.error { background: #fee2e2; color: #991b1b; border-radius: 8px; padding: 1em; margin-bottom: 1em; }
-    @media (max-width: 700px) { .container { padding: 1rem; } .form-row { flex-direction: column; gap: 0; } .payment-methods { flex-direction: column; gap: 0.5rem; } }
-    @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+    /* Base Styles */
+    body { 
+        background: #f3f4f6; 
+        font-family: 'Segoe UI', Arial, sans-serif;
+        line-height: 1.5;
+    }
+    .container { 
+        max-width: 800px; 
+        margin: 2rem auto; 
+        background: #fff; 
+        border-radius: 14px; 
+        box-shadow: 0 2px 16px rgba(37,99,235,0.07); 
+        padding: 2rem;
+    }
+
+    /* Header Styles */
+    .header { 
+        border-bottom: 2px solid #e0e7ef; 
+        margin-bottom: 1.5rem; 
+        padding-bottom: 1rem; 
+    }
+    .header h1 { 
+        color: #1d4ed8; 
+        font-size: 2rem; 
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Info Boxes */
+    .guarantee, .note { 
+        background: #f1f5fd; 
+        color: #2563eb; 
+        border-radius: 8px; 
+        padding: 1rem 1.2rem; 
+        margin-bottom: 1.5rem; 
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+    .info-box { 
+        background: #f9fafb; 
+        border-left: 4px solid #2563eb; 
+        border-radius: 8px; 
+        padding: 1.2rem; 
+        margin-bottom: 1.5rem;
+    }
+    .info-box ul {
+        margin: 0.5rem 0;
+        padding-left: 1.2rem;
+    }
+    .info-box li {
+        margin: 0.4rem 0;
+    }
+
+    /* Payment Methods */
+    .payment-methods { 
+        display: flex; 
+        gap: 2rem; 
+        margin-bottom: 1.5rem;
+        justify-content: center;
+    }
+    .payment-method { 
+        text-align: center; 
+        font-size: 1.1rem; 
+        color: #374151;
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 8px;
+        min-width: 100px;
+    }
+    .payment-method i {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        color: #2563eb;
+    }
+
+    /* Form Sections */
+    .section { 
+        background: #f9fafb; 
+        border-radius: 8px; 
+        padding: 1.5rem; 
+        margin-bottom: 1.5rem;
+    }
+    .section-title { 
+        font-weight: 700; 
+        color: #2563eb; 
+        margin-bottom: 1rem; 
+        font-size: 1.2rem; 
+        display: flex; 
+        align-items: center; 
+        gap: 0.5rem;
+    }
+
+    /* Form Elements */
+    .form-row { 
+        display: flex; 
+        gap: 1.2rem;
+        margin-bottom: 1rem;
+    }
+    .form-group { 
+        flex: 1; 
+        display: flex; 
+        flex-direction: column;
+    }
+    .form-group label { 
+        font-weight: 600; 
+        margin-bottom: 0.4rem;
+        color: #374151;
+    }
+    input[type="text"], 
+    input[type="email"], 
+    textarea,
+    select { 
+        border: 1px solid #d1d5db; 
+        border-radius: 8px; 
+        padding: 0.7rem; 
+        font-size: 1rem;
+        background: #fff;
+    }
+    input[type="text"]:focus, 
+    input[type="email"]:focus, 
+    textarea:focus,
+    select:focus { 
+        outline: 2px solid #2563eb; 
+        border-color: #2563eb;
+    }
+    textarea { 
+        min-height: 80px; 
+        resize: vertical;
+    }
+
+    /* Manga Sets */
+    .add-set-btn { 
+        background: #e0e7ef; 
+        color: #2563eb; 
+        border: none; 
+        border-radius: 8px; 
+        padding: 0.7rem 1.2rem; 
+        font-weight: 600; 
+        cursor: pointer; 
+        margin-top: 1rem;
+        transition: all 0.2s;
+    }
+    .add-set-btn:hover { 
+        background: #2563eb; 
+        color: #fff;
+    }
+    #sets-list .manga-set { 
+        background: #fff; 
+        border: 1px solid #e5e7eb; 
+        border-radius: 8px; 
+        padding: 1.2rem; 
+        margin-bottom: 1rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        align-items: end;
+    }
+    .remove-set-btn { 
+        background: #fee2e2; 
+        color: #dc2626; 
+        border: none; 
+        border-radius: 6px; 
+        padding: 0.5rem 1rem; 
+        font-weight: 600; 
+        cursor: pointer;
+        transition: all 0.2s;
+        width: fit-content;
+    }
+    .remove-set-btn:hover { 
+        background: #dc2626; 
+        color: #fff;
+    }
+
+    /* Photo Upload */
+    .photo-upload-box { 
+        border: 2px dashed #2563eb; 
+        border-radius: 8px; 
+        padding: 2rem; 
+        text-align: center; 
+        background: #f1f5fd; 
+        margin-bottom: 1rem;
+        transition: all 0.2s;
+    }
+    .photo-upload-box:hover {
+        border-color: #1d4ed8;
+        background: #e5edff;
+    }
+    .photo-upload-label { 
+        cursor: pointer; 
+        display: block; 
+        font-weight: 600; 
+        color: #2563eb;
+    }
+    .photo-list { 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 1rem; 
+        margin-top: 1rem;
+    }
+    .photo-thumb { 
+        width: 100px; 
+        height: 100px; 
+        object-fit: cover; 
+        border-radius: 8px; 
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Submit Button */
+    .submit-btn { 
+        background: #2563eb; 
+        color: #fff; 
+        border: none; 
+        border-radius: 8px; 
+        padding: 1rem 2rem; 
+        font-size: 1.1rem; 
+        font-weight: 700; 
+        cursor: pointer; 
+        margin-top: 1rem;
+        width: 100%;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    .submit-btn:hover { 
+        background: #1d4ed8;
+        transform: translateY(-1px);
+    }
+
+    /* Messages */
+    .message { 
+        border-radius: 8px; 
+        padding: 1rem 1.2rem; 
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .message.success { 
+        background: #dcfce7; 
+        color: #166534;
+    }
+    .message.error { 
+        background: #fee2e2; 
+        color: #991b1b;
+    }
+
+    /* Loading Overlay */
+    #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(255,255,255,0.9);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+    .spinner {
+        border: 6px solid #e5e7eb;
+        border-top: 6px solid #2563eb;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) { 
+        .container { 
+            margin: 1rem;
+            padding: 1rem;
+        }
+        .form-row { 
+            flex-direction: column; 
+            gap: 1rem;
+        }
+        .payment-methods { 
+            flex-direction: column; 
+            gap: 0.5rem;
+        }
+        .manga-set {
+            grid-template-columns: 1fr !important;
+        }
+    }
     </style>
 </head>
 <body>
 <?php include dirname(__DIR__) . '/includes/mobile-nav-header.php'; ?>
 <div class="container">
-    <div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.7);z-index:9999;align-items:center;justify-content:center;flex-direction:column;">
-        <div style="border:6px solid #eee;border-top:6px solid #7c3aed;border-radius:50%;width:48px;height:48px;animation:spin 1s linear infinite;"></div>
-        <div style="margin-top:1rem;font-weight:600;color:#7c3aed;">Submitting...</div>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div style="margin-top:1rem;font-weight:600;color:#2563eb;">Submitting...</div>
     </div>
-    <?php if ($message): ?><div class="message success"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
-    <?php if ($error): ?><div class="message error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
+
+    <?php if ($message): ?>
+        <div class="message success">
+            <i class="fa fa-check-circle"></i>
+            <?php echo htmlspecialchars($message); ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+        <div class="message error">
+            <i class="fa fa-exclamation-circle"></i>
+            <?php echo htmlspecialchars($error); ?>
+        </div>
+    <?php endif; ?>
+
     <div class="header">
         <h1><i class="fa fa-book-open"></i> Sell Your Manga Sets</h1>
         <p>Turn your manga collection into cash! We buy complete sets in good condition.</p>
@@ -245,23 +521,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Manga condition options
+    const conditionOptions = [
+        { value: 'G5', label: 'G5 - Like New/Never Read' },
+        { value: 'G4', label: 'G4 - Very Good (Light shelf wear)' },
+        { value: 'G3', label: 'G3 - Good (Some wear, all pages intact)' },
+        { value: 'G2', label: 'G2 - Fair (Noticeable wear)' },
+        { value: 'G1', label: 'G1 - Poor (Significant wear/damage)' }
+    ];
+
     // Dynamic manga set entry
+    function createConditionSelect() {
+        const select = document.createElement('select');
+        select.name = 'set_condition[]';
+        select.required = true;
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select condition...';
+        select.appendChild(defaultOption);
+
+        conditionOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.label;
+            select.appendChild(optionElement);
+        });
+
+        return select;
+    }
+
     function renderSets() {
         const setsList = document.getElementById('sets-list');
         setsList.innerHTML = '';
-        window.mangaSets.forEach((set, idx) => {
-            const div = document.createElement('div');
-            div.className = 'manga-set';
-            div.innerHTML = `
-                <input type="text" name="set_title[]" placeholder="Series Title" required value="${set.title || ''}" style="flex:2;">
-                <input type="text" name="set_volumes[]" placeholder="Volumes (e.g. 1-12)" required value="${set.volumes || ''}" style="flex:1;">
-                <input type="text" name="set_condition[]" placeholder="Condition" required value="${set.condition || ''}" style="flex:1;">
-                <input type="text" name="set_expected_price[]" placeholder="Asking $ (optional)" value="${set.expected_price || ''}" style="flex:1;">
-                <button type="button" class="remove-set-btn" onclick="removeSet(${idx})">&times;</button>
+
+        const sets = window.mangaSets || [];
+        if (sets.length === 0) {
+            addSet();
+            return;
+        }
+
+        sets.forEach((set, index) => {
+            const setDiv = document.createElement('div');
+            setDiv.className = 'manga-set';
+            
+            const titleGroup = document.createElement('div');
+            titleGroup.className = 'form-group';
+            titleGroup.innerHTML = `
+                <label>Series Title *</label>
+                <input type="text" name="set_title[]" required value="${set.title || ''}" placeholder="e.g. Naruto">
             `;
-            setsList.appendChild(div);
+
+            const volumesGroup = document.createElement('div');
+            volumesGroup.className = 'form-group';
+            volumesGroup.innerHTML = `
+                <label>Volumes *</label>
+                <input type="text" name="set_volumes[]" required value="${set.volumes || ''}" placeholder="e.g. 1-72 or 1,2,3,5">
+            `;
+
+            const conditionGroup = document.createElement('div');
+            conditionGroup.className = 'form-group';
+            const conditionLabel = document.createElement('label');
+            conditionLabel.textContent = 'Condition *';
+            const conditionSelect = createConditionSelect();
+            if (set.condition) {
+                conditionSelect.value = set.condition;
+            }
+            conditionGroup.appendChild(conditionLabel);
+            conditionGroup.appendChild(conditionSelect);
+
+            const priceGroup = document.createElement('div');
+            priceGroup.className = 'form-group';
+            priceGroup.innerHTML = `
+                <label>Expected Price</label>
+                <input type="text" name="set_expected_price[]" value="${set.expected_price || ''}" placeholder="$">
+            `;
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'remove-set-btn';
+            removeButton.innerHTML = '<i class="fa fa-trash"></i> Remove';
+            removeButton.onclick = () => removeSet(index);
+
+            setDiv.appendChild(titleGroup);
+            setDiv.appendChild(volumesGroup);
+            setDiv.appendChild(conditionGroup);
+            setDiv.appendChild(priceGroup);
+            setDiv.appendChild(removeButton);
+            setsList.appendChild(setDiv);
         });
     }
+
     window.mangaSets = window.mangaSets || [{title:'',volumes:'',condition:'',expected_price:''}];
     function addSet(e) {
         e.preventDefault();

@@ -7,7 +7,6 @@
 class DatabaseEncryption {
     private $encryptionKey;
     private $algorithm = 'aes-256-gcm';
-    private $keyDerivationSalt;
     
     public function __construct() {
         $this->initializeEncryption();
@@ -16,7 +15,6 @@ class DatabaseEncryption {
     private function initializeEncryption() {
         // Get encryption key from environment or secure key management
         $this->encryptionKey = $this->getEncryptionKey();
-        $this->keyDerivationSalt = $this->getKeySalt();
     }
     
     /**
@@ -38,23 +36,18 @@ class DatabaseEncryption {
     }
     
     /**
-     * Get key derivation salt
-     */
-    private function getKeySalt() {
-        return random_bytes(16); // Generate a new salt for each instance
-    }
-    
-    /**
      * Derive field-specific encryption key
      */
     private function deriveFieldKey($fieldName) {
-        return hash_pbkdf2('sha256', $this->encryptionKey, $this->keyDerivationSalt . $fieldName, 10000, 32, true);
+        // Use a deterministic salt based on the field name
+        $salt = hash_hmac('sha256', $fieldName, $this->encryptionKey, true);
+        return hash_pbkdf2('sha256', $this->encryptionKey, $salt, 10000, 32, true);
     }
     
     /**
      * Encrypt sensitive data
      */
-    public function encrypt($data, $fieldName = 'default') {
+    public function encrypt($data, $fieldName) {
         if (empty($data)) {
             return $data;
         }
@@ -89,7 +82,7 @@ class DatabaseEncryption {
     /**
      * Decrypt sensitive data
      */
-    public function decrypt($encryptedData, $fieldName = 'default') {
+    public function decrypt($encryptedData, $fieldName) {
         if (empty($encryptedData)) {
             return $encryptedData;
         }
