@@ -190,6 +190,32 @@ try {
     $total_quoted_value = 0;
 }
 
+// Debug information visible to admins
+echo '<!-- Debug Information -->';
+echo '<div style="background: #f0f0f0; padding: 10px; margin: 10px; border: 1px solid #ccc;">';
+echo '<h3>Debug Information (Admin Only)</h3>';
+echo '<pre>';
+echo "PHP Version: " . phpversion() . "\n";
+echo "Database Connection Status: " . ($db ? "Connected" : "Not Connected") . "\n";
+echo "Encryption Status: " . (isset($encryption) ? "Initialized" : "Not Initialized") . "\n";
+echo "Total Submissions Found: " . (isset($submissions) ? count($submissions) : "N/A") . "\n";
+echo "Current Filters: \n";
+echo "- Status Filter: " . htmlspecialchars($status_filter) . "\n";
+echo "- Search Term: " . htmlspecialchars($search) . "\n";
+echo "Query Used: " . htmlspecialchars($query) . "\n";
+echo "Parameters: " . print_r($params, true) . "\n";
+if (!empty($error)) {
+    echo "Errors: " . htmlspecialchars($error) . "\n";
+}
+echo "\nFirst Submission Raw Data (if any):\n";
+if (!empty($submissions)) {
+    echo print_r($submissions[0], true) . "\n";
+} else {
+    echo "No submissions found in array\n";
+}
+echo '</pre>';
+echo '</div>';
+
 // Decrypt helper function
 function decrypt_field($encrypted, $encryption) {
     if (empty($encrypted)) {
