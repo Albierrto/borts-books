@@ -14,6 +14,16 @@ require_once dirname(__DIR__) . '/includes/database-encryption.php';
 $message = '';
 $error = '';
 
+// Debug function
+function debug_log($msg, $data = null) {
+    error_log("DEBUG: $msg");
+    if ($data !== null) {
+        error_log("DATA: " . print_r($data, true));
+    }
+}
+
+debug_log("Starting admin-sell-submissions.php");
+
 // Check if table exists and create if needed
 try {
     $result = $db->query("SHOW TABLES LIKE 'sell_submissions'");
@@ -99,8 +109,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $status_filter = trim($_GET['status'] ?? '');
 $search = trim($_GET['search'] ?? '');
 
+debug_log("Filters:", ['status' => $status_filter, 'search' => $search]);
+
 // Initialize encryption
-$encryption = new DatabaseEncryption();
+try {
+    $encryption = new DatabaseEncryption();
+    debug_log("Encryption initialized successfully");
+} catch (Exception $e) {
+    debug_log("Encryption initialization error: " . $e->getMessage());
+    $error = 'Error initializing encryption: ' . $e->getMessage();
+}
 
 // Build query
 $where_conditions = [];
@@ -111,41 +129,60 @@ if ($status_filter) {
     $params[] = $status_filter;
 }
 
-// Note: We'll handle search after decryption since the fields are encrypted
 $where_clause = $where_conditions ? "WHERE " . implode(" AND ", $where_conditions) : "";
+$query = "SELECT * FROM sell_submissions $where_clause ORDER BY created_at DESC";
+
+debug_log("Query:", ['sql' => $query, 'params' => $params]);
 
 // Get submissions
 try {
-    $stmt = $db->prepare("SELECT * FROM sell_submissions $where_clause ORDER BY created_at DESC");
+    $stmt = $db->prepare($query);
     $stmt->execute($params);
     $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    debug_log("Found submissions:", ['count' => count($submissions)]);
 
     // Filter encrypted fields if search is present
     if ($search) {
+        debug_log("Filtering by search term:", ['search' => $search]);
         $filtered_submissions = [];
         foreach ($submissions as $submission) {
-            $decrypted_name = decrypt_field($submission['full_name'], $encryption);
-            $decrypted_email = decrypt_field($submission['email'], $encryption);
-            
-            if (stripos($decrypted_name, $search) !== false || 
-                stripos($decrypted_email, $search) !== false) {
-                $filtered_submissions[] = $submission;
+            try {
+                $decrypted_name = decrypt_field($submission['full_name'], $encryption);
+                $decrypted_email = decrypt_field($submission['email'], $encryption);
+                
+                if (stripos($decrypted_name, $search) !== false || 
+                    stripos($decrypted_email, $search) !== false) {
+                    $filtered_submissions[] = $submission;
+                }
+            } catch (Exception $e) {
+                debug_log("Decryption error during search:", ['error' => $e->getMessage()]);
             }
         }
         $submissions = $filtered_submissions;
+        debug_log("After search filter:", ['filtered_count' => count($submissions)]);
     }
 } catch (PDOException $e) {
+    debug_log("Database error:", ['error' => $e->getMessage()]);
     $error = 'Error fetching submissions: ' . $e->getMessage();
     $submissions = [];
 }
 
 // Get statistics
 try {
+    debug_log("Fetching statistics");
     $total_submissions = $db->query("SELECT COUNT(*) FROM sell_submissions")->fetchColumn();
     $pending_submissions = $db->query("SELECT COUNT(*) FROM sell_submissions WHERE status = 'pending'")->fetchColumn();
     $in_progress_submissions = $db->query("SELECT COUNT(*) FROM sell_submissions WHERE status = 'in_progress'")->fetchColumn();
     $total_quoted_value = $db->query("SELECT COALESCE(SUM(quote_amount), 0) FROM sell_submissions WHERE quote_amount IS NOT NULL")->fetchColumn();
+    
+    debug_log("Statistics:", [
+        'total' => $total_submissions,
+        'pending' => $pending_submissions,
+        'in_progress' => $in_progress_submissions,
+        'quoted_value' => $total_quoted_value
+    ]);
 } catch (PDOException $e) {
+    debug_log("Statistics error:", ['error' => $e->getMessage()]);
     $error .= ' Error fetching statistics: ' . $e->getMessage();
     $total_submissions = 0;
     $pending_submissions = 0;
@@ -155,11 +192,16 @@ try {
 
 // Decrypt helper function
 function decrypt_field($encrypted, $encryption) {
-    if (empty($encrypted)) return '';
+    if (empty($encrypted)) {
+        debug_log("Empty field to decrypt");
+        return '';
+    }
     try {
-        return $encryption->decrypt($encrypted);
+        $decrypted = $encryption->decrypt($encrypted);
+        debug_log("Successfully decrypted field");
+        return $decrypted;
     } catch (Exception $e) {
-        error_log('Decryption error: ' . $e->getMessage());
+        debug_log("Decryption error:", ['error' => $e->getMessage()]);
         return '[Decryption Error]';
     }
 }
