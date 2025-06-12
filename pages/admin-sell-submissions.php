@@ -449,6 +449,20 @@ function decrypt_field($encrypted, $encryption) {
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
+            border: 2px solid red;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        .submissions {
+            position: relative;
+            z-index: 1;
+            border: 2px solid blue;
+            margin-top: 20px;
+            display: block !important;
         }
 
         .submission-header {
@@ -736,17 +750,31 @@ Number of submissions to display: <?php echo count($submissions); ?>
 
             <?php foreach ($submissions as $submission): ?>
                 <?php
+                    // Debug decryption
+                    echo "<!-- Decrypting submission {$submission['id']} -->\n";
+                    
                     // Decrypt sensitive data
-                    $decrypted_name = htmlspecialchars(decrypt_field($submission['full_name'], $encryption));
-                    $decrypted_email = htmlspecialchars(decrypt_field($submission['email'], $encryption));
-                    $decrypted_phone = htmlspecialchars(decrypt_field($submission['phone'], $encryption));
-                    $decrypted_description = htmlspecialchars(decrypt_field($submission['description'], $encryption));
+                    try {
+                        $decrypted_name = htmlspecialchars(decrypt_field($submission['full_name'], $encryption));
+                        echo "<!-- Successfully decrypted name -->\n";
+                        $decrypted_email = htmlspecialchars(decrypt_field($submission['email'], $encryption));
+                        echo "<!-- Successfully decrypted email -->\n";
+                        $decrypted_phone = htmlspecialchars(decrypt_field($submission['phone'], $encryption));
+                        echo "<!-- Successfully decrypted phone -->\n";
+                        $decrypted_description = htmlspecialchars(decrypt_field($submission['description'], $encryption));
+                        echo "<!-- Successfully decrypted description -->\n";
+                    } catch (Exception $e) {
+                        echo "<!-- Decryption error: " . htmlspecialchars($e->getMessage()) . " -->\n";
+                        continue; // Skip this submission if decryption fails
+                    }
                     
                     // Parse manga sets
                     $manga_sets = json_decode($submission['item_details'], true) ?: [];
+                    echo "<!-- Found " . count($manga_sets) . " manga sets -->\n";
                     
                     // Get photos
                     $photos = json_decode($submission['photo_paths'], true) ?: [];
+                    echo "<!-- Found " . count($photos) . " photos -->\n";
                 ?>
                 <div class="submission-card">
                     <div class="submission-header">
