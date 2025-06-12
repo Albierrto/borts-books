@@ -227,9 +227,28 @@ function decrypt_field($encrypted, $encryption) {
         return '';
     }
     try {
-        $decrypted = $encryption->decrypt($encrypted);
-        debug_log("Successfully decrypted field");
-        return $decrypted;
+        // Get the field name from the array key
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+        $fieldName = '';
+        
+        if (isset($trace[1]['file']) && isset($trace[1]['line'])) {
+            $file = file_get_contents($trace[1]['file']);
+            $lines = explode("\n", $file);
+            $line = $lines[$trace[1]['line'] - 1];
+            
+            // Look for array key in the form: $submission['field_name']
+            if (preg_match('/\$submission\[\'([^\']+)\'\]/', $line, $matches)) {
+                $fieldName = $matches[1];
+            }
+        }
+        
+        if (empty($fieldName)) {
+            throw new Exception('Could not determine field name for decryption');
+        }
+        
+        $decrypted = $encryption->decrypt($encrypted, $fieldName);
+        debug_log("Successfully decrypted field: " . $fieldName);
+        return htmlspecialchars($decrypted);
     } catch (Exception $e) {
         debug_log("Decryption error:", ['error' => $e->getMessage()]);
         return '[Decryption Error]';
@@ -767,8 +786,17 @@ Number of submissions to display: <?php echo count($submissions); ?>
                     <?php foreach ($submissions as $submission): ?>
                         <?php
                             try {
-                                $decrypted_name = htmlspecialchars(decrypt_field($submission['full_name'], $encryption));
-                                $decrypted_email = htmlspecialchars(decrypt_field($submission['email'], $encryption));
+                                // Decrypt sensitive data with explicit field names
+                                $decrypted_name = decrypt_field($submission['full_name'], $encryption);
+                                $decrypted_email = decrypt_field($submission['email'], $encryption);
+                                $decrypted_phone = decrypt_field($submission['phone'], $encryption);
+                                $decrypted_description = decrypt_field($submission['description'], $encryption);
+                                
+                                // Parse manga sets
+                                $manga_sets = json_decode($submission['item_details'], true) ?: [];
+                                
+                                // Get photos
+                                $photos = json_decode($submission['photo_paths'], true) ?: [];
                         ?>
                             <tr>
                                 <td style="border: 1px solid #ccc; padding: 8px;"><?php echo $submission['id']; ?></td>
@@ -792,11 +820,11 @@ Number of submissions to display: <?php echo count($submissions); ?>
             <?php foreach ($submissions as $submission): ?>
                 <?php
                     try {
-                        // Decrypt sensitive data
-                        $decrypted_name = htmlspecialchars(decrypt_field($submission['full_name'], $encryption));
-                        $decrypted_email = htmlspecialchars(decrypt_field($submission['email'], $encryption));
-                        $decrypted_phone = htmlspecialchars(decrypt_field($submission['phone'], $encryption));
-                        $decrypted_description = htmlspecialchars(decrypt_field($submission['description'], $encryption));
+                        // Decrypt sensitive data with explicit field names
+                        $decrypted_name = decrypt_field($submission['full_name'], $encryption);
+                        $decrypted_email = decrypt_field($submission['email'], $encryption);
+                        $decrypted_phone = decrypt_field($submission['phone'], $encryption);
+                        $decrypted_description = decrypt_field($submission['description'], $encryption);
                         
                         // Parse manga sets
                         $manga_sets = json_decode($submission['item_details'], true) ?: [];
