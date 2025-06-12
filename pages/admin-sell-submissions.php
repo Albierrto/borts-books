@@ -823,7 +823,7 @@ Number of submissions to display: <?php echo count($submissions); ?>
                                 <td style="border: 1px solid #ccc; padding: 8px;"><?php echo $decrypted_email; ?></td>
                                 <td style="border: 1px solid #ccc; padding: 8px;"><?php echo ucfirst($submission['status']); ?></td>
                                 <td style="border: 1px solid #ccc; padding: 8px;">
-                                    <button onclick="alert('ID: <?php echo $submission['id']; ?>')">View Details</button>
+                                    <button onclick="editSubmission(<?php echo $submission['id']; ?>, '<?php echo $submission['status']; ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', <?php echo $submission['quote_amount'] ?? 0; ?>)">Edit</button>
                                 </td>
                             </tr>
                         <?php
@@ -869,6 +869,54 @@ Number of submissions to display: <?php echo count($submissions); ?>
                                     <?php endforeach; ?>
                                 </div>
                             <?php endif; ?>
+
+                            <?php if (!empty($decrypted_description)): ?>
+                                <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                                    <h4 style="margin: 0 0 5px 0;">Additional Description:</h4>
+                                    <p style="margin: 0;"><?php echo nl2br($decrypted_description); ?></p>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Edit Form -->
+                            <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+                                <h4 style="margin: 0 0 15px 0;">Update Submission</h4>
+                                <form method="POST" style="display: grid; gap: 15px;">
+                                    <input type="hidden" name="action" value="update_submission">
+                                    <input type="hidden" name="submission_id" value="<?php echo $submission['id']; ?>">
+                                    
+                                    <div style="display: grid; gap: 5px;">
+                                        <label style="font-weight: 500; color: #495057;">Status:</label>
+                                        <select name="status" required style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; width: 100%;">
+                                            <option value="pending" <?php echo $submission['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                            <option value="in_progress" <?php echo $submission['status'] === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
+                                            <option value="quoted" <?php echo $submission['status'] === 'quoted' ? 'selected' : ''; ?>>Quoted</option>
+                                            <option value="completed" <?php echo $submission['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                            <option value="rejected" <?php echo $submission['status'] === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
+                                        </select>
+                                    </div>
+
+                                    <div style="display: grid; gap: 5px;">
+                                        <label style="font-weight: 500; color: #495057;">Quote Amount ($):</label>
+                                        <input type="number" name="quote_amount" step="0.01" min="0" 
+                                               value="<?php echo $submission['quote_amount'] ?? ''; ?>"
+                                               style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; width: 100%;">
+                                    </div>
+
+                                    <div style="display: grid; gap: 5px;">
+                                        <label style="font-weight: 500; color: #495057;">Admin Notes:</label>
+                                        <textarea name="admin_notes" rows="3" 
+                                                  style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; width: 100%; resize: vertical;"
+                                        ><?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?></textarea>
+                                    </div>
+
+                                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                                        <button type="submit" 
+                                                style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                                            Save Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                 <?php
                     } catch (Exception $e) {
