@@ -1,6 +1,10 @@
 <?php
 session_start();
 
+// Enable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // Simple admin check
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     header('Location: admin-login.php');
@@ -748,136 +752,83 @@ Number of submissions to display: <?php echo count($submissions); ?>
             </div>
             <!-- Debug: End of debug output -->
 
+            <!-- Basic table format for debugging -->
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <thead>
+                    <tr>
+                        <th style="border: 1px solid #ccc; padding: 8px;">ID</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Name</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Email</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Status</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($submissions as $submission): ?>
+                        <?php
+                            try {
+                                $decrypted_name = htmlspecialchars(decrypt_field($submission['full_name'], $encryption));
+                                $decrypted_email = htmlspecialchars(decrypt_field($submission['email'], $encryption));
+                        ?>
+                            <tr>
+                                <td style="border: 1px solid #ccc; padding: 8px;"><?php echo $submission['id']; ?></td>
+                                <td style="border: 1px solid #ccc; padding: 8px;"><?php echo $decrypted_name; ?></td>
+                                <td style="border: 1px solid #ccc; padding: 8px;"><?php echo $decrypted_email; ?></td>
+                                <td style="border: 1px solid #ccc; padding: 8px;"><?php echo ucfirst($submission['status']); ?></td>
+                                <td style="border: 1px solid #ccc; padding: 8px;">
+                                    <button onclick="alert('ID: <?php echo $submission['id']; ?>')">View Details</button>
+                                </td>
+                            </tr>
+                        <?php
+                            } catch (Exception $e) {
+                                echo "<!-- Decryption error for submission {$submission['id']}: " . htmlspecialchars($e->getMessage()) . " -->";
+                            }
+                        ?>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <!-- Original cards with simplified styling -->
             <?php foreach ($submissions as $submission): ?>
                 <?php
-                    // Debug decryption
-                    echo "<!-- Decrypting submission {$submission['id']} -->\n";
-                    
-                    // Decrypt sensitive data
                     try {
+                        // Decrypt sensitive data
                         $decrypted_name = htmlspecialchars(decrypt_field($submission['full_name'], $encryption));
-                        echo "<!-- Successfully decrypted name -->\n";
                         $decrypted_email = htmlspecialchars(decrypt_field($submission['email'], $encryption));
-                        echo "<!-- Successfully decrypted email -->\n";
                         $decrypted_phone = htmlspecialchars(decrypt_field($submission['phone'], $encryption));
-                        echo "<!-- Successfully decrypted phone -->\n";
                         $decrypted_description = htmlspecialchars(decrypt_field($submission['description'], $encryption));
-                        echo "<!-- Successfully decrypted description -->\n";
-                    } catch (Exception $e) {
-                        echo "<!-- Decryption error: " . htmlspecialchars($e->getMessage()) . " -->\n";
-                        continue; // Skip this submission if decryption fails
-                    }
-                    
-                    // Parse manga sets
-                    $manga_sets = json_decode($submission['item_details'], true) ?: [];
-                    echo "<!-- Found " . count($manga_sets) . " manga sets -->\n";
-                    
-                    // Get photos
-                    $photos = json_decode($submission['photo_paths'], true) ?: [];
-                    echo "<!-- Found " . count($photos) . " photos -->\n";
+                        
+                        // Parse manga sets
+                        $manga_sets = json_decode($submission['item_details'], true) ?: [];
+                        
+                        // Get photos
+                        $photos = json_decode($submission['photo_paths'], true) ?: [];
                 ?>
-                <div class="submission-card">
-                    <div class="submission-header">
-                        <div class="submission-info">
-                            <h3><?php echo $decrypted_name; ?></h3>
-                            <div class="contact-info">
-                                <a href="mailto:<?php echo $decrypted_email; ?>"><?php echo $decrypted_email; ?></a>
-                                <?php if ($decrypted_phone): ?>
-                                    <span>|</span>
-                                    <a href="tel:<?php echo $decrypted_phone; ?>"><?php echo $decrypted_phone; ?></a>
-                                <?php endif; ?>
-                            </div>
-                            <div class="submission-meta">
-                                <span class="status-badge <?php echo $submission['status']; ?>">
-                                    <?php echo ucfirst(str_replace('_', ' ', $submission['status'])); ?>
-                                </span>
-                                <span class="date">
-                                    Submitted: <?php echo date('M j, Y g:i A', strtotime($submission['created_at'])); ?>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="submission-actions">
-                            <button class="btn btn-primary edit-btn" data-id="<?php echo $submission['id']; ?>">
-                                <i class="fas fa-edit"></i> Edit
-                            </button>
-                            <button class="btn btn-danger delete-btn" data-id="<?php echo $submission['id']; ?>">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="manga-sets">
-                        <h4>Manga Sets</h4>
-                        <div class="sets-grid">
-                            <?php foreach ($manga_sets as $set): ?>
-                                <div class="set-card">
-                                    <div class="set-info">
-                                        <strong><?php echo htmlspecialchars($set['title']); ?></strong>
-                                        <div>Volumes: <?php echo htmlspecialchars($set['volumes']); ?></div>
-                                        <div>Condition: <?php echo htmlspecialchars($set['condition']); ?></div>
-                                        <?php if (!empty($set['expected_price'])): ?>
-                                            <div>Expected: $<?php echo htmlspecialchars($set['expected_price']); ?></div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-
-                    <?php if ($photos): ?>
-                        <div class="photos-section">
-                            <h4>Photos</h4>
-                            <div class="photos-grid">
-                                <?php foreach ($photos as $photo): ?>
-                                    <div class="photo-card">
-                                        <img src="../uploads/sell-submissions/<?php echo htmlspecialchars($photo['filename']); ?>" 
-                                             alt="Submission photo" class="submission-photo">
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($decrypted_description): ?>
-                        <div class="description-section">
-                            <h4>Additional Description</h4>
-                            <p><?php echo nl2br($decrypted_description); ?></p>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="admin-section">
-                        <form class="update-form" method="POST">
-                            <input type="hidden" name="action" value="update_submission">
-                            <input type="hidden" name="submission_id" value="<?php echo $submission['id']; ?>">
+                        <div style="border: 2px solid #000; margin: 20px 0; padding: 15px; background: #fff;">
+                            <h3 style="margin: 0 0 10px 0;"><?php echo $decrypted_name; ?></h3>
+                            <p style="margin: 5px 0;">Email: <?php echo $decrypted_email; ?></p>
+                            <p style="margin: 5px 0;">Status: <?php echo ucfirst($submission['status']); ?></p>
+                            <p style="margin: 5px 0;">Submitted: <?php echo date('M j, Y g:i A', strtotime($submission['created_at'])); ?></p>
                             
-                            <div class="form-group">
-                                <label>Status</label>
-                                <select name="status" required>
-                                    <option value="pending" <?php echo $submission['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="in_progress" <?php echo $submission['status'] === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
-                                    <option value="quoted" <?php echo $submission['status'] === 'quoted' ? 'selected' : ''; ?>>Quoted</option>
-                                    <option value="completed" <?php echo $submission['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
-                                    <option value="rejected" <?php echo $submission['status'] === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Quote Amount ($)</label>
-                                <input type="number" name="quote_amount" step="0.01" min="0" 
-                                       value="<?php echo $submission['quote_amount'] ?? ''; ?>">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Admin Notes</label>
-                                <textarea name="admin_notes"><?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?></textarea>
-                            </div>
-
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save"></i> Save Changes
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                            <?php if (!empty($manga_sets)): ?>
+                                <div style="margin: 10px 0;">
+                                    <h4 style="margin: 5px 0;">Manga Sets:</h4>
+                                    <?php foreach ($manga_sets as $set): ?>
+                                        <div style="margin: 5px 0; padding: 5px; background: #f5f5f5;">
+                                            <strong><?php echo htmlspecialchars($set['title']); ?></strong>
+                                            <br>Volumes: <?php echo htmlspecialchars($set['volumes']); ?>
+                                            <br>Condition: <?php echo htmlspecialchars($set['condition']); ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                <?php
+                    } catch (Exception $e) {
+                        echo "<!-- Decryption error: " . htmlspecialchars($e->getMessage()) . " -->";
+                        continue;
+                    }
+                ?>
             <?php endforeach; ?>
         </div>
     </div>
