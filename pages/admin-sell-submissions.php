@@ -18,41 +18,11 @@ require_once dirname(__DIR__) . '/includes/database-encryption.php';
 $message = '';
 $error = '';
 
-// Debug function
-function debug_log($msg, $data = null) {
-    error_log("DEBUG: $msg");
-    if ($data !== null) {
-        error_log("DATA: " . print_r($data, true));
-    }
-}
-
-debug_log("Starting admin-sell-submissions.php");
-
-// Check if table exists and create if needed
+// Initialize encryption
 try {
-    $result = $db->query("SHOW TABLES LIKE 'sell_submissions'");
-    if ($result->rowCount() == 0) {
-        // Table doesn't exist, create it
-        $sql = "CREATE TABLE sell_submissions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            full_name VARBINARY(1024) NOT NULL,
-            email VARBINARY(1024) NOT NULL,
-            phone VARBINARY(1024),
-            overall_condition VARCHAR(50),
-            description VARBINARY(8192),
-            status ENUM('pending', 'in_progress', 'quoted', 'completed', 'rejected') DEFAULT 'pending',
-            quote_amount DECIMAL(10,2),
-            admin_notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            photo_paths JSON,
-            item_details JSON
-        )";
-        
-        $db->exec($sql);
-    }
-} catch (PDOException $e) {
-    $error = 'Error setting up database: ' . $e->getMessage();
+    $encryption = new DatabaseEncryption();
+} catch (Exception $e) {
+    $error = 'Error initializing encryption: ' . $e->getMessage();
 }
 
 // Handle form submission
@@ -113,24 +83,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $status_filter = trim($_GET['status'] ?? '');
 $search = trim($_GET['search'] ?? '');
 
-debug_log("Filters:", ['status' => $status_filter, 'search' => $search]);
-
-// Initialize encryption
-try {
-    $encryption = new DatabaseEncryption();
-    // Add debug output for encryption key
-    $keyFile = dirname(__DIR__) . '/includes/encryption.key';
-    error_log("Encryption key file path: " . $keyFile);
-    error_log("Encryption key file exists: " . (file_exists($keyFile) ? 'Yes' : 'No'));
-    if (file_exists($keyFile)) {
-        error_log("Encryption key file size: " . filesize($keyFile) . " bytes");
-    }
-    debug_log("Encryption initialized successfully");
-} catch (Exception $e) {
-    debug_log("Encryption initialization error: " . $e->getMessage());
-    $error = 'Error initializing encryption: ' . $e->getMessage();
-}
-
 // Build query
 $where_conditions = [];
 $params = [];
@@ -143,57 +95,23 @@ if ($status_filter) {
 $where_clause = $where_conditions ? "WHERE " . implode(" AND ", $where_conditions) : "";
 $query = "SELECT * FROM sell_submissions $where_clause ORDER BY created_at DESC";
 
-debug_log("Query:", ['sql' => $query, 'params' => $params]);
-
 // Get submissions
 try {
     $stmt = $db->prepare($query);
     $stmt->execute($params);
     $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    debug_log("Found submissions:", ['count' => count($submissions)]);
-
-    // Filter encrypted fields if search is present
-    if ($search) {
-        debug_log("Filtering by search term:", ['search' => $search]);
-        $filtered_submissions = [];
-        foreach ($submissions as $submission) {
-            try {
-                $decrypted_name = decrypt_field($submission['full_name'], $encryption, 'full_name');
-                $decrypted_email = decrypt_field($submission['email'], $encryption, 'email');
-                
-                if (stripos($decrypted_name, $search) !== false || 
-                    stripos($decrypted_email, $search) !== false) {
-                    $filtered_submissions[] = $submission;
-                }
-            } catch (Exception $e) {
-                debug_log("Decryption error during search:", ['error' => $e->getMessage()]);
-            }
-        }
-        $submissions = $filtered_submissions;
-        debug_log("After search filter:", ['filtered_count' => count($submissions)]);
-    }
 } catch (PDOException $e) {
-    debug_log("Database error:", ['error' => $e->getMessage()]);
     $error = 'Error fetching submissions: ' . $e->getMessage();
     $submissions = [];
 }
 
 // Get statistics
 try {
-    debug_log("Fetching statistics");
     $total_submissions = $db->query("SELECT COUNT(*) FROM sell_submissions")->fetchColumn();
     $pending_submissions = $db->query("SELECT COUNT(*) FROM sell_submissions WHERE status = 'pending'")->fetchColumn();
     $in_progress_submissions = $db->query("SELECT COUNT(*) FROM sell_submissions WHERE status = 'in_progress'")->fetchColumn();
     $total_quoted_value = $db->query("SELECT COALESCE(SUM(quote_amount), 0) FROM sell_submissions WHERE quote_amount IS NOT NULL")->fetchColumn();
-    
-    debug_log("Statistics:", [
-        'total' => $total_submissions,
-        'pending' => $pending_submissions,
-        'in_progress' => $in_progress_submissions,
-        'quoted_value' => $total_quoted_value
-    ]);
 } catch (PDOException $e) {
-    debug_log("Statistics error:", ['error' => $e->getMessage()]);
     $error .= ' Error fetching statistics: ' . $e->getMessage();
     $total_submissions = 0;
     $pending_submissions = 0;
@@ -201,48 +119,17 @@ try {
     $total_quoted_value = 0;
 }
 
-// Debug information visible to admins
-echo '<!-- Debug Information -->';
-echo '<div style="background: #f0f0f0; padding: 10px; margin: 10px; border: 1px solid #ccc;">';
-echo '<h3>Debug Information (Admin Only)</h3>';
-echo '<pre>';
-echo "PHP Version: " . phpversion() . "\n";
-echo "Database Connection Status: " . ($db ? "Connected" : "Not Connected") . "\n";
-echo "Encryption Status: " . (isset($encryption) ? "Initialized" : "Not Initialized") . "\n";
-echo "Total Submissions Found: " . (isset($submissions) ? count($submissions) : "N/A") . "\n";
-echo "Current Filters: \n";
-echo "- Status Filter: " . htmlspecialchars($status_filter) . "\n";
-echo "- Search Term: " . htmlspecialchars($search) . "\n";
-echo "Query Used: " . htmlspecialchars($query) . "\n";
-echo "Parameters: " . print_r($params, true) . "\n";
-if (!empty($error)) {
-    echo "Errors: " . htmlspecialchars($error) . "\n";
-}
-echo "\nFirst Submission Raw Data (if any):\n";
-if (!empty($submissions)) {
-    echo print_r($submissions[0], true) . "\n";
-} else {
-    echo "No submissions found in array\n";
-}
-echo '</pre>';
-echo '</div>';
-
 // Decrypt helper function
 function decrypt_field($encrypted, $encryption, $fieldName) {
     if (empty($encrypted)) {
-        error_log("Empty field to decrypt");
         return '';
     }
-
     try {
-        error_log("Attempting to decrypt field: " . $fieldName);
         $decrypted = $encryption->decrypt($encrypted, $fieldName);
-        error_log("Successfully decrypted field: " . $fieldName);
         return htmlspecialchars($decrypted);
     } catch (Exception $e) {
         error_log("Decryption error for field: " . $fieldName . ", Error: " . $e->getMessage());
-        error_log("Raw encrypted data: " . bin2hex(substr($encrypted, 0, 32)) . "...");
-        return '[Decryption Error: ' . $e->getMessage() . ']';
+        return '[Decryption Error]';
     }
 }
 
@@ -750,100 +637,14 @@ function decrypt_field($encrypted, $encryption, $fieldName) {
         </div>
 
         <div class="submissions">
-            <!-- Debug: Start of submissions loop -->
-            <div style="background: #f0f0f0; padding: 10px; margin: 10px; border: 1px solid #ccc;">
-                <pre>
-Number of submissions to display: <?php echo count($submissions); ?>
-
-<?php foreach ($submissions as $index => $submission): ?>
-    Submission <?php echo $index + 1; ?>: ID <?php echo $submission['id']; ?>
-<?php endforeach; ?>
-                </pre>
-            </div>
-            <!-- Debug: End of debug output -->
-
-            <!-- Basic table format for debugging -->
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                <thead>
-                    <tr>
-                        <th style="border: 1px solid #ccc; padding: 8px;">ID</th>
-                        <th style="border: 1px solid #ccc; padding: 8px;">Name</th>
-                        <th style="border: 1px solid #ccc; padding: 8px;">Email</th>
-                        <th style="border: 1px solid #ccc; padding: 8px;">Status</th>
-                        <th style="border: 1px solid #ccc; padding: 8px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($submissions as $submission): ?>
-                        <?php
-                            try {
-                                // Add debug output
-                                error_log("Processing submission ID: " . $submission['id']);
-                                
-                                // Decrypt sensitive data
-                                $decrypted_name = decrypt_field($submission['full_name'], $encryption, 'full_name');
-                                error_log("Name decrypted: " . ($decrypted_name === '[Decryption Error]' ? 'Failed' : 'Success'));
-                                
-                                $decrypted_email = decrypt_field($submission['email'], $encryption, 'email');
-                                error_log("Email decrypted: " . ($decrypted_email === '[Decryption Error]' ? 'Failed' : 'Success'));
-                                
-                                $decrypted_phone = !empty($submission['phone']) ? decrypt_field($submission['phone'], $encryption, 'phone') : '';
-                                error_log("Phone decrypted: " . ($decrypted_phone === '[Decryption Error]' ? 'Failed' : 'Success'));
-                                
-                                $decrypted_description = !empty($submission['description']) ? decrypt_field($submission['description'], $encryption, 'description') : '';
-                                error_log("Description decrypted: " . ($decrypted_description === '[Decryption Error]' ? 'Failed' : 'Success'));
-                                
-                                // Parse manga sets with error handling
-                                try {
-                                    $manga_sets = json_decode($submission['item_details'], true);
-                                    if (json_last_error() !== JSON_ERROR_NONE) {
-                                        error_log("JSON decode error for manga sets: " . json_last_error_msg());
-                                        $manga_sets = [];
-                                    }
-                                } catch (Exception $e) {
-                                    error_log("Error parsing manga sets: " . $e->getMessage());
-                                    $manga_sets = [];
-                                }
-                                
-                                // Parse photos with error handling
-                                try {
-                                    $photos = json_decode($submission['photo_paths'], true);
-                                    if (json_last_error() !== JSON_ERROR_NONE) {
-                                        error_log("JSON decode error for photos: " . json_last_error_msg());
-                                        $photos = [];
-                                    }
-                                } catch (Exception $e) {
-                                    error_log("Error parsing photos: " . $e->getMessage());
-                                    $photos = [];
-                                }
-                        ?>
-                            <tr>
-                                <td style="border: 1px solid #ccc; padding: 8px;"><?php echo $submission['id']; ?></td>
-                                <td style="border: 1px solid #ccc; padding: 8px;"><?php echo $decrypted_name; ?></td>
-                                <td style="border: 1px solid #ccc; padding: 8px;"><?php echo $decrypted_email; ?></td>
-                                <td style="border: 1px solid #ccc; padding: 8px;"><?php echo ucfirst($submission['status']); ?></td>
-                                <td style="border: 1px solid #ccc; padding: 8px;">
-                                    <button onclick="editSubmission(<?php echo $submission['id']; ?>, '<?php echo $submission['status']; ?>', '<?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?>', <?php echo $submission['quote_amount'] ?? 0; ?>)">Edit</button>
-                                </td>
-                            </tr>
-                        <?php
-                            } catch (Exception $e) {
-                                echo "<!-- Decryption error for submission {$submission['id']}: " . htmlspecialchars($e->getMessage()) . " -->";
-                            }
-                        ?>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-
-            <!-- Original cards with simplified styling -->
             <?php foreach ($submissions as $submission): ?>
                 <?php
                     try {
-                        // Decrypt sensitive data with explicit field names
+                        // Decrypt sensitive data
                         $decrypted_name = decrypt_field($submission['full_name'], $encryption, 'full_name');
                         $decrypted_email = decrypt_field($submission['email'], $encryption, 'email');
-                        $decrypted_phone = decrypt_field($submission['phone'], $encryption, 'phone');
-                        $decrypted_description = decrypt_field($submission['description'], $encryption, 'description');
+                        $decrypted_phone = !empty($submission['phone']) ? decrypt_field($submission['phone'], $encryption, 'phone') : '';
+                        $decrypted_description = !empty($submission['description']) ? decrypt_field($submission['description'], $encryption, 'description') : '';
                         
                         // Parse manga sets
                         $manga_sets = json_decode($submission['item_details'], true) ?: [];
@@ -920,41 +721,11 @@ Number of submissions to display: <?php echo count($submissions); ?>
                         </div>
                 <?php
                     } catch (Exception $e) {
-                        echo "<!-- Decryption error: " . htmlspecialchars($e->getMessage()) . " -->";
+                        error_log("Error processing submission " . $submission['id'] . ": " . $e->getMessage());
                         continue;
                     }
                 ?>
             <?php endforeach; ?>
-        </div>
-    </div>
-
-    <div id="editModal" class="crm-edit-modal">
-        <div class="crm-edit-modal-content">
-            <h3>Edit Submission</h3>
-            <form id="editForm" method="POST">
-                <input type="hidden" name="action" value="update_submission">
-                <input type="hidden" name="submission_id" id="editSubmissionId">
-                
-                <label for="editStatus">Status</label>
-                <select id="editStatus" name="status" required>
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="quoted">Quoted</option>
-                    <option value="completed">Completed</option>
-                    <option value="rejected">Rejected</option>
-                </select>
-
-                <label for="editQuote">Quote Amount ($)</label>
-                <input type="number" id="editQuote" name="quote_amount" step="0.01" min="0">
-
-                <label for="editNotes">Admin Notes</label>
-                <textarea id="editNotes" name="admin_notes" rows="3"></textarea>
-
-                <div class="crm-edit-modal-actions">
-                    <button type="button" class="btn" style="background: var(--gray-500);" onclick="closeEditModal()">Cancel</button>
-                    <button type="submit" class="btn">Save Changes</button>
-                </div>
-            </form>
         </div>
     </div>
 
