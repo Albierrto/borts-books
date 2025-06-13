@@ -604,6 +604,17 @@ function decrypt_field($encrypted, $encryption, $fieldName) {
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
     </style>
+
+    <!-- Modal Slideshow -->
+    <div id="photoModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); overflow: auto;">
+        <span class="close" onclick="closeModal()" style="position: absolute; right: 35px; top: 15px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 1001;">&times;</span>
+        <a class="prev" onclick="changeSlide(-1)" style="cursor: pointer; position: absolute; left: 35px; top: 50%; transform: translateY(-50%); color: white; font-weight: bold; font-size: 30px; user-select: none; z-index: 1001;">❮</a>
+        <a class="next" onclick="changeSlide(1)" style="cursor: pointer; position: absolute; right: 35px; top: 50%; transform: translateY(-50%); color: white; font-weight: bold; font-size: 30px; user-select: none; z-index: 1001;">❯</a>
+        <div class="modal-content" style="margin: auto; display: block; width: 80%; max-width: 1200px; position: relative; top: 50%; transform: translateY(-50%);">
+            <img id="modalImage" src="" style="width: 100%; max-height: 90vh; object-fit: contain;">
+        </div>
+        <div id="caption" style="margin: auto; display: block; width: 80%; max-width: 700px; text-align: center; color: #ccc; padding: 10px 0; height: 150px;"></div>
+    </div>
 </head>
 <body>
     <div class="container">
@@ -816,12 +827,12 @@ function decrypt_field($encrypted, $encryption, $fieldName) {
                                         Photos
                                     </h4>
                                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
-                                        <?php foreach ($photos as $photo): ?>
+                                        <?php foreach ($photos as $index => $photo): ?>
                                         <div style="position: relative;">
                                             <img src="../uploads/sell-submissions/<?php echo htmlspecialchars($photo['filename']); ?>" 
                                                  alt="Submission Photo"
                                                  style="width: 100%; height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid <?php echo $statusStyle['border']; ?>;"
-                                                 onclick="window.open(this.src, '_blank')"
+                                                 onclick="openModal(this.src, <?php echo $index; ?>, <?php echo htmlspecialchars(json_encode($photos)); ?>)"
                                             >
                                         </div>
                                         <?php endforeach; ?>
@@ -980,6 +991,62 @@ function decrypt_field($encrypted, $encryption, $fieldName) {
             else params.delete('status');
             
             window.location.href = window.location.pathname + '?' + params.toString();
+        });
+
+        let currentSlideIndex = 0;
+        let slides = [];
+
+        function openModal(imgSrc, index, photoArray) {
+            const modal = document.getElementById('photoModal');
+            const modalImg = document.getElementById('modalImage');
+            slides = photoArray;
+            currentSlideIndex = index;
+            
+            modal.style.display = 'block';
+            modalImg.src = imgSrc;
+            updateCaption();
+        }
+
+        function closeModal() {
+            document.getElementById('photoModal').style.display = 'none';
+        }
+
+        function changeSlide(direction) {
+            currentSlideIndex += direction;
+            if (currentSlideIndex >= slides.length) {
+                currentSlideIndex = 0;
+            }
+            if (currentSlideIndex < 0) {
+                currentSlideIndex = slides.length - 1;
+            }
+            const modalImg = document.getElementById('modalImage');
+            modalImg.src = '../uploads/sell-submissions/' + slides[currentSlideIndex].filename;
+            updateCaption();
+        }
+
+        function updateCaption() {
+            const caption = document.getElementById('caption');
+            caption.innerHTML = `Photo ${currentSlideIndex + 1} of ${slides.length}`;
+        }
+
+        // Close modal when clicking outside the image
+        document.getElementById('photoModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeModal();
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(event) {
+            if (document.getElementById('photoModal').style.display === 'block') {
+                if (event.key === 'Escape') {
+                    closeModal();
+                } else if (event.key === 'ArrowLeft') {
+                    changeSlide(-1);
+                } else if (event.key === 'ArrowRight') {
+                    changeSlide(1);
+                }
+            }
         });
     </script>
 </body>
