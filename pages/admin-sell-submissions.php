@@ -641,10 +641,10 @@ function decrypt_field($encrypted, $encryption, $fieldName) {
                 <?php
                     try {
                         // Decrypt sensitive fields
-                        $decrypted_name = $encryption->decryptField($submission['full_name']);
-                        $decrypted_email = $encryption->decryptField($submission['email']);
-                        $decrypted_phone = $encryption->decryptField($submission['phone']);
-                        $decrypted_description = $encryption->decryptField($submission['description']);
+                        $decrypted_name = decrypt_field($submission['full_name'], $encryption, 'full_name');
+                        $decrypted_email = decrypt_field($submission['email'], $encryption, 'email');
+                        $decrypted_phone = !empty($submission['phone']) ? decrypt_field($submission['phone'], $encryption, 'phone') : '';
+                        $decrypted_description = !empty($submission['description']) ? decrypt_field($submission['description'], $encryption, 'description') : '';
                         
                         // Parse manga sets
                         $manga_sets = json_decode($submission['item_details'], true) ?: [];

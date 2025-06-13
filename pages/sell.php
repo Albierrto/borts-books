@@ -506,8 +506,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="phone">Phone Number (Optional)</label>
-                    <input type="tel" id="phone" name="phone" placeholder="(123) 456-7890" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
+                    <label for="phone">Phone Number (Recommended)</label>
+                    <input type="text" id="phone" name="phone" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
                 </div>
             </div>
             <div class="form-group">
