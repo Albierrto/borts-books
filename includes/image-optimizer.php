@@ -1,94 +1,101 @@
 <?php
 /**
- * Image Optimization Utility
- * Helps compress and resize images for better web performance
+ * Image Optimization System
+ * Handles image processing, optimization, and caching
  */
 
 class ImageOptimizer {
-    
-    public static function optimizeImage($sourcePath, $destinationPath, $maxWidth = 800, $quality = 85) {
-        if (!file_exists($sourcePath)) {
-            return false;
+    private static $cache_dir = '../cache/images/';
+    private static $sizes = [
+        'thumbnail' => ['width' => 300, 'height' => 400],
+        'medium' => ['width' => 600, 'height' => 800],
+        'large' => ['width' => 900, 'height' => 1200]
+    ];
+
+    public static function init() {
+        if (!file_exists(self::$cache_dir)) {
+            mkdir(self::$cache_dir, 0755, true);
         }
-        
-        $imageInfo = getimagesize($sourcePath);
-        if (!$imageInfo) {
-            return false;
+    }
+
+    public static function optimizeImage($source_url, $size = 'thumbnail') {
+        // Generate cache key from URL
+        $cache_key = md5($source_url . $size);
+        $cache_path = self::$cache_dir . $cache_key;
+
+        // Check if cached version exists
+        if (file_exists($cache_path . '.webp')) {
+            return str_replace('../', '/', $cache_path . '.webp');
         }
-        
-        $width = $imageInfo[0];
-        $height = $imageInfo[1];
-        $type = $imageInfo[2];
-        
-        // Calculate new dimensions while maintaining aspect ratio
-        if ($width > $maxWidth) {
-            $newWidth = $maxWidth;
-            $newHeight = ($height * $maxWidth) / $width;
-        } else {
-            $newWidth = $width;
-            $newHeight = $height;
+
+        // Download image if it's a URL
+        if (filter_var($source_url, FILTER_VALIDATE_URL)) {
+            $image_data = file_get_contents($source_url);
+            $temp_file = tempnam(sys_get_temp_dir(), 'img');
+            file_put_contents($temp_file, $image_data);
+            $source_url = $temp_file;
         }
-        
-        // Create image resource based on type
-        switch ($type) {
+
+        // Load image based on type
+        $image_info = getimagesize($source_url);
+        switch ($image_info[2]) {
             case IMAGETYPE_JPEG:
-                $sourceImage = imagecreatefromjpeg($sourcePath);
+                $image = imagecreatefromjpeg($source_url);
                 break;
             case IMAGETYPE_PNG:
-                $sourceImage = imagecreatefrompng($sourcePath);
+                $image = imagecreatefrompng($source_url);
                 break;
-            case IMAGETYPE_GIF:
-                $sourceImage = imagecreatefromgif($sourcePath);
+            case IMAGETYPE_WEBP:
+                $image = imagecreatefromwebp($source_url);
                 break;
             default:
                 return false;
         }
+
+        // Resize image
+        $target_dimensions = self::$sizes[$size];
+        $resized = imagecreatetruecolor($target_dimensions['width'], $target_dimensions['height']);
         
-        if (!$sourceImage) {
-            return false;
+        // Preserve transparency for PNG
+        if ($image_info[2] === IMAGETYPE_PNG) {
+            imagealphablending($resized, false);
+            imagesavealpha($resized, true);
         }
-        
-        // Create new image with optimized dimensions
-        $optimizedImage = imagecreatetruecolor($newWidth, $newHeight);
-        
-        // Preserve transparency for PNG and GIF
-        if ($type == IMAGETYPE_PNG || $type == IMAGETYPE_GIF) {
-            imagealphablending($optimizedImage, false);
-            imagesavealpha($optimizedImage, true);
-            $transparent = imagecolorallocatealpha($optimizedImage, 255, 255, 255, 127);
-            imagefilledrectangle($optimizedImage, 0, 0, $newWidth, $newHeight, $transparent);
-        }
-        
-        // Resize the image
+
         imagecopyresampled(
-            $optimizedImage, $sourceImage,
-            0, 0, 0, 0,
-            $newWidth, $newHeight, $width, $height
+            $resized, 
+            $image, 
+            0, 0, 0, 0, 
+            $target_dimensions['width'], 
+            $target_dimensions['height'], 
+            $image_info[0], 
+            $image_info[1]
         );
-        
-        // Save optimized image
-        $result = false;
-        switch ($type) {
-            case IMAGETYPE_JPEG:
-                $result = imagejpeg($optimizedImage, $destinationPath, $quality);
-                break;
-            case IMAGETYPE_PNG:
-                // PNG quality is 0-9, convert from 0-100
-                $pngQuality = 9 - round(($quality / 100) * 9);
-                $result = imagepng($optimizedImage, $destinationPath, $pngQuality);
-                break;
-            case IMAGETYPE_GIF:
-                $result = imagegif($optimizedImage, $destinationPath);
-                break;
+
+        // Save as WebP
+        imagewebp($resized, $cache_path . '.webp', 80);
+
+        // Clean up
+        imagedestroy($image);
+        imagedestroy($resized);
+        if (isset($temp_file)) {
+            unlink($temp_file);
         }
-        
-        // Clean up memory
-        imagedestroy($sourceImage);
-        imagedestroy($optimizedImage);
-        
-        return $result;
+
+        return str_replace('../', '/', $cache_path . '.webp');
     }
-    
+
+    public static function generateSrcSet($source_url) {
+        $srcset = [];
+        foreach (self::$sizes as $size => $dimensions) {
+            $optimized_url = self::optimizeImage($source_url, $size);
+            if ($optimized_url) {
+                $srcset[] = $optimized_url . ' ' . $dimensions['width'] . 'w';
+            }
+        }
+        return implode(', ', $srcset);
+    }
+
     public static function createThumbnail($sourcePath, $thumbnailPath, $size = 200, $quality = 80) {
         if (!file_exists($sourcePath)) {
             return false;
@@ -185,4 +192,7 @@ class ImageOptimizer {
         return round($bytes, 2) . ' ' . $units[$pow];
     }
 }
+
+// Initialize on include
+ImageOptimizer::init();
 ?> 

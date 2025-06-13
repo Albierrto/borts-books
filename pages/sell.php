@@ -16,13 +16,13 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         log_debug('Form submitted: ' . json_encode($_POST));
-        // Validate required fields
+                // Validate required fields
         $required = ['full_name', 'email'];
         foreach ($required as $field) {
             if (empty($_POST[$field])) {
                 log_debug("Missing required field: $field");
-                throw new Exception('Please fill in all required fields.');
-            }
+                    throw new Exception('Please fill in all required fields.');
+                }
         }
         if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
             log_debug('Invalid email: ' . $_POST['email']);
@@ -47,14 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $expected_price = trim($_POST['set_expected_price'][$i] ?? '');
                 if ($title !== '') {
                     $sets[] = [
-                        'title' => $title,
-                        'volumes' => $volumes,
-                        'condition' => $condition,
-                        'expected_price' => $expected_price
-                    ];
-                }
+                    'title' => $title,
+                    'volumes' => $volumes,
+                    'condition' => $condition,
+                    'expected_price' => $expected_price
+                ];
             }
         }
+    }
         if (empty($sets)) {
             throw new Exception('Please enter at least one manga set.');
         }
@@ -100,19 +100,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $db->prepare("INSERT INTO sell_submissions (
             full_name, email, phone, overall_condition, description, photo_paths, item_details
         ) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $encrypted_data['full_name'],
-            $encrypted_data['email'],
-            $encrypted_data['phone'],
+                $stmt->execute([
+                    $encrypted_data['full_name'],
+                    $encrypted_data['email'],
+                    $encrypted_data['phone'],
             $_POST['overall_condition'] ?? null,
-            $encrypted_data['description'],
+                    $encrypted_data['description'],
             $photo_json,
             $item_details
         ]);
         log_debug('Submission inserted successfully.');
         $message = 'Thank you for your submission! We will review it and contact you soon.';
-        $_POST = [];
-    } catch (Exception $e) {
+                $_POST = [];
+            } catch (Exception $e) {
         $error = $e->getMessage();
         log_debug('Error: ' . $error);
     }
@@ -133,9 +133,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         line-height: 1.5;
     }
     .container { 
-        max-width: 800px; 
+            max-width: 800px;
         margin: 2rem auto; 
-        background: #fff; 
+            background: #fff;
         border-radius: 14px; 
         box-shadow: 0 2px 16px rgba(37,99,235,0.07); 
         padding: 2rem;
@@ -151,8 +151,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         color: #1d4ed8; 
         font-size: 2rem; 
         margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
+            display: flex;
+            align-items: center;
         gap: 0.5rem;
     }
 
@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* Payment Methods */
     .payment-methods { 
-        display: grid;
+            display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 1.5rem;
         margin: 2rem auto;
@@ -191,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         padding: 0 1rem;
     }
     .payment-method { 
-        text-align: center; 
+            text-align: center;
         font-size: 1.1rem; 
         color: #374151;
         padding: 1.5rem;
@@ -208,8 +208,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         font-size: 2rem;
         margin-bottom: 0.75rem;
         color: #2563eb;
-        display: block;
-    }
+                display: block;
+            }
 
     /* Form Sections */
     .section { 
@@ -223,8 +223,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         color: #2563eb; 
         margin-bottom: 1rem; 
         font-size: 1.2rem; 
-        display: flex; 
-        align-items: center; 
+            display: flex;
+            align-items: center;
         gap: 0.5rem;
     }
 
@@ -234,13 +234,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         gap: 1.2rem;
         margin-bottom: 1rem;
     }
-    .form-group { 
+        .form-group {
         flex: 1; 
         display: flex; 
         flex-direction: column;
-    }
-    .form-group label { 
-        font-weight: 600; 
+        }
+        .form-group label {
+            font-weight: 600;
         margin-bottom: 0.4rem;
         color: #374151;
     }
@@ -249,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     textarea,
     select { 
         border: 1px solid #d1d5db; 
-        border-radius: 8px; 
+            border-radius: 8px;
         padding: 0.7rem; 
         font-size: 1rem;
         background: #fff;
@@ -263,18 +263,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     textarea { 
         min-height: 80px; 
-        resize: vertical;
+            resize: vertical;
     }
 
     /* Manga Sets */
     .add-set-btn { 
         background: #e0e7ef; 
         color: #2563eb; 
-        border: none; 
+            border: none;
         border-radius: 8px; 
         padding: 0.7rem 1.2rem; 
         font-weight: 600; 
-        cursor: pointer; 
+            cursor: pointer;
         margin-top: 1rem;
         transition: all 0.2s;
     }
@@ -288,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border-radius: 8px; 
         padding: 1.2rem; 
         margin-bottom: 1rem;
-        display: grid;
+            display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
         align-items: end;
@@ -296,11 +296,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .remove-set-btn { 
         background: #fee2e2; 
         color: #dc2626; 
-        border: none; 
+            border: none;
         border-radius: 6px; 
         padding: 0.5rem 1rem; 
-        font-weight: 600; 
-        cursor: pointer;
+            font-weight: 600;
+            cursor: pointer;
         transition: all 0.2s;
         width: fit-content;
     }
@@ -312,7 +312,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /* Photo Upload */
     .photo-upload-box { 
         border: 2px dashed #2563eb; 
-        border-radius: 8px; 
+            border-radius: 8px;
         padding: 2rem; 
         text-align: center; 
         background: #f1f5fd; 
@@ -324,8 +324,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         background: #e5edff;
     }
     .photo-upload-label { 
-        cursor: pointer; 
-        display: block; 
+            cursor: pointer;
+            display: block;
         font-weight: 600; 
         color: #2563eb;
     }
@@ -339,7 +339,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         width: 100px; 
         height: 100px; 
         object-fit: cover; 
-        border-radius: 8px; 
+            border-radius: 8px;
         border: 1px solid #e5e7eb;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
@@ -348,18 +348,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .submit-btn { 
         background: #2563eb; 
         color: #fff; 
-        border: none; 
+            border: none;
         border-radius: 8px; 
         padding: 1rem 2rem; 
         font-size: 1.1rem; 
         font-weight: 700; 
-        cursor: pointer; 
+            cursor: pointer;
         margin-top: 1rem;
         width: 100%;
         transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         gap: 0.5rem;
     }
     .submit-btn:hover { 
@@ -372,8 +372,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border-radius: 8px; 
         padding: 1rem 1.2rem; 
         margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
+            display: flex;
+            align-items: center;
         gap: 0.5rem;
     }
     .message.success { 
@@ -419,7 +419,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 1rem;
         }
         .form-row { 
-            flex-direction: column; 
+                flex-direction: column;
             gap: 1rem;
         }
         .payment-methods { 
@@ -429,8 +429,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .manga-set {
             grid-template-columns: 1fr !important;
+            }
         }
-    }
     </style>
 </head>
 <body>
@@ -438,7 +438,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div id="loading-overlay">
         <div class="spinner"></div>
         <div style="margin-top:1rem;font-weight:600;color:#2563eb;">Submitting...</div>
-    </div>
+            </div>
 
     <?php if ($message): ?>
         <div class="message success">
@@ -460,9 +460,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <div class="guarantee">
         <i class="fa fa-clock"></i> 24-Hour Quote Guarantee<br>
-        Submit your collection today and receive a detailed quote within 24 hours!
-    </div>
-    <div class="info-box">
+                    Submit your collection today and receive a detailed quote within 24 hours!
+        </div>
+            <div class="info-box">
         <strong>What We're Looking For</strong>
         <ul>
             <li><b>Complete series:</b> We prefer full sets or substantial partial sets.</li>
@@ -470,75 +470,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <li><b>Popular series:</b> Naruto, One Piece, Attack on Titan, etc.</li>
             <li><b>English printings:</b> We currently only accept English manga.</li>
             <li><b>Competitive offers:</b> We pay top dollar for high quality series.</li>
-        </ul>
-    </div>
+                </ul>
+                </div>
     <div class="payment-methods">
         <div class="payment-method">
             <i class="fab fa-paypal"></i>
             PayPal
-        </div>
+                </div>
         <div class="payment-method">
             <i class="fa fa-money-bill-wave"></i>
             Venmo
-        </div>
+                </div>
         <div class="payment-method">
             <i class="fa fa-university"></i>
             Zelle
-        </div>
-    </div>
+                </div>
+            </div>
     <div class="note">
         <b>Note:</b> Your personal information is encrypted and stored securely. Payouts are covered for security and safety via PayPal, Venmo, Zelle, and major US banks only.
-    </div>
+        </div>
     <form method="POST" enctype="multipart/form-data">
         <div class="section">
             <div class="section-title">
                 <i class="fas fa-user"></i> Contact Information
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="full_name">Full Name *</label>
-                    <input type="text" id="full_name" name="full_name" required value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>">
-                </div>
-                <div class="form-group">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="full_name">Full Name *</label>
+                            <input type="text" id="full_name" name="full_name" required value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>">
+                        </div>
+                        <div class="form-group">
                     <label for="email">Email *</label>
-                    <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
+                            <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
                     <label for="phone">Phone Number (Recommended)</label>
                     <input type="text" id="phone" name="phone" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
-                </div>
+                        </div>
             </div>
-            <div class="form-group">
+                        <div class="form-group">
                 <label for="zip">ZIP Code</label>
                 <input type="text" id="zip" name="zip" placeholder="For shipping estimate" value="<?php echo htmlspecialchars($_POST['zip'] ?? ''); ?>">
-            </div>
-            <div class="form-group">
-                <label for="description">Additional Description</label>
+                        </div>
+                    <div class="form-group">
+                        <label for="description">Additional Description</label>
                 <textarea id="description" name="description" placeholder="Describe your collection, any special editions, damage, etc."><?php echo htmlspecialchars($_POST['description'] ?? ''); ?></textarea>
-            </div>
-        </div>
+                    </div>
+                </div>
         <div class="section">
             <div class="section-title"><i class="fa fa-layer-group"></i> Your Manga Sets</div>
             <div id="sets-list"></div>
             <button id="add-set-btn" class="add-set-btn">+ Add Another Set</button>
-        </div>
+                                </div>
         <div class="section">
             <div class="section-title"><i class="fa fa-images"></i> Photos of Your Collection *</div>
             <div class="photo-upload-box" id="photo-upload-box">
                 <label for="photos" class="photo-upload-label">
                     <i class="fa fa-upload"></i> Click to Upload Photos<br>
                     <span style="font-size:0.95em; color:#666;">Or drag and drop images here<br>JPG, PNG, GIF, WebP only, max 10MB each</span>
-                </label>
+                        </label>
                 <input type="file" id="photos" name="photos[]" accept="image/*" multiple>
                 <div class="photo-list" id="photo-list"></div>
-            </div>
-        </div>
+                        </div>
+                    </div>
         <button type="submit" class="submit-btn"><i class="fa fa-paper-plane"></i> Submit for Review</button>
-    </form>
-</div>
-<script>
+        </form>
+        </div>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Manga condition options
     const conditionOptions = [
@@ -577,8 +577,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const sets = window.mangaSets || [];
         if (sets.length === 0) {
             addSet();
-            return;
-        }
+                    return;
+                }
 
         sets.forEach((set, index) => {
             const setDiv = document.createElement('div');
@@ -633,7 +633,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.mangaSets = window.mangaSets || [{title:'',volumes:'',condition:'',expected_price:''}];
     function addSet(e) {
-        e.preventDefault();
+            e.preventDefault();
         window.mangaSets.push({title:'',volumes:'',condition:'',expected_price:''});
         renderSets();
     }
@@ -679,6 +679,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('form').addEventListener('submit', function() {
         document.getElementById('loading-overlay').style.display = 'flex';
     });
-});
-</script>
+        });
+    </script>
 <?php include dirname(__DIR__) . '/includes/mobile-nav-footer.php'; ?>

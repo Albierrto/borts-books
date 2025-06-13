@@ -45,589 +45,117 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='url(%23grad)'/%3E%3Cpath d='M25 20h50c2.5 0 4.5 2 4.5 4.5v51c0 2.5-2 4.5-4.5 4.5H25c-2.5 0-4.5-2-4.5-4.5v-51c0-2.5 2-4.5 4.5-4.5z' fill='white'/%3E%3Cpath d='M30 30h40v5H30z' fill='%23667eea'/%3E%3Cpath d='M30 40h35v3H30z' fill='%23999'/%3E%3Cpath d='M30 47h30v3H30z' fill='%23999'/%3E%3Cpath d='M30 54h25v3H30z' fill='%23999'/%3E%3Cpath d='M30 61h20v3H30z' fill='%23999'/%3E%3C/svg%3E">
     <title><?php echo $pageTitle; ?> - Manga Store</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/styles.css">
-    <link rel="stylesheet" href="assets/css/mobile-nav.css">
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" as="style">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- Critical CSS -->
     <style>
+        /* Critical styles for immediate render */
         body { 
-            background: #f7f7fa; 
-            font-family: 'Inter', sans-serif; 
             margin: 0;
             padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f7f7fa;
         }
         
-        /* Enhanced Hero Section */
         .hero {
-            background: linear-gradient(135deg, #232946 0%, #395aa0 50%, #eebbc3 100%);
+            background: #232946;
             color: #fff;
-            padding: 4rem 1rem 3rem 1rem;
+            padding: 4rem 1rem 3rem;
             text-align: center;
             position: relative;
             overflow: hidden;
         }
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="%23fff" opacity="0.1"/><circle cx="20" cy="20" r="1" fill="%23fff" opacity="0.05"/><circle cx="80" cy="30" r="1.5" fill="%23fff" opacity="0.08"/></svg>');
-            animation: float 20s infinite linear;
-        }
+        
         .hero-content {
             position: relative;
             z-index: 2;
             max-width: 1200px;
             margin: 0 auto;
         }
+        
         .hero h1 {
-            font-family: 'Permanent Marker', cursive;
             font-size: clamp(2rem, 5vw, 3.5rem);
-            margin-bottom: 1rem;
-            letter-spacing: 2px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-        .hero p { 
-            font-size: clamp(1.1rem, 2.5vw, 1.4rem); 
-            margin-bottom: 1.5rem; 
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            line-height: 1.6;
-        }
-
-        /* Price Guarantee Banner */
-        .price-guarantee {
-            background: linear-gradient(45deg, #28a745, #20c997);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            margin: 1.5rem auto 2.5rem auto;
-            max-width: 500px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-            animation: pulse 2s infinite;
-        }
-
-        .price-guarantee h3 {
-            margin: 0 0 0.5rem 0;
-            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
-            font-weight: 800;
-        }
-
-        .price-guarantee p {
-            margin: 0;
-            font-size: clamp(0.9rem, 2vw, 1rem);
-            opacity: 0.95;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-        
-        /* Enhanced CTA Buttons */
-        .hero-ctas { 
-            display: flex; 
-            justify-content: center; 
-            gap: 1.5rem; 
-            flex-wrap: wrap;
-        }
-        .hero-ctas a {
-            padding: 1.2rem 2.8rem;
-            border-radius: 50px;
-            font-size: clamp(1rem, 2vw, 1.2rem);
-            font-weight: 700;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            position: relative;
-            overflow: hidden;
-        }
-        .hero-ctas a::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-        .hero-ctas a:hover::before {
-            left: 100%;
-        }
-        .hero-ctas .btn-primary { 
-            background: linear-gradient(45deg, #eebbc3, #f7c7d0); 
-            color: #232946; 
-        }
-        .hero-ctas .btn-primary:hover { 
-            background: linear-gradient(45deg, #fff, #eebbc3); 
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-        }
-        .hero-ctas .btn-secondary { 
-            background: transparent; 
-            border: 3px solid #eebbc3; 
-            color: #fff; 
-        }
-        .hero-ctas .btn-secondary:hover { 
-            background: #eebbc3; 
-            color: #232946;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(238, 187, 195, 0.4);
-        }
-        
-        /* Sell Hero Section Enhancement */
-        .sell-hero {
-            background: linear-gradient(135deg, #eebbc3 0%, #f7c7d0 50%, #232946 100%);
-            padding: 4rem 1rem 3rem 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .sell-hero-content {
-            display: flex;
-            align-items: center;
-            gap: 3rem;
-            max-width: 1100px;
-            width: 100%;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .sell-hero img {
-            width: 220px;
-            height: 220px;
-            object-fit: cover;
-            border-radius: 18px;
-            box-shadow: 0 8px 30px rgba(35,41,70,0.2);
-            border: 6px solid #fff;
-            transition: transform 0.3s ease;
-        }
-        .sell-hero img:hover {
-            transform: scale(1.05) rotate(2deg);
-        }
-        .sell-hero-text {
-            flex: 1;
-            min-width: 300px;
-        }
-        .sell-hero h2 {
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
-            font-weight: 900;
-            color: #232946;
-            margin-bottom: 1rem;
-            letter-spacing: 1px;
-        }
-        .sell-hero p {
-            font-size: clamp(1.1rem, 2vw, 1.3rem);
-            color: #232946;
-            margin-bottom: 1.5rem;
-            max-width: 500px;
-            line-height: 1.6;
-        }
-        .sell-hero a {
-            background: linear-gradient(45deg, #232946, #395aa0);
-            color: #fff;
-            padding: 1.2rem 2.8rem;
-            border-radius: 50px;
-            font-weight: 800;
-            font-size: clamp(1rem, 2vw, 1.2rem);
-            text-decoration: none;
-            box-shadow: 0 4px 20px rgba(35,41,70,0.3);
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .sell-hero a:hover {
-            background: linear-gradient(45deg, #395aa0, #232946);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(35,41,70,0.4);
-        }
-        
-        /* Enhanced Trending Section */
-        .trending-section { 
-            background: linear-gradient(135deg, #232946 0%, #1a1f3a 100%);
-            color: #fff; 
-            padding: 3rem 1rem; 
-        }
-        .section-title { 
-            text-align: center; 
-            font-size: clamp(1.8rem, 4vw, 2.5rem); 
-            font-weight: 800; 
-            margin: 0 0 2rem 0; 
-            letter-spacing: 1px;
-        }
-        
-        /* Enhanced Carousel */
-        .carousel-container {
-            position: relative;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .carousel-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: linear-gradient(45deg, #eebbc3, #f7c7d0);
-            color: #232946;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 1.2rem;
+            margin: 0 0 1rem;
             font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            z-index: 3;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            line-height: 1.2;
+        }
+        
+        .hero p {
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            margin: 0 auto 1.5rem;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+        
+        .price-guarantee {
+            background: #28a745;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1.5rem auto 2.5rem;
+            max-width: 500px;
+        }
+        
+        .hero-ctas {
             display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .hero-ctas a {
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: bold;
+            text-decoration: none;
+            min-width: 200px;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
+            gap: 0.5rem;
         }
-        .carousel-btn:hover {
-            background: linear-gradient(45deg, #fff, #eebbc3);
-            transform: translateY(-50%) scale(1.1);
-        }
-        .carousel-prev { left: -25px; }
-        .carousel-next { right: -25px; }
         
-        /* Enhanced Product Cards */
-        .trending-card {
-            background: #fff;
+        .btn-primary {
+            background: #eebbc3;
             color: #232946;
-            border-radius: 16px;
-            min-width: 240px;
-            max-width: 240px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            margin-bottom: 1rem;
-            flex: 0 0 auto;
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s ease;
-            overflow: hidden;
         }
-        .trending-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-        }
-        .trending-card img {
-            width: 100%;
-            height: 280px;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
-        .trending-card:hover img {
-            transform: scale(1.05);
-        }
-        .trending-card .info {
-            padding: 1.2rem;
-            text-align: center;
-        }
-        .trending-card .title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .trending-card .price {
-            color: #e63946;
-            font-weight: 700;
-            font-size: 1.2rem;
-            margin-bottom: 1rem;
-        }
-        .trending-card .add-cart {
-            background: linear-gradient(45deg, #eebbc3, #f7c7d0);
-            color: #232946;
-            border: none;
-            border-radius: 25px;
-            padding: 0.7rem 1.5rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-        .trending-card .add-cart:hover {
-            background: linear-gradient(45deg, #232946, #395aa0);
+        
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid #eebbc3;
             color: #fff;
-            transform: translateY(-1px);
         }
         
-        /* Enhanced Value Props */
-        .value-props {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin: 3rem 1rem;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .value-prop {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            padding: 2rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        .value-prop:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-        }
-        .value-prop i { 
-            font-size: 2.5rem; 
-            color: #eebbc3; 
-            margin-bottom: 1rem;
-            display: block;
-        }
-        .value-prop h4 { 
-            font-size: 1.2rem; 
-            font-weight: 700; 
-            margin-bottom: 0.5rem; 
-        }
-        .value-prop p { 
-            font-size: 1rem; 
-            color: #666; 
-            line-height: 1.5;
-        }
-        
-        /* Mobile Optimizations */
         @media (max-width: 768px) {
             .hero {
-                padding: 3rem 1rem 2rem 1rem;
+                padding: 3rem 1rem 2rem;
             }
             .hero-ctas {
-                gap: 1rem;
+                flex-direction: column;
+                align-items: center;
             }
             .hero-ctas a {
-                padding: 1rem 2rem;
                 width: 100%;
                 max-width: 280px;
-                justify-content: center;
-            }
-            
-            .sell-hero-content {
-                flex-direction: column;
-            gap: 2rem;
-                text-align: center;
-        }
-            .sell-hero img {
-                width: 180px;
-                height: 180px;
-            }
-            
-            .carousel-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1rem;
-            }
-            .carousel-prev { left: -20px; }
-            .carousel-next { right: -20px; }
-            
-            .value-props {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-                margin: 2rem 1rem;
-            }
-            
-            .trending-carousel {
-                padding: 1rem 0.5rem;
             }
         }
-        
-        @media (max-width: 480px) {
-            .carousel-prev { left: -15px; }
-            .carousel-next { right: -15px; }
-            
-            .trending-card {
-                min-width: 200px;
-                max-width: 200px;
-            }
-            .trending-card img {
-                height: 240px;
-            }
-        }
-        
-        /* Animations */
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        .hero::before {
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        /* Enhanced Reviews Section */
-        .reviews-section { 
-            background: #fff; 
-            padding: 3rem 1rem; 
-        }
-        .reviews-grid { 
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem; 
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .review-card {
-            background: #f7f7fa;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            padding: 1.5rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        .review-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-        }
-        .review-card .avatar { 
-            width: 60px; 
-            height: 60px; 
-            border-radius: 50%; 
-            object-fit: cover; 
-            margin: 0 auto 1rem auto;
-            display: block;
-            border: 3px solid #eebbc3;
-        }
-        .review-card .name { 
-            font-weight: 700; 
-            font-size: 1.1rem; 
-            margin-bottom: 0.5rem; 
-        }
-        .review-card .stars { 
-            color: #ffc107; 
-            margin-bottom: 1rem; 
-            font-size: 1.2rem;
-        }
-        .review-card p {
-            font-style: italic;
-            line-height: 1.5;
-            color: #555;
-        }
-        
-        /* Enhanced Newsletter Section */
-        .newsletter-section { 
-            background: linear-gradient(135deg, #232946 0%, #1a1f3a 100%);
-            color: #fff; 
-            text-align: center; 
-            padding: 3rem 1rem; 
-        }
-        .newsletter-section h3 { 
-            font-size: clamp(1.5rem, 3vw, 1.8rem); 
-            font-weight: 800; 
-            margin-bottom: 1rem; 
-        }
-        .newsletter-section p {
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-        .newsletter-form { 
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        .newsletter-inputs {
-            display: flex; 
-            gap: 1rem; 
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-        }
-        .newsletter-name,
-        .newsletter-email {
-            padding: 1rem 1.5rem;
-            border-radius: 50px;
-            border: none;
-            font-size: 1rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            outline: none;
-            transition: all 0.3s ease;
-        }
-        .newsletter-name {
-            flex: 0 1 180px;
-            min-width: 150px;
-        }
-        .newsletter-email {
-            flex: 1 1 250px;
-            min-width: 250px;
-        }
-        .newsletter-name:focus,
-        .newsletter-email:focus {
-            box-shadow: 0 4px 20px rgba(238, 187, 195, 0.3);
-            transform: translateY(-1px);
-        }
-        .newsletter-form button {
-            background: linear-gradient(45deg, #eebbc3, #f7c7d0);
-            color: #232946;
-            border: none;
-            border-radius: 50px;
-            padding: 1rem 2rem;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            min-width: 150px;
-            position: relative;
-        }
-        .newsletter-form button:hover:not(:disabled) {
-            background: linear-gradient(45deg, #fff, #eebbc3);
-            transform: translateY(-2px);
-        }
-        .newsletter-form button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-        .newsletter-status {
-            margin-top: 1rem;
-            padding: 1rem;
-            border-radius: 10px;
-            font-weight: 600;
-        }
-        .newsletter-status.success {
-            background: rgba(40, 167, 69, 0.2);
-            color: #28a745;
-            border: 1px solid rgba(40, 167, 69, 0.3);
-        }
-        .newsletter-status.error {
-            background: rgba(220, 53, 69, 0.2);
-            color: #dc3545;
-            border: 1px solid rgba(220, 53, 69, 0.3);
-        }
-        
-        @media (max-width: 768px) {
-            .newsletter-inputs {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .newsletter-name,
-            .newsletter-email {
-                width: 100%;
-                max-width: 350px;
-                margin: 0 auto;
-            }
-            .newsletter-form button {
-                width: 100%;
-                max-width: 200px;
-                margin: 0 auto;
-            }
-        }
-
     </style>
+    
+    <!-- Non-critical CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="assets/css/mobile-nav.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    
+    <noscript>
+        <link rel="stylesheet" href="assets/css/styles.css">
+        <link rel="stylesheet" href="assets/css/mobile-nav.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&display=swap" rel="stylesheet">
+    </noscript>
 </head>
 <body>
     <header>
@@ -652,15 +180,15 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
 
     <section class="hero">
         <div class="hero-content">
-        <h1>Discover, Collect, and Sell Manga</h1>
-        <p>Your ultimate destination for authentic manga, rare finds, and unbeatable deals. Shop, sell, and join a passionate manga community!</p>
-        
-        <div class="price-guarantee">
-            <h3><i class="fas fa-trophy"></i> LOWEST PRICES GUARANTEED</h3>
-            <p>We beat Amazon, eBay, Crunchyroll & all competitors!</p>
-        </div>
-        
-        <div class="hero-ctas">
+            <h1>Discover, Collect, and Sell Manga</h1>
+            <p>Your ultimate destination for authentic manga, rare finds, and unbeatable deals. Shop, sell, and join a passionate manga community!</p>
+            
+            <div class="price-guarantee">
+                <h3><i class="fas fa-trophy"></i> LOWEST PRICES GUARANTEED</h3>
+                <p>We beat Amazon, eBay, Crunchyroll & all competitors!</p>
+            </div>
+            
+            <div class="hero-ctas">
                 <a href="/pages/shop.php" class="btn-primary">
                     <i class="fas fa-shopping-bag"></i>
                     Shop Now
@@ -726,6 +254,140 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
             <button id="carouselNext" class="carousel-btn carousel-next">&#8594;</button>
         </div>
     </section>
+
+    <!-- Featured Manga Showcase -->
+    <section class="manga-showcase">
+        <div class="container">
+            <h2>Featured Collections</h2>
+            <div class="manga-grid">
+                <?php foreach ($trendingManga as $index => $manga): ?>
+                <article class="manga-card">
+                    <div class="manga-image">
+                        <?php 
+                        // Use the ImageOptimizer to generate optimized images
+                        require_once 'includes/image-optimizer.php';
+                        $srcset = ImageOptimizer::generateSrcSet($manga['image_url']);
+                        $optimizedThumb = ImageOptimizer::optimizeImage($manga['image_url'], 'thumbnail');
+                        ?>
+                        <picture>
+                            <source 
+                                srcset="<?php echo htmlspecialchars($srcset); ?>"
+                                sizes="(max-width: 768px) 240px, 300px"
+                                type="image/webp"
+                            >
+                            <img 
+                                src="<?php echo htmlspecialchars($optimizedThumb); ?>"
+                                alt="<?php echo htmlspecialchars($manga['title']); ?>"
+                                loading="lazy"
+                                width="300"
+                                height="400"
+                                decoding="async"
+                            >
+                        </picture>
+                    </div>
+                    <div class="manga-info">
+                        <h3><?php echo htmlspecialchars($manga['title']); ?></h3>
+                        <p class="price">$<?php echo number_format($manga['price'], 2); ?></p>
+                        <button class="add-to-cart" onclick="addToCart(<?php echo $manga['id']; ?>)">
+                            <i class="fas fa-shopping-cart"></i> Add to Cart
+                        </button>
+                    </div>
+                </article>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+
+    <style>
+        .manga-showcase {
+            padding: 4rem 0;
+            background: #fff;
+        }
+        
+        .manga-showcase h2 {
+            text-align: center;
+            font-size: clamp(1.8rem, 3vw, 2.5rem);
+            margin-bottom: 2rem;
+            color: #232946;
+        }
+        
+        .manga-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            padding: 1rem;
+        }
+        
+        .manga-card {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .manga-image {
+            position: relative;
+            aspect-ratio: 3/4;
+            overflow: hidden;
+        }
+        
+        .manga-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .manga-info {
+            padding: 1.5rem;
+        }
+        
+        .manga-info h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: #232946;
+            font-weight: 600;
+        }
+        
+        .price {
+            font-size: 1.25rem;
+            color: #e63946;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .add-to-cart {
+            width: 100%;
+            padding: 0.8rem;
+            background: #232946;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: background 0.2s ease;
+        }
+        
+        .add-to-cart:hover {
+            background: #1a1f35;
+        }
+        
+        @media (max-width: 768px) {
+            .manga-showcase {
+                padding: 2rem 0;
+            }
+            
+            .manga-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 1rem;
+            }
+        }
+    </style>
 
     <div class="value-props">
         <div class="value-prop">
