@@ -491,26 +491,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <form method="POST" enctype="multipart/form-data">
         <div class="section">
-            <div class="section-title"><i class="fa fa-user"></i> Contact Information</div>
+            <div class="section-title">
+                <i class="fas fa-user"></i> Contact Information
+            </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="full_name">Full Name *</label>
                     <input type="text" id="full_name" name="full_name" required value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>">
                 </div>
                 <div class="form-group">
-                    <label for="email">Email Address *</label>
+                    <label for="email">Email *</label>
                     <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="phone">Phone (recommended)</label>
-                    <input type="text" id="phone" name="phone" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
+                    <label for="phone">Phone Number (Optional)</label>
+                    <input type="tel" id="phone" name="phone" placeholder="(123) 456-7890" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
                 </div>
-                <div class="form-group">
-                    <label for="zip">ZIP Code</label>
-                    <input type="text" id="zip" name="zip" placeholder="For shipping estimate" value="<?php echo htmlspecialchars($_POST['zip'] ?? ''); ?>">
-                </div>
+            </div>
+            <div class="form-group">
+                <label for="zip">ZIP Code</label>
+                <input type="text" id="zip" name="zip" placeholder="For shipping estimate" value="<?php echo htmlspecialchars($_POST['zip'] ?? ''); ?>">
             </div>
             <div class="form-group">
                 <label for="description">Additional Description</label>

@@ -89,6 +89,14 @@ try {
         error_log("Database connection established successfully");
     }
     
+    // Add admin_notes and status fields if they don't exist
+    $db->exec("
+        ALTER TABLE sell_submissions 
+        ADD COLUMN IF NOT EXISTS admin_notes TEXT,
+        ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending',
+        ADD COLUMN IF NOT EXISTS quote_amount DECIMAL(10,2) DEFAULT NULL
+    ");
+    
 } catch (PDOException $e) {
     // Log detailed error for debugging (not shown to user)
     error_log('Database connection failed: ' . $e->getMessage() . ' | DSN: ' . $dsn);
