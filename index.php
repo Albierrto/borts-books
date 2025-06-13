@@ -285,90 +285,159 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
     <style>
         .manga-showcase {
             padding: 4rem 0;
-            background: #fff;
+            background: linear-gradient(to bottom, #f8f9fa, #fff);
         }
         
         .manga-showcase h2 {
             text-align: center;
-            font-size: clamp(1.8rem, 3vw, 2.5rem);
-            margin-bottom: 2rem;
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            margin-bottom: 3rem;
             color: #232946;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+        }
+        
+        .manga-showcase h2:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: #e63946;
+            border-radius: 2px;
         }
         
         .manga-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2.5rem;
             padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
         }
         
         .manga-card {
             background: #fff;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            transition: transform 0.2s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+        }
+        
+        .manga-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
         }
         
         .manga-image {
             position: relative;
             aspect-ratio: 3/4;
             overflow: hidden;
+            background: #f8f9fa;
         }
         
         .manga-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.3s ease;
+            transition: transform 0.5s ease;
+        }
+        
+        .manga-card:hover .manga-image img {
+            transform: scale(1.05);
         }
         
         .manga-info {
-            padding: 1.5rem;
+            padding: 2rem;
+            background: #fff;
+            position: relative;
         }
         
         .manga-info h3 {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
             color: #232946;
-            font-weight: 600;
+            font-weight: 700;
+            line-height: 1.4;
         }
         
         .price {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             color: #e63946;
             font-weight: 700;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .price:before {
+            content: '¥';
+            font-size: 1rem;
+            opacity: 0.8;
         }
         
         .add-to-cart {
             width: 100%;
-            padding: 0.8rem;
+            padding: 1rem;
             background: #232946;
             color: #fff;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-weight: 600;
+            font-size: 1.1rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            transition: background 0.2s ease;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .add-to-cart:hover {
             background: #1a1f35;
+            transform: translateY(-2px);
+        }
+        
+        .add-to-cart i {
+            font-size: 1.2rem;
         }
         
         @media (max-width: 768px) {
             .manga-showcase {
-                padding: 2rem 0;
+                padding: 3rem 0;
             }
             
             .manga-grid {
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                gap: 1rem;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 1.5rem;
+                padding: 1rem;
+            }
+            
+            .manga-info {
+                padding: 1.5rem;
+            }
+            
+            .manga-info h3 {
+                font-size: 1.1rem;
+            }
+            
+            .price {
+                font-size: 1.25rem;
+                margin-bottom: 1rem;
+            }
+            
+            .add-to-cart {
+                padding: 0.875rem;
+                font-size: 1rem;
             }
         }
     </style>
