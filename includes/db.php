@@ -89,11 +89,11 @@ try {
         error_log("Database connection established successfully");
     }
     
-    // Add admin_notes and status fields if they don't exist
+    // Update status column length and add other fields if they don't exist
     $db->exec("
         ALTER TABLE sell_submissions 
+        MODIFY COLUMN status VARCHAR(50) DEFAULT 'pending',
         ADD COLUMN IF NOT EXISTS admin_notes TEXT,
-        ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending',
         ADD COLUMN IF NOT EXISTS quote_amount DECIMAL(10,2) DEFAULT NULL
     ");
     
