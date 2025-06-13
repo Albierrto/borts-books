@@ -263,27 +263,11 @@ $trendingManga = $db->query($trendingQuery)->fetchAll(PDO::FETCH_ASSOC);
                 <?php foreach ($trendingManga as $index => $manga): ?>
                 <article class="manga-card">
                     <div class="manga-image">
-                        <?php 
-                        // Use the ImageOptimizer to generate optimized images
-                        require_once 'includes/image-optimizer.php';
-                        $srcset = ImageOptimizer::generateSrcSet($manga['image_url']);
-                        $optimizedThumb = ImageOptimizer::optimizeImage($manga['image_url'], 'thumbnail');
-                        ?>
-                        <picture>
-                            <source 
-                                srcset="<?php echo htmlspecialchars($srcset); ?>"
-                                sizes="(max-width: 768px) 240px, 300px"
-                                type="image/webp"
-                            >
-                            <img 
-                                src="<?php echo htmlspecialchars($optimizedThumb); ?>"
-                                alt="<?php echo htmlspecialchars($manga['title']); ?>"
-                                loading="lazy"
-                                width="300"
-                                height="400"
-                                decoding="async"
-                            >
-                        </picture>
+                        <img 
+                            src="<?php echo htmlspecialchars($manga['image_url']); ?>"
+                            alt="<?php echo htmlspecialchars($manga['title']); ?>"
+                            loading="lazy"
+                        >
                     </div>
                     <div class="manga-info">
                         <h3><?php echo htmlspecialchars($manga['title']); ?></h3>
