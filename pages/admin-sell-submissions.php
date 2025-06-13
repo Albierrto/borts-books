@@ -809,6 +809,26 @@ function decrypt_field($encrypted, $encryption, $fieldName) {
 
                             <!-- Manga Sets and Description Section -->
                             <div>
+                                <!-- Photos Section -->
+                                <?php if (!empty($photos)): ?>
+                                <div style="margin-bottom: 15px;">
+                                    <h4 style="margin: 0 0 10px 0; color: <?php echo $statusStyle['text']; ?>;">
+                                        Photos
+                                    </h4>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
+                                        <?php foreach ($photos as $photo): ?>
+                                        <div style="position: relative;">
+                                            <img src="../uploads/sell-submissions/<?php echo htmlspecialchars($photo['filename']); ?>" 
+                                                 alt="Submission Photo"
+                                                 style="width: 100%; height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid <?php echo $statusStyle['border']; ?>;"
+                                                 onclick="window.open(this.src, '_blank')"
+                                            >
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+
                                 <?php if (!empty($manga_sets)): ?>
                                 <div style="margin-bottom: 15px;">
                                     <h4 style="margin: 0 0 10px 0; color: <?php echo $statusStyle['text']; ?>;">
