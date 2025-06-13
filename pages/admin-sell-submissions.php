@@ -705,7 +705,7 @@ function decrypt_field($encrypted, $encryption, $fieldName) {
         </div>
 
         <!-- Submissions Grid -->
-        <div style="display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+        <div style="display: grid; gap: 20px;">
             <?php
             // Modify query based on status filter
             $status_filter = $current_status !== 'all' ? "WHERE status = ?" : "";
@@ -760,95 +760,164 @@ function decrypt_field($encrypted, $encryption, $fieldName) {
                             <?php echo ucfirst($submission['status']); ?>
                         </div>
 
-                        <!-- Main Content -->
-                        <div style="margin-top: 15px;">
-                            <h3 style="margin: 0 0 15px 0; 
-                                       color: <?php echo $statusStyle['text']; ?>;
-                                       font-size: 1.25rem;">
-                                <?php echo $decrypted_name; ?>
-                            </h3>
-                            
-                            <div style="display: grid; gap: 8px; color: <?php echo $statusStyle['text']; ?>;">
-                                <p style="margin: 0;">
-                                    <i class="fas fa-envelope" style="width: 20px;"></i>
-                                    <a href="mailto:<?php echo $decrypted_email; ?>" 
-                                       style="color: inherit; text-decoration: none;">
-                                        <?php echo $decrypted_email; ?>
-                                    </a>
-                                </p>
-                                <?php if (!empty($decrypted_phone)): ?>
-                                <p style="margin: 0;">
-                                    <i class="fas fa-phone" style="width: 20px;"></i>
-                                    <a href="tel:<?php echo $decrypted_phone; ?>" 
-                                       style="color: inherit; text-decoration: none;">
-                                        <?php echo $decrypted_phone; ?>
-                                    </a>
-                                </p>
-                                <?php endif; ?>
-                                <p style="margin: 0;">
-                                    <i class="fas fa-clock" style="width: 20px;"></i>
-                                    <?php echo date('M j, Y g:i A', strtotime($submission['created_at'])); ?>
-                                </p>
-                            </div>
+                        <div style="display: grid; grid-template-columns: 300px 1fr; gap: 20px;">
+                            <!-- Contact Info Section -->
+                            <div>
+                                <h3 style="margin: 0 0 15px 0; 
+                                           color: <?php echo $statusStyle['text']; ?>;
+                                           font-size: 1.25rem;">
+                                    <?php echo $decrypted_name; ?>
+                                </h3>
+                                
+                                <div style="display: grid; gap: 8px; color: <?php echo $statusStyle['text']; ?>;">
+                                    <p style="margin: 0;">
+                                        <i class="fas fa-envelope" style="width: 20px;"></i>
+                                        <a href="mailto:<?php echo $decrypted_email; ?>" 
+                                           style="color: inherit; text-decoration: none;">
+                                            <?php echo $decrypted_email; ?>
+                                        </a>
+                                    </p>
+                                    <?php if (!empty($decrypted_phone)): ?>
+                                    <p style="margin: 0;">
+                                        <i class="fas fa-phone" style="width: 20px;"></i>
+                                        <a href="tel:<?php echo $decrypted_phone; ?>" 
+                                           style="color: inherit; text-decoration: none;">
+                                            <?php echo $decrypted_phone; ?>
+                                        </a>
+                                    </p>
+                                    <?php endif; ?>
+                                    <p style="margin: 0;">
+                                        <i class="fas fa-clock" style="width: 20px;"></i>
+                                        <?php echo date('M j, Y g:i A', strtotime($submission['created_at'])); ?>
+                                    </p>
+                                </div>
 
-                            <!-- Action Buttons -->
-                            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                                <button onclick="toggleEdit(<?php echo $submission['id']; ?>)" 
-                                        style="flex: 1; padding: 8px; background: <?php echo $statusStyle['border']; ?>; 
-                                               color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                                <button onclick="deleteSubmission(<?php echo $submission['id']; ?>)"
-                                        style="padding: 8px; background: #dc2626; color: white; 
-                                               border: none; border-radius: 6px; cursor: pointer;">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-
-                            <!-- Edit Form -->
-                            <?php include('includes/submission-edit-form.php'); ?>
-
-                            <!-- Manga Sets -->
-                            <?php if (!empty($manga_sets)): ?>
-                            <div style="margin-top: 15px;">
-                                <h4 style="margin: 0 0 10px 0; color: <?php echo $statusStyle['text']; ?>;">
-                                    Manga Sets
-                                </h4>
-                                <div style="display: grid; gap: 10px;">
-                                    <?php foreach ($manga_sets as $set): ?>
-                                    <div style="padding: 10px; 
-                                              background: <?php echo $statusStyle['bg']; ?>; 
-                                              border: 1px solid <?php echo $statusStyle['border']; ?>;
-                                              border-radius: 6px;">
-                                        <strong style="color: <?php echo $statusStyle['text']; ?>;">
-                                            <?php echo htmlspecialchars($set['title']); ?>
-                                        </strong>
-                                        <div style="color: <?php echo $statusStyle['text']; ?>; opacity: 0.8; font-size: 0.9rem;">
-                                            <div>Volumes: <?php echo htmlspecialchars($set['volumes']); ?></div>
-                                            <div>Condition: <?php echo htmlspecialchars($set['condition']); ?></div>
-                                            <?php if (!empty($set['expected_price'])): ?>
-                                            <div>Expected: $<?php echo htmlspecialchars($set['expected_price']); ?></div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    <?php endforeach; ?>
+                                <!-- Action Buttons -->
+                                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                    <button onclick="toggleEdit(<?php echo $submission['id']; ?>)" 
+                                            style="flex: 1; padding: 8px; background: <?php echo $statusStyle['border']; ?>; 
+                                                   color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button onclick="deleteSubmission(<?php echo $submission['id']; ?>)"
+                                            style="padding: 8px; background: #dc2626; color: white; 
+                                                   border: none; border-radius: 6px; cursor: pointer;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </div>
-                            <?php endif; ?>
 
-                            <!-- Description -->
-                            <?php if (!empty($decrypted_description)): ?>
-                            <div style="margin-top: 15px;">
-                                <h4 style="margin: 0 0 5px 0; color: <?php echo $statusStyle['text']; ?>;">
-                                    Additional Description
-                                </h4>
-                                <p style="margin: 0; color: <?php echo $statusStyle['text']; ?>; opacity: 0.8;">
-                                    <?php echo nl2br($decrypted_description); ?>
-                                </p>
+                            <!-- Manga Sets and Description Section -->
+                            <div>
+                                <?php if (!empty($manga_sets)): ?>
+                                <div style="margin-bottom: 15px;">
+                                    <h4 style="margin: 0 0 10px 0; color: <?php echo $statusStyle['text']; ?>;">
+                                        Manga Sets
+                                    </h4>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                                        <?php foreach ($manga_sets as $set): ?>
+                                        <div style="padding: 10px; 
+                                                  background: <?php echo $statusStyle['bg']; ?>; 
+                                                  border: 1px solid <?php echo $statusStyle['border']; ?>;
+                                                  border-radius: 6px;">
+                                            <strong style="color: <?php echo $statusStyle['text']; ?>;">
+                                                <?php echo htmlspecialchars($set['title']); ?>
+                                            </strong>
+                                            <div style="color: <?php echo $statusStyle['text']; ?>; opacity: 0.8; font-size: 0.9rem;">
+                                                <div>Volumes: <?php echo htmlspecialchars($set['volumes']); ?></div>
+                                                <div>Condition: <?php echo htmlspecialchars($set['condition']); ?></div>
+                                                <?php if (!empty($set['expected_price'])): ?>
+                                                <div>Expected: $<?php echo htmlspecialchars($set['expected_price']); ?></div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($decrypted_description)): ?>
+                                <div>
+                                    <h4 style="margin: 0 0 5px 0; color: <?php echo $statusStyle['text']; ?>;">
+                                        Additional Description
+                                    </h4>
+                                    <p style="margin: 0; color: <?php echo $statusStyle['text']; ?>; opacity: 0.8;">
+                                        <?php echo nl2br($decrypted_description); ?>
+                                    </p>
+                                </div>
+                                <?php endif; ?>
                             </div>
-                            <?php endif; ?>
                         </div>
-                <?php
+
+                        <!-- Edit Form -->
+                        <div id="edit-form-<?php echo $submission['id']; ?>" 
+                             style="display: none; margin-top: 15px; padding: 15px; 
+                                    background: <?php echo $statusStyle['bg']; ?>; 
+                                    border: 1px solid <?php echo $statusStyle['border']; ?>;
+                                    border-radius: 6px;">
+                            <form method="POST" class="update-form" style="display: grid; gap: 15px;">
+                                <input type="hidden" name="action" value="update_submission">
+                                <input type="hidden" name="submission_id" value="<?php echo $submission['id']; ?>">
+                                
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 500; color: <?php echo $statusStyle['text']; ?>;">
+                                            Status
+                                        </label>
+                                        <select name="status" required 
+                                                style="width: 100%; padding: 8px; 
+                                                       background: white;
+                                                       border: 1px solid <?php echo $statusStyle['border']; ?>; 
+                                                       border-radius: 6px;">
+                                            <option value="pending" <?php echo $submission['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                            <option value="in_progress" <?php echo $submission['status'] === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
+                                            <option value="quoted" <?php echo $submission['status'] === 'quoted' ? 'selected' : ''; ?>>Quoted</option>
+                                            <option value="completed" <?php echo $submission['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                            <option value="rejected" <?php echo $submission['status'] === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 500; color: <?php echo $statusStyle['text']; ?>;">
+                                            Quote Amount ($)
+                                        </label>
+                                        <input type="number" name="quote_amount" step="0.01" min="0" 
+                                               value="<?php echo $submission['quote_amount'] ?? ''; ?>"
+                                               style="width: 100%; padding: 8px; 
+                                                      background: white;
+                                                      border: 1px solid <?php echo $statusStyle['border']; ?>; 
+                                                      border-radius: 6px;">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 500; color: <?php echo $statusStyle['text']; ?>;">
+                                        Admin Notes
+                                    </label>
+                                    <textarea name="admin_notes" rows="3" 
+                                              style="width: 100%; padding: 8px; 
+                                                     background: white;
+                                                     border: 1px solid <?php echo $statusStyle['border']; ?>; 
+                                                     border-radius: 6px; resize: vertical;"
+                                    ><?php echo htmlspecialchars($submission['admin_notes'] ?? ''); ?></textarea>
+                                </div>
+
+                                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                                    <button type="button" onclick="toggleEdit(<?php echo $submission['id']; ?>)"
+                                            style="padding: 8px 16px; background: #6b7280; color: white; 
+                                                   border: none; border-radius: 6px; cursor: pointer;">
+                                        Cancel
+                                    </button>
+                                    <button type="submit" 
+                                            style="padding: 8px 16px; 
+                                                   background: <?php echo $statusStyle['border']; ?>; 
+                                                   color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+            <?php
                 } catch (Exception $e) {
                     echo "<div class='error'>Error processing submission: " . htmlspecialchars($e->getMessage()) . "</div>";
                 }
